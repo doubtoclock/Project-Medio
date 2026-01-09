@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, MapPin, X, TrainFront, Navigation, Star } from 'lucide-react';
-import { FakeMap } from './FakeMap';
 import { Header } from './Header';
 import { RealMap } from './Map';
 
