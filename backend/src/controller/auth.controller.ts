@@ -1,17 +1,25 @@
 import { Request, Response } from "express";
 import { registerUser, loginUser } from "../services/auth.service";
+import { registerSchema } from "../validators/auth.validator";
+import { z } from "zod";
 
+/**
+ * REGISTER CONTROLLER
+ */
 export const register = async (req: Request, res: Response) => {
   try {
-    const { name, email, password } = req.body;
+    // 1. Validate request body using Zod
+    const parsed = registerSchema.safeParse(req.body);
 
-    if (!name || !email || !password) {
+    if (!parsed.success) {
       return res.status(400).json({
-        message: "All fields are required"
+        message: "Invalid input",
+        errors: parsed.error.flatten().fieldErrors
       });
     }
 
-    const user = await registerUser({ name, email, password });
+    // 2. Call service layer
+    const user = await registerUser(parsed.data);
 
     return res.status(201).json({
       message: "User registered successfully",
@@ -25,16 +33,21 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * LOGIN CONTROLLER
+ */
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
+    // Basic guard (login schema can be added later)
     if (!email || !password) {
       return res.status(400).json({
         message: "Email and password are required"
       });
     }
 
+    // 2. Call service layer
     const token = await loginUser({ email, password });
 
     return res.status(200).json({
@@ -42,8 +55,8 @@ export const login = async (req: Request, res: Response) => {
       token
     });
   } catch (error) {
-    return res.status(500).json({
-      message: "Login failed",
+    return res.status(401).json({
+      message: "Invalid credentials",
       error: (error as Error).message
     });
   }
