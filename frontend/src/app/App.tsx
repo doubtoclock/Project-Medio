@@ -9,7 +9,7 @@ export default function App() {
 
   return (
     <div className="bg-black min-h-screen text-zinc-100 font-sans selection:bg-emerald-500/30 flex justify-center">
-      <main className="min-h-screen w-full mx-auto max-w-lg relative bg-zinc-950 shadow-2xl border-x border-zinc-900 overflow-hidden">
+      <main className="min-h-screen w-full mx-auto relative bg-zinc-950 shadow-2xl border-x border-zinc-900 overflow-hidden">
         {activeTab === 'meet' && <MeetView />}
         {activeTab === 'travel' && <TravelView />}
         {activeTab === 'guide' && <UserGuideView />}

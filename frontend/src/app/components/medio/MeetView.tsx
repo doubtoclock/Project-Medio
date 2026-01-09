@@ -1,17 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, MapPin, X, TrainFront, Navigation, Star } from 'lucide-react';
-import { FakeMap } from './FakeMap';
 import { Header } from './Header';
-
-// Mock Data
-const MOCK_PLACES = [
-  { id: '1', name: 'Nocturne Café', type: 'Food', address: '123 Midnight Ave', rating: 4.8, image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1000&auto=format&fit=crop', timeFromA: '15m', timeFromB: '20m', top: '40%', left: '30%' },
-  { id: '2', name: 'Nebula Mall', type: 'Mall', address: '45 Starlight Blvd', rating: 4.5, image: 'https://images.unsplash.com/photo-1519567241046-7f570eee3d9f?q=80&w=1000&auto=format&fit=crop', timeFromA: '30m', timeFromB: '25m', top: '60%', left: '70%' },
-  { id: '3', name: 'Lunar Cinema', type: 'Movies', address: '88 Crescent Way', rating: 4.7, image: 'https://images.unsplash.com/photo-1517604931442-71053e3e2rc?q=80&w=1000&auto=format&fit=crop', timeFromA: '40m', timeFromB: '35m', top: '25%', left: '60%' },
-  { id: '4', name: 'The Void Bistro', type: 'Food', address: '99 Deep Space Ln', rating: 4.6, image: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1000&auto=format&fit=crop', timeFromA: '22m', timeFromB: '18m', top: '55%', left: '20%' },
-  { id: '5', name: 'Zenith Park', type: 'Park', address: '12 Sky High Dr', rating: 4.9, image: 'https://images.unsplash.com/photo-1496442226666-8d4a0e62e6e9?q=80&w=1000&auto=format&fit=crop', timeFromA: '10m', timeFromB: '12m', top: '45%', left: '50%' },
-];
+import { RealMap } from './Map';
 
 export const MeetView = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -20,47 +11,14 @@ export const MeetView = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [selectedPlace, setSelectedPlace] = useState<any>(null);
 
-  const filteredPlaces = activeFilter === 'All' 
-    ? MOCK_PLACES 
-    : MOCK_PLACES.filter(p => p.type === activeFilter);
 
   return (
     <div className="h-screen bg-zinc-950 text-zinc-100 relative overflow-hidden">
         <Header />
         
         {/* Map Background */}
-        <FakeMap />
-
-        {/* Pins Layer */}
-        <div className="absolute inset-0 pointer-events-none mt-20"> {/* Added margin-top to offset fixed header */}
-            {filteredPlaces.map((place) => (
-                <motion.button
-                    key={place.id}
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    whileHover={{ scale: 1.2 }}
-                    onClick={() => setSelectedPlace(place)}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 z-10 group pointer-events-auto"
-                    style={{ top: place.top, left: place.left }}
-                >
-                    <div className="relative">
-                        <div className={`
-                            flex items-center justify-center w-8 h-8 rounded-full shadow-lg border-2 
-                            ${selectedPlace?.id === place.id ? 'bg-white border-white text-black scale-125 z-20' : 'bg-zinc-800 border-zinc-600 text-white'}
-                            transition-all duration-300
-                        `}>
-                            {place.type === 'Food' && <span className="text-xs">🍔</span>}
-                            {place.type === 'Mall' && <span className="text-xs">🛍️</span>}
-                            {place.type === 'Movies' && <span className="text-xs">🎬</span>}
-                            {place.type === 'Park' && <span className="text-xs">🌳</span>}
-                        </div>
-                        <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap backdrop-blur-sm">
-                            {place.name}
-                        </div>
-                    </div>
-                </motion.button>
-            ))}
-        </div>
+        <div className="absolute inset-0 -z-0">
+        <RealMap /></div>
 
       {/* Search Area */}
       <div className="absolute top-[80px] left-0 right-0 z-40 px-4 transition-all duration-300 pointer-events-none pt-4">
