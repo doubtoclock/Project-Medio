@@ -1,9 +1,13 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { prisma } from "../lib/prisma";
+import { User } from "../models/user";
 import { RegisterInput } from "../validators/auth.validator";
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is not defined in environment variables");
+}
 
 /**
  * REGISTER USER
@@ -12,10 +16,7 @@ export const registerUser = async (data: RegisterInput) => {
   const { name, email, password } = data;
 
   // 1. Check if user already exists
-  const existingUser = await prisma.user.findUnique({
-    where: { email }
-  });
-
+  const existingUser = await User.findOne({ email });
   if (existingUser) {
     throw new Error("User already exists");
   }
@@ -23,22 +24,20 @@ export const registerUser = async (data: RegisterInput) => {
   // 2. Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // 3. Create user (IMPORTANT: never return password)
-  const user = await prisma.user.create({
-    data: {
-      name,
-      email,
-      password: hashedPassword
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      createdAt: true
-    }
+  // 3. Create user
+  const user = await User.create({
+    name,
+    email,
+    password: hashedPassword
   });
 
-  return user;
+  // 4. Return safe response (no password)
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    createdAt: user.createdAt
+  };
 };
 
 /**
@@ -51,17 +50,13 @@ export const loginUser = async (data: {
   const { email, password } = data;
 
   // 1. Find user
-  const user = await prisma.user.findUnique({
-    where: { email }
-  });
-
+  const user = await User.findOne({ email });
   if (!user) {
     throw new Error("Invalid email or password");
   }
 
   // 2. Compare password
   const isPasswordValid = await bcrypt.compare(password, user.password);
-
   if (!isPasswordValid) {
     throw new Error("Invalid email or password");
   }
@@ -69,7 +64,7 @@ export const loginUser = async (data: {
   // 3. Generate JWT
   const token = jwt.sign(
     {
-      userId: user.id,
+      userId: user._id,
       email: user.email
     },
     JWT_SECRET,

@@ -1,9 +1,12 @@
+import "dotenv/config"; // ✅ MUST be first
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import authRoutes from "./routes/auth.routes";
+import { connectDB } from "./lib/db"; // ✅ MongoDB connection
 
-dotenv.config();
+// Connect to MongoDB
+connectDB();
 
 const app = express();
 
@@ -23,12 +26,19 @@ app.get("/", (req, res) => {
 });
 
 // Global error handler (safe fallback)
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({
-    message: "Something went wrong"
-  });
-});
+app.use(
+  (
+    err: Error,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    console.error(err.stack);
+    res.status(500).json({
+      message: "Something went wrong"
+    });
+  }
+);
 
 // Start server
 app.listen(PORT, () => {
