@@ -14,7 +14,7 @@ export const TravelView = () => {
             <div className="absolute inset-0 -z-0">
             <RealMap /></div>
 
-             <div className="absolute inset-0 pt-24 px-4 pb-24 overflow-y-auto no-scrollbar pointer-events-auto">
+             <div className="absolute inset-0 pt-24 px-4 pb-24 overflow-y-auto no-scrollbar pointer-events-none">
                 <header className="mb-4 relative z-10">
                     <h1 className="text-4xl font-bold mb-2 text-white tracking-tight drop-shadow-md"></h1>
                     <p className="text-zinc-600 text-sm font-medium">Find the best way to your destination.</p>

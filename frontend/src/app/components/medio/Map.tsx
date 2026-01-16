@@ -18,12 +18,14 @@ type RealMapProps = {
   lat?: number;
   lng?: number;
   zoom?: number;
+  markers?: Array<{ lat: number; lng: number; name: string; color?: string }>;
 };
 
 export const RealMap: React.FC<RealMapProps> = ({
   lat = 19.0760,   // default: Mumbai
   lng = 72.8777,
   zoom = 12,
+  markers = [],
 }) => {
   return (
     <div className="absolute inset-0">
@@ -39,12 +41,11 @@ export const RealMap: React.FC<RealMapProps> = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {/* Example marker */}
-        <Marker position={[lat, lng]}>
-          <Popup>
-            You are here 📍
-          </Popup>
-        </Marker>
+        {markers.map((marker, idx) => (
+          <Marker key={idx} position={[marker.lat, marker.lng]}>
+            <Popup>{marker.name}</Popup>
+          </Marker>
+        ))}
       </MapContainer>
     </div>
   );
