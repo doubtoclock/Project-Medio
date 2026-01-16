@@ -3,10 +3,8 @@ import "dotenv/config"; // ✅ MUST be first
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes";
-import { connectDB } from "./lib/db"; // ✅ MongoDB connection
-
-// Connect to MongoDB
-connectDB();
+import placeRoutes from "./routes/place.routes"; // ✅ ADD THIS
+import { connectDB } from "./lib/db";
 
 const app = express();
 
@@ -14,33 +12,41 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Config
-const PORT = process.env.PORT || 5000;
-
 // Routes
 app.use("/auth", authRoutes);
+app.use("/places", placeRoutes); // ✅ ADD THIS
 
 // Health check route
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.json({ message: "Server is running 🚀" });
 });
 
-// Global error handler (safe fallback)
+// Global error handler
 app.use(
   (
     err: Error,
-    req: express.Request,
+    _req: express.Request,
     res: express.Response,
-    next: express.NextFunction
+    _next: express.NextFunction
   ) => {
     console.error(err.stack);
-    res.status(500).json({
-      message: "Something went wrong"
-    });
+    res.status(500).json({ message: "Something went wrong" });
   }
 );
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-});
+const PORT = process.env.PORT || 5000;
+
+// 🚀 START SERVER ONLY AFTER DB CONNECTS
+const startServer = async () => {
+  try {
+    await connectDB(); // ✅ WAIT for MongoDB connection
+    app.listen(PORT, () => {
+      console.log(`✅ Server running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("❌ Failed to start server", error);
+    process.exit(1);
+  }
+};
+
+startServer();

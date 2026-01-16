@@ -1,0 +1,93 @@
+import { Request, Response } from "express";
+import { Place } from "../models/place"; // ✅ lowercase (as per your setup)
+
+/**
+ * CREATE PLACE
+ * POST /places
+ */
+export const createPlace = async (req: Request, res: Response) => {
+  try {
+    const { label, address, lat, lng } = req.body;
+
+    if (!label || !address) {
+      return res.status(400).json({
+        message: "Label and address are required"
+      });
+    }
+
+    const userId = (req as any).user.userId;
+
+    const place = await Place.create({
+      userId,
+      label,
+      address,
+      lat,
+      lng
+    });
+
+    return res.status(201).json({
+      message: "Place saved successfully",
+      place
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Failed to save place"
+    });
+  }
+};
+
+/**
+ * GET MY PLACES
+ * GET /places
+ */
+export const getMyPlaces = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+
+    const places = await Place.find({ userId }).sort({ createdAt: -1 });
+
+    return res.json({
+      count: places.length,
+      places
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Failed to fetch places"
+    });
+  }
+};
+
+/**
+ * DELETE PLACE
+ * DELETE /places/:id
+ */
+export const deletePlace = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const placeId = req.params.id;
+
+    const place = await Place.findOne({
+      _id: placeId,
+      userId
+    });
+
+    if (!place) {
+      return res.status(404).json({
+        message: "Place not found or not authorized"
+      });
+    }
+
+    await Place.deleteOne({ _id: placeId });
+
+    return res.json({
+      message: "Place deleted successfully"
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Failed to delete place"
+    });
+  }
+};
