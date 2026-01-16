@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Navigation, Clock, CreditCard, Star, MapPin } from 'lucide-react';
 import { motion } from "framer-motion";
-import { FakeMap } from './FakeMap';
+import { RealMap } from './Map';
 import { Header } from './Header';
 
 export const TravelView = () => {
@@ -9,13 +9,15 @@ export const TravelView = () => {
 
     return (
         <div className="h-screen bg-zinc-950 text-zinc-100 relative overflow-hidden">
-             <Header />
-             <FakeMap />
+            <Header />
+             {/* Map Background */}
+            <div className="absolute inset-0 -z-0">
+            <RealMap /></div>
 
              <div className="absolute inset-0 pt-24 px-4 pb-24 overflow-y-auto no-scrollbar pointer-events-auto">
                 <header className="mb-4 relative z-10">
                     <h1 className="text-4xl font-bold mb-2 text-white tracking-tight drop-shadow-md"></h1>
-                    <p className="text-zinc-400 text-sm font-medium drop-shadow-md">Find the best way to your destination.</p>
+                    <p className="text-zinc-600 text-sm font-medium">Find the best way to your destination.</p>
                 </header>
 
                 <div className="relative mb-6 group z-10">
