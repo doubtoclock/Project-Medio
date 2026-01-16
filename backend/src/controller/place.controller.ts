@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import { Place } from "../models/place"; // ✅ lowercase (as per your setup)
+import { Place } from "../models/place";          // ✅ lowercase
+import { History } from "../models/history";      // ✅ recent history
 
 /**
  * CREATE PLACE
@@ -23,6 +24,13 @@ export const createPlace = async (req: Request, res: Response) => {
       address,
       lat,
       lng
+    });
+
+    // 🕒 Auto-add to history
+    await History.create({
+      userId,
+      action: "PLACE_CREATED",
+      value: `${label} - ${address}`
     });
 
     return res.status(201).json({
@@ -80,6 +88,13 @@ export const deletePlace = async (req: Request, res: Response) => {
     }
 
     await Place.deleteOne({ _id: placeId });
+
+    // 🕒 Auto-add to history
+    await History.create({
+      userId,
+      action: "PLACE_DELETED",
+      value: place.label
+    });
 
     return res.json({
       message: "Place deleted successfully"
