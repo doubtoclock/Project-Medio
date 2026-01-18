@@ -4,10 +4,10 @@ import { useNavigate } from "react-router-dom";
 export const LoginPage = ({ onLogin }: { onLogin: () => void }) => {
   const navigate = useNavigate();
 
-  const handleGoogleLogin = async () => {
-    // 🔐 Google OAuth logic goes here (Firebase / backend)
-    onLogin();
-    navigate("/meet", { replace: true });
+  const handleGoogleLogin = () => {
+    // 🔁 Redirect-based Google OAuth (full page)
+    window.location.href =
+      "http://localhost:5000/api/auth/google/redirect";
   };
 
   return (

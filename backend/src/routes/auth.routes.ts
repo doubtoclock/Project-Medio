@@ -1,13 +1,31 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { register, login } from "../controller/auth.controller";
+import {
+  register,
+  login,
+  googleRedirectLogin,
+  googleRedirectCallback
+} from "../controller/auth.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 
 const router = Router();
 
+console.log("✅ auth.routes.ts loaded");
+
 /**
  * Auth Routes
- * Base path: /auth
+ * Base path: /api/auth
  */
+
+/* =========================
+   TEST ROUTE (TEMPORARY)
+========================= */
+router.get("/test", (req: Request, res: Response) => {
+  res.send("AUTH ROUTES WORKING");
+});
+
+/* =========================
+   EMAIL / PASSWORD AUTH
+========================= */
 
 // Register
 router.post(
@@ -32,6 +50,20 @@ router.post(
     }
   }
 );
+
+/* =========================
+   GOOGLE AUTH (REDIRECT)
+========================= */
+
+// Step 1: Redirect user to Google login page
+router.get("/google/redirect", googleRedirectLogin);
+
+// Step 2: Google redirects back here
+router.get("/google/callback", googleRedirectCallback);
+
+/* =========================
+   PROTECTED ROUTES
+========================= */
 
 // 🔐 Protected route (JWT required)
 router.get(
