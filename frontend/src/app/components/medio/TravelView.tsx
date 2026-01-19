@@ -69,7 +69,7 @@ export const TravelView = () => {
                     <motion.div 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="mt-8 space-y-4 relative z-10"
+                        className="mt-8 space-y-4 relative z-10 pointer-events-auto"
                     >
                         <div className="flex items-center justify-between">
                             <h2 className="text-xs font-bold uppercase text-zinc-400 tracking-wider bg-black/40 backdrop-blur-md inline-block px-2 py-1 rounded-md">Best Options</h2>

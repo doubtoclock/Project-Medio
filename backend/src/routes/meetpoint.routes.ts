@@ -3,7 +3,7 @@ import { calculateMeetPoint } from "../controller/meetpoint.controller";
 
 const router = Router();
 
-// POST /api/meetpoint
-router.post("/meetpoint", calculateMeetPoint);
+// POST /api/meeting-point
+router.post("/", calculateMeetPoint);
 
 export default router;

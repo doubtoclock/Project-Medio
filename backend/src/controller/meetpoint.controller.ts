@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
-import { getNearbyPlaces } from "../services/osm.service";
-import { calculateMidpoint } from "../utils/midpoint";
-import { scorePlace } from "../utils/distance";
+import { getIsochrone } from "../services/opentripplanner.service";
+import { generateGrid, findEquidistantPoints } from "../utils/grid";
 
 type Point = {
   lat: number;
@@ -18,26 +17,24 @@ export const calculateMeetPoint = async (
       pointB: Point;
     };
 
-    // basic validation
+    // Basic validation
     if (!pointA || !pointB) {
       res.status(400).json({ error: "pointA and pointB are required" });
       return;
     }
 
-    const midpoint = calculateMidpoint(pointA, pointB);
-    const places = await getNearbyPlaces(midpoint);
+    // Fetch isochrones for both points
+    const isochroneA = await getIsochrone(pointA, 30); // 30 minutes travel time
+    const isochroneB = await getIsochrone(pointB, 30);
 
-    const scoredPlaces = places
-      .map((place) => ({
-        ...place,
-        score: scorePlace(place, pointA, pointB)
-      }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
+    // Generate 1km x 1km grid covering the overlapping area
+    const grid = generateGrid(isochroneA, isochroneB);
+
+    // Find equidistant points
+    const equidistantPoints = findEquidistantPoints(grid, pointA, pointB);
 
     res.json({
-      midpoint,
-      bestPlaces: scoredPlaces
+      equidistantPoints,
     });
   } catch (error) {
     console.error(error);

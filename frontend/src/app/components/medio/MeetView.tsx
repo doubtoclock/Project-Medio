@@ -19,7 +19,7 @@ const LOCATION_DATABASE = [
 // Function to fetch suggestions from backend
 const fetchLocationSuggestions = async (query: string) => {
   try {
-    const response = await fetch(`/api/locations/search?q=${encodeURIComponent(query)}`);
+    const response = await fetch(`http://localhost:5001/api/locations/search?q=${encodeURIComponent(query)}`);
     const data = await response.json();
     console.log('Backend suggestions for:', query, 'results:', data);
     return data;
@@ -40,6 +40,7 @@ export const MeetView = () => {
   const [activeField, setActiveField] = useState<'A' | 'B' | null>(null);
   const [suggestionsA, setSuggestionsA] = useState<typeof LOCATION_DATABASE>([]);
   const [suggestionsB, setSuggestionsB] = useState<typeof LOCATION_DATABASE>([]);
+  const [equidistantPoints, setEquidistantPoints] = useState<{ lat: number; lng: number }[]>([]);
 
   // Fetch suggestions when user types
   const handleInputChangeA = async (value: string) => {
@@ -84,18 +85,18 @@ export const MeetView = () => {
     if (!coordsA || !coordsB) return;
 
     console.log('Sending to backend:', { coordsA, coordsB });
-
-    const response = await fetch('/api/meeting-point', {
+    const response = await fetch('http://localhost:5001/api/meeting-point', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        locationA: { name: locA, lat: coordsA.lat, lng: coordsA.lng },
-        locationB: { name: locB, lat: coordsB.lat, lng: coordsB.lng },
+        pointA: { lat: coordsA.lat, lng: coordsA.lng },
+        pointB: { lat: coordsB.lat, lng: coordsB.lng },
       }),
     });
 
     const data = await response.json();
     console.log('Meeting point response:', data);
+    setEquidistantPoints(data.equidistantPoints);
   };
 
   const clearLocation = (type: 'A' | 'B') => {
@@ -120,6 +121,7 @@ export const MeetView = () => {
           markers={[
             ...(coordsA ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA, color: 'green' }] : []),
             ...(coordsB ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB, color: 'red' }] : []),
+            ...equidistantPoints.map((point) => ({ lat: point.lat, lng: point.lng, name: 'Equidistant', color: 'blue' })),
           ]}
         />
       </div>

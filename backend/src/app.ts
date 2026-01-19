@@ -33,6 +33,8 @@ app.use("/api", meetpointRoutes);
 // Place routes (if used)
 app.use("/api/places", placeRoutes);
 
+app.use("/api/meeting-point", meetpointRoutes)
+
 /* =========================
    GLOBAL ERROR HANDLER
 ========================= */
