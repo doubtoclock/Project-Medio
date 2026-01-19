@@ -1,9 +1,9 @@
-import { Router, Request, Response, NextFunction } from "express";
+import { Router, Request, Response } from "express";
 import {
   register,
   login,
   googleRedirectLogin,
-  googleRedirectCallback
+  googleRedirectCallback,
 } from "../controller/auth.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 
@@ -12,14 +12,16 @@ const router = Router();
 console.log("✅ auth.routes.ts loaded");
 
 /**
+ * =========================
  * Auth Routes
  * Base path: /api/auth
+ * =========================
  */
 
 /* =========================
-   TEST ROUTE (TEMPORARY)
+   TEST ROUTE
 ========================= */
-router.get("/test", (req: Request, res: Response) => {
+router.get("/test", (_req: Request, res: Response) => {
   res.send("AUTH ROUTES WORKING");
 });
 
@@ -28,53 +30,45 @@ router.get("/test", (req: Request, res: Response) => {
 ========================= */
 
 // Register
-router.post(
-  "/register",
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      await register(req, res);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
+router.post("/register", register);
 
 // Login
-router.post(
-  "/login",
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      await login(req, res);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
+router.post("/login", login);
 
 /* =========================
-   GOOGLE AUTH (REDIRECT)
+   GOOGLE AUTH (OAUTH)
 ========================= */
 
-// Step 1: Redirect user to Google login page
-router.get("/google/redirect", googleRedirectLogin);
+// STEP 1: Redirect user to Google
+// Frontend hits: GET /api/auth/google
+router.get("/google", googleRedirectLogin);
 
-// Step 2: Google redirects back here
+// STEP 2: Google redirects back here
 router.get("/google/callback", googleRedirectCallback);
 
 /* =========================
    PROTECTED ROUTES
 ========================= */
 
-// 🔐 Protected route (JWT required)
-router.get(
-  "/me",
-  authMiddleware,
-  (req: Request, res: Response) => {
-    res.json({
-      message: "You are authenticated",
-      user: (req as any).user
-    });
-  }
-);
+// 🔐 Check logged-in user
+router.get("/me", authMiddleware, (req: Request, res: Response) => {
+  res.status(200).json({
+    message: "You are authenticated",
+    user: (req as any).user,
+  });
+});
+
+// 🚪 Logout (clear cookie)
+router.post("/logout", (_req: Request, res: Response) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: false, // true in production
+  });
+
+  res.status(200).json({
+    message: "Logged out successfully",
+  });
+});
 
 export default router;

@@ -1,34 +1,43 @@
-import React, { useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import { BottomNav } from "./components/medio/BottomNav";
 import { MeetView } from "./components/medio/MeetView";
 import { TravelView } from "./components/medio/TravelView";
 import { UserGuideView } from "./components/medio/UserGuideView";
+import { ProfileView } from "./components/medio/ProfileView"; // 👈 NEW
 
 import { LoginPage } from "./components/medio/auth/Login";
 import { ProtectedRoute } from "./components/medio/auth/ProtectedRoute";
 
-export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+/**
+ * Layout shown ONLY when user is authenticated
+ */
+const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <>
+      {children}
+      <BottomNav />
+    </>
+  );
+};
 
+export default function App() {
   return (
     <div className="bg-black min-h-screen text-zinc-100 font-sans flex justify-center">
       <main className="min-h-screen w-full mx-auto relative bg-zinc-950 shadow-2xl border-x border-zinc-900 overflow-hidden">
 
         <Routes>
-          {/* LOGIN */}
-          <Route
-            path="/login"
-            element={<LoginPage onLogin={() => setIsAuthenticated(true)} />}
-          />
+          {/* 🔐 LOGIN (PUBLIC) */}
+          <Route path="/login" element={<LoginPage />} />
 
-          {/* PROTECTED ROUTES */}
+          {/* 🔒 PROTECTED APP ROUTES */}
           <Route
             path="/meet"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
-                <MeetView />
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <MeetView />
+                </ProtectedLayout>
               </ProtectedRoute>
             }
           />
@@ -36,8 +45,10 @@ export default function App() {
           <Route
             path="/travel"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
-                <TravelView />
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <TravelView />
+                </ProtectedLayout>
               </ProtectedRoute>
             }
           />
@@ -45,23 +56,30 @@ export default function App() {
           <Route
             path="/guide"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
-                <UserGuideView />
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <UserGuideView />
+                </ProtectedLayout>
               </ProtectedRoute>
             }
           />
 
-          {/* DEFAULT */}
+          {/* 👤 PROFILE (NEW) */}
           <Route
-            path="*"
+            path="/profile"
             element={
-              <Navigate to={isAuthenticated ? "/meet" : "/login"} replace />
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <ProfileView />
+                </ProtectedLayout>
+              </ProtectedRoute>
             }
           />
+
+          {/* 🔁 DEFAULT */}
+          <Route path="*" element={<Navigate to="/meet" replace />} />
         </Routes>
 
-        {/* Bottom nav ONLY when logged in */}
-        {isAuthenticated && <BottomNav />}
       </main>
     </div>
   );

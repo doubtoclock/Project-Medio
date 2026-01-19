@@ -1,39 +1,52 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 import meetpointRoutes from "./routes/meetpoint.routes";
 import authRoutes from "./routes/auth.routes";
-import placeRoutes from "./routes/place.routes"; // if you have this
+import placeRoutes from "./routes/place.routes";
 
 const app = express();
 
 /* =========================
+   APP CONFIG
+========================= */
+
+// 🔒 Needed for secure cookies behind proxies (Render, Railway, etc.)
+app.set("trust proxy", 1);
+
+/* =========================
    MIDDLEWARES
 ========================= */
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173", // frontend URL
+    credentials: true,               // 🔥 allow cookies
+  })
+);
+
 app.use(express.json());
+app.use(cookieParser()); // 🔥 parse JWT from cookies
 
 /* =========================
    HEALTH CHECK
 ========================= */
 app.get("/", (_req: Request, res: Response) => {
-  res.json({ message: "Server is running 🚀" });
+  res.status(200).json({ message: "Server is running 🚀" });
 });
 
 /* =========================
    ROUTES
 ========================= */
 
-// Auth routes (email + Google OAuth)
+// 🔐 Auth routes (login, google oauth, me, logout)
 app.use("/api/auth", authRoutes);
 
-// Meetpoint routes
-app.use("/api", meetpointRoutes);
+// 📍 Meetpoint routes (protected internally)
+app.use("/api/meetpoint", meetpointRoutes);
 
-// Place routes (if used)
+// 📍 Place routes
 app.use("/api/places", placeRoutes);
-
-app.use("/api/meeting-point", meetpointRoutes)
 
 /* =========================
    GLOBAL ERROR HANDLER
@@ -45,7 +58,7 @@ app.use(
     res: Response,
     _next: NextFunction
   ) => {
-    console.error(err.stack);
+    console.error("❌ Error:", err.message);
     res.status(500).json({
       message: "Something went wrong",
     });

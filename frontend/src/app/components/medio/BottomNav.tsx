@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { MapPin, Navigation, Book } from "lucide-react";
+import { MapPin, Navigation, Book, User } from "lucide-react";
 
 /* ---------------- BOTTOM NAV ---------------- */
 
@@ -10,6 +10,8 @@ export const BottomNav = () => {
       <NavItem to="/meet" label="Meet" icon={<MapPin size={24} />} />
       <NavItem to="/travel" label="Travel" icon={<Navigation size={24} />} />
       <NavItem to="/guide" label="Guide" icon={<Book size={24} />} />
+      {/* 👤 PROFILE (NEW) */}
+      <NavItem to="/profile" label="Profile" icon={<User size={24} />} />
     </div>
   );
 };

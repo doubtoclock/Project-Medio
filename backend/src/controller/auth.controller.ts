@@ -13,6 +13,8 @@ const googleClient = new OAuth2Client(
   "http://localhost:5000/api/auth/google/callback"
 );
 
+const JWT_SECRET = process.env.JWT_SECRET as string;
+
 /* =========================
    REGISTER CONTROLLER
 ========================= */
@@ -23,7 +25,7 @@ export const register = async (req: Request, res: Response) => {
     if (!parsed.success) {
       return res.status(400).json({
         message: "Invalid input",
-        errors: parsed.error.flatten().fieldErrors
+        errors: parsed.error.flatten().fieldErrors,
       });
     }
 
@@ -31,12 +33,12 @@ export const register = async (req: Request, res: Response) => {
 
     return res.status(201).json({
       message: "User registered successfully",
-      data: user
+      data: user,
     });
   } catch (error) {
     return res.status(500).json({
       message: "Registration failed",
-      error: (error as Error).message
+      error: (error as Error).message,
     });
   }
 };
@@ -50,20 +52,26 @@ export const login = async (req: Request, res: Response) => {
 
     if (!email || !password) {
       return res.status(400).json({
-        message: "Email and password are required"
+        message: "Email and password are required",
       });
     }
 
     const token = await loginUser({ email, password });
 
+    // ✅ SET JWT COOKIE
+    res.cookie("token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false, // true in production (HTTPS)
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
     return res.status(200).json({
       message: "Login successful",
-      token
     });
   } catch (error) {
     return res.status(401).json({
       message: "Invalid credentials",
-      error: (error as Error).message
     });
   }
 };
@@ -73,13 +81,13 @@ export const login = async (req: Request, res: Response) => {
 ========================= */
 
 /**
- * STEP 1: Redirect user to Google login page
+ * STEP 1: Redirect user to Google
  */
-export const googleRedirectLogin = (req: Request, res: Response) => {
+export const googleRedirectLogin = (_req: Request, res: Response) => {
   const url = googleClient.generateAuthUrl({
     access_type: "offline",
     scope: ["profile", "email"],
-    prompt: "select_account" // 👈 force account chooser
+    prompt: "select_account",
   });
 
   res.redirect(url);
@@ -99,8 +107,8 @@ export const googleRedirectCallback = async (req: Request, res: Response) => {
     const { tokens } = await googleClient.getToken(code as string);
 
     const ticket = await googleClient.verifyIdToken({
-      idToken: tokens.id_token!,
-      audience: process.env.GOOGLE_CLIENT_ID
+      idToken: tokens.id_token as string,
+      audience: process.env.GOOGLE_CLIENT_ID,
     });
 
     const payload = ticket.getPayload();
@@ -109,19 +117,27 @@ export const googleRedirectCallback = async (req: Request, res: Response) => {
       return res.redirect("http://localhost:5173/login?error=google");
     }
 
-    // Create app JWT
+    // ✅ CREATE APP JWT (MATCHES auth.middleware.ts)
     const appToken = jwt.sign(
       {
         email: payload.email,
         name: payload.name,
-        picture: payload.picture
+        picture: payload.picture,
       },
-      process.env.JWT_SECRET as string,
+      JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    // Redirect to frontend with token
-    res.redirect(`http://localhost:5173/meet?token=${appToken}`);
+    // ✅ SET COOKIE
+    res.cookie("token", appToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false, // true in production
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    // 🔥 Redirect back to login with success flag
+    res.redirect("http://localhost:5173/login?login=success");
   } catch (error) {
     console.error("Google OAuth Error:", error);
     res.redirect("http://localhost:5173/login?error=google");

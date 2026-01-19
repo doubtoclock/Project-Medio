@@ -2,8 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
 interface JwtPayload {
-  userId: string;
   email: string;
+  name?: string;
+  picture?: string;
 }
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
@@ -14,24 +15,24 @@ export const authMiddleware = (
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization;
+    // 🔥 READ JWT FROM COOKIE
+    const token = req.cookies?.token;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Unauthorized" });
+    if (!token) {
+      return res.status(401).json({
+        message: "Not authenticated",
+      });
     }
-
-    const token = authHeader.split(" ")[1];
 
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
 
     // Attach user info to request
-    (req as any).user = {
-      userId: decoded.userId,
-      email: decoded.email
-    };
+    (req as any).user = decoded;
 
     next();
   } catch (error) {
-    return res.status(401).json({ message: "Invalid or expired token" });
+    return res.status(401).json({
+      message: "Invalid or expired token",
+    });
   }
 };
