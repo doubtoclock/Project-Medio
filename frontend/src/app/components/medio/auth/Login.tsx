@@ -8,7 +8,7 @@ export const LoginPage = () => {
 
   // 🔐 If already logged in, go directly to /meet
   useEffect(() => {
-    fetch("http://localhost:5000/api/auth/me", {
+    fetch("http://localhost:5001/api/auth/me", {
       credentials: "include",
     })
       .then((res) => {
@@ -20,7 +20,7 @@ export const LoginPage = () => {
   }, [navigate]);
 
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:5000/api/auth/google";
+    window.location.href = "http://localhost:5001/api/auth/google";
   };
 
   const handleContinue = () => {

@@ -12,7 +12,7 @@ export const ProtectedRoute = ({
   useEffect(() => {
     let isMounted = true;
 
-    fetch("http://localhost:5000/api/auth/me", {
+    fetch("http://localhost:5001/api/auth/me", {
       credentials: "include", // 🔥 REQUIRED for cookie auth
     })
       .then((res) => {

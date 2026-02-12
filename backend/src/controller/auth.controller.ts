@@ -10,7 +10,7 @@ import jwt from "jsonwebtoken";
 const googleClient = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  "http://localhost:5000/api/auth/google/callback"
+  "http://localhost:5001/api/auth/google/callback"
 );
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
