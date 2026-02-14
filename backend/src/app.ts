@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import meetpointRoutes from "./routes/meetpoint.routes";
 import authRoutes from "./routes/auth.routes";
 import placeRoutes from "./routes/place.routes";
+import searchRoutes from "./routes/search.routes";
 
 const app = express();
 
@@ -47,6 +48,9 @@ app.use("/api/meetpoint", meetpointRoutes);
 
 // 📍 Place routes
 app.use("/api/places", placeRoutes);
+
+// 🔍 Search routes
+app.use("/api/search", searchRoutes);
 
 /* =========================
    GLOBAL ERROR HANDLER

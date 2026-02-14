@@ -1,73 +1,105 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, MapPin, X } from 'lucide-react';
 import { Header } from './Header';
 import { RealMap } from './Map';
 
-// Mock location database
-const LOCATION_DATABASE = [
-  { name: 'Gateway of India', lat: 18.9220, lng: 72.8347 },
-  { name: 'Marine Drive', lat: 18.9432, lng: 72.8236 },
-  { name: 'Bandra', lat: 19.0596, lng: 72.8295 },
-  { name: 'Colaba', lat: 18.9387, lng: 72.8353 },
-  { name: 'Fort', lat: 18.9629, lng: 72.8354 },
-  { name: 'Dadar', lat: 19.0176, lng: 72.8479 },
-  { name: 'Andheri', lat: 19.1136, lng: 72.8697 },
-  { name: 'Churchgate', lat: 18.9566, lng: 72.8194 },
-];
+interface LocationResult {
+  name: string;
+  lat: number;
+  lng: number;
+}
 
 // Function to fetch suggestions from backend
 const fetchLocationSuggestions = async (query: string) => {
   try {
-    const response = await fetch(`http://localhost:5001/api/locations/search?q=${encodeURIComponent(query)}`);
+    const response = await fetch(`http://localhost:5001/api/search?q=${encodeURIComponent(query)}`);
+
+    if (!response.ok) return [];
+
     const data = await response.json();
-    console.log('Backend suggestions for:', query, 'results:', data);
     return data;
   } catch (error) {
-    console.error('Error fetching suggestions:', error);
-    // Fallback to mock data
-    return LOCATION_DATABASE.filter(loc => 
-      loc.name.toLowerCase().includes(query.toLowerCase())
-    );
+    console.error("Error fetching suggestions:", error);
+    return [];
   }
 };
 
 export const MeetView = () => {
   const [locA, setLocA] = useState('');
   const [locB, setLocB] = useState('');
-  const [coordsA, setCoordsA] = useState<{lat: number, lng: number} | null>(null);
-  const [coordsB, setCoordsB] = useState<{lat: number, lng: number} | null>(null);
+  const [debouncedA, setDebouncedA] = useState('');
+  const [debouncedB, setDebouncedB] = useState('');
+
+  const [coordsA, setCoordsA] = useState<{ lat: number; lng: number } | null>(null);
+  const [coordsB, setCoordsB] = useState<{ lat: number; lng: number } | null>(null);
+
   const [activeField, setActiveField] = useState<'A' | 'B' | null>(null);
-  const [suggestionsA, setSuggestionsA] = useState<typeof LOCATION_DATABASE>([]);
-  const [suggestionsB, setSuggestionsB] = useState<typeof LOCATION_DATABASE>([]);
+
+  const [suggestionsA, setSuggestionsA] = useState<LocationResult[]>([]);
+  const [suggestionsB, setSuggestionsB] = useState<LocationResult[]>([]);
+
   const [equidistantPoints, setEquidistantPoints] = useState<{ lat: number; lng: number }[]>([]);
 
-  // Fetch suggestions when user types
-  const handleInputChangeA = async (value: string) => {
-    setLocA(value);
-    setActiveField('A');
-    
-    if (value.length > 0) {
-      const results = await fetchLocationSuggestions(value);
-      setSuggestionsA(results);
+  useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedA(locA);
+  }, 400);
+
+  return () => clearTimeout(timer);
+}, [locA]);
+
+useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedB(locB);
+  }, 400);
+
+  return () => clearTimeout(timer);
+}, [locB]);
+
+  useEffect(() => {
+  if (debouncedA.length > 2) {
+      fetchLocationSuggestions(debouncedA).then(setSuggestionsA);
     } else {
       setSuggestionsA([]);
     }
-  };
+  }, [debouncedA]);
 
-  const handleInputChangeB = async (value: string) => {
-    setLocB(value);
-    setActiveField('B');
-    
-    if (value.length > 0) {
-      const results = await fetchLocationSuggestions(value);
-      setSuggestionsB(results);
+  useEffect(() => {
+    if (debouncedB.length > 2) {
+      fetchLocationSuggestions(debouncedB).then(setSuggestionsB);
     } else {
       setSuggestionsB([]);
     }
+  }, [debouncedB]);
+
+  useEffect(() => {
+  if (debouncedA.length > 2) {
+    fetchLocationSuggestions(debouncedA).then(setSuggestionsA);
+  } else {
+    setSuggestionsA([]);
+  }
+}, [debouncedA]);
+
+useEffect(() => {
+  if (debouncedB.length > 2) {
+    fetchLocationSuggestions(debouncedB).then(setSuggestionsB);
+  } else {
+    setSuggestionsB([]);
+  }
+}, [debouncedB]);
+
+  const handleInputChangeA = (value: string) => {
+    setLocA(value);
+    setActiveField('A');
   };
 
-  const handleSelectLocation = (location: typeof LOCATION_DATABASE[0], type: 'A' | 'B') => {
+  const handleInputChangeB = (value: string) => {
+    setLocB(value);
+    setActiveField('B');
+  };
+
+  const handleSelectLocation = (location: LocationResult, type: 'A' | 'B')  => {
     console.log('Selected location:', location, 'Type:', type);
     if (type === 'A') {
       setLocA(location.name);
@@ -156,7 +188,7 @@ export const MeetView = () => {
               <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-800 border border-zinc-700 rounded-lg overflow-hidden shadow-lg z-50">
                 {suggestionsA.map((location) => (
                   <button
-                    key={location.name}
+                    key={`${location.name}-${location.lat}`}
                     onClick={() => handleSelectLocation(location, 'A')}
                     className="w-full px-4 py-3 text-left text-sm text-zinc-100 hover:bg-zinc-700 transition-colors flex items-center gap-2 border-b border-zinc-700 last:border-b-0"
                   >
@@ -194,7 +226,7 @@ export const MeetView = () => {
               <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-800 border border-zinc-700 rounded-lg overflow-hidden shadow-lg z-50">
                 {suggestionsB.map((location) => (
                   <button
-                    key={location.name}
+                    key={`${location.name}-${location.lat}`}
                     onClick={() => handleSelectLocation(location, 'B')}
                     className="w-full px-4 py-3 text-left text-sm text-zinc-100 hover:bg-zinc-700 transition-colors flex items-center gap-2 border-b border-zinc-700 last:border-b-0"
                   >

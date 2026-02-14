@@ -23,63 +23,58 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
 
 export default function App() {
   return (
-    <div className="bg-black min-h-screen text-zinc-100 font-sans overflow-hidden">
-      <div className="max-w-md mx-auto min-h-screen bg-zinc-950 relative shadow-2xl">
-        <Routes>
-          {/* 🔐 LOGIN (PUBLIC) */}
-          <Route path="/login" element={<LoginPage />} />
+    <div className="bg-zinc-950 min-h-screen text-zinc-100 font-sans overflow-x-hidden">
+      <Routes>
+        {/* 🔐 LOGIN (PUBLIC) */}
+        <Route path="/login" element={<LoginPage />} />
 
-          {/* 🔒 PROTECTED APP ROUTES */}
-          <Route
-            path="/meet"
-            element={
-              <ProtectedRoute>
-                <ProtectedLayout>
-                  <MeetView />
-                </ProtectedLayout>
-              </ProtectedRoute>
-            }
-          />
+        {/* 🔒 PROTECTED ROUTES */}
+        <Route
+          path="/meet"
+          element={
+            <ProtectedRoute>
+              <ProtectedLayout>
+                <MeetView />
+              </ProtectedLayout>
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/travel"
-            element={
-              <ProtectedRoute>
-                <ProtectedLayout>
-                  <TravelView />
-                </ProtectedLayout>
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/travel"
+          element={
+            <ProtectedRoute>
+              <ProtectedLayout>
+                <TravelView />
+              </ProtectedLayout>
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/guide"
-            element={
-              <ProtectedRoute>
-                <ProtectedLayout>
-                  <UserGuideView />
-                </ProtectedLayout>
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/guide"
+          element={
+            <ProtectedRoute>
+              <ProtectedLayout>
+                <UserGuideView />
+              </ProtectedLayout>
+            </ProtectedRoute>
+          }
+        />
 
-          {/* 👤 PROFILE (NEW) */}
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProtectedLayout>
-                  <ProfileView />
-                </ProtectedLayout>
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProtectedLayout>
+                <ProfileView />
+              </ProtectedLayout>
+            </ProtectedRoute>
+          }
+        />
 
-          {/* 🔁 DEFAULT */}
-          <Route path="*" element={<Navigate to="/meet" replace />} />
-        </Routes>
-
-      </div>
+        <Route path="*" element={<Navigate to="/meet" replace />} />
+      </Routes>
     </div>
   );
 }
