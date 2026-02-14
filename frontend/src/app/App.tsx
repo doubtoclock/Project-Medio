@@ -23,9 +23,8 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
 
 export default function App() {
   return (
-    <div className="bg-black min-h-screen text-zinc-100 font-sans flex justify-center">
-      <main className="min-h-screen w-full mx-auto relative bg-zinc-950 shadow-2xl border-x border-zinc-900 overflow-hidden">
-
+    <div className="bg-black min-h-screen text-zinc-100 font-sans overflow-hidden">
+      <div className="max-w-md mx-auto min-h-screen bg-zinc-950 relative shadow-2xl">
         <Routes>
           {/* 🔐 LOGIN (PUBLIC) */}
           <Route path="/login" element={<LoginPage />} />
@@ -80,7 +79,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/meet" replace />} />
         </Routes>
 
-      </main>
+      </div>
     </div>
   );
 }

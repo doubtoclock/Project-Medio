@@ -143,3 +143,18 @@ export const googleRedirectCallback = async (req: Request, res: Response) => {
     res.redirect("http://localhost:5173/login?error=google");
   }
 };
+
+/* =========================
+   LOGOUT CONTROLLER
+========================= */
+export const logout = (_req: Request, res: Response) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: false, // true in production
+  });
+
+  return res.status(200).json({
+    message: "Logged out successfully",
+  });
+};

@@ -2,6 +2,7 @@ import "dotenv/config";
 
 import app from "./app";
 import { connectDB } from "./lib/db";
+import cookieParser from "cookie-parser";
 
 const PORT = Number(process.env.PORT) || 5001;
 
