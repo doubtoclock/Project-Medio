@@ -73,22 +73,6 @@ useEffect(() => {
     }
   }, [debouncedB]);
 
-  useEffect(() => {
-  if (debouncedA.length > 2) {
-    fetchLocationSuggestions(debouncedA).then(setSuggestionsA);
-  } else {
-    setSuggestionsA([]);
-  }
-}, [debouncedA]);
-
-useEffect(() => {
-  if (debouncedB.length > 2) {
-    fetchLocationSuggestions(debouncedB).then(setSuggestionsB);
-  } else {
-    setSuggestionsB([]);
-  }
-}, [debouncedB]);
-
   const handleInputChangeA = (value: string) => {
     setLocA(value);
     setActiveField('A');

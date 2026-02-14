@@ -6,6 +6,7 @@ import meetpointRoutes from "./routes/meetpoint.routes";
 import authRoutes from "./routes/auth.routes";
 import placeRoutes from "./routes/place.routes";
 import searchRoutes from "./routes/search.routes";
+import otpRoutes from "./routes/otp.routes";
 
 const app = express();
 
@@ -51,6 +52,9 @@ app.use("/api/places", placeRoutes);
 
 // 🔍 Search routes
 app.use("/api/search", searchRoutes);
+
+//otp routes
+app.use("/api/otp", otpRoutes);
 
 /* =========================
    GLOBAL ERROR HANDLER
