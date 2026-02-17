@@ -6,7 +6,7 @@ import meetpointRoutes from "./routes/meetpoint.routes";
 import authRoutes from "./routes/auth.routes";
 import placeRoutes from "./routes/place.routes";
 import searchRoutes from "./routes/search.routes";
-import otpRoutes from "./routes/otp.routes";
+import routeRoutes from "./routes/route.routes"; // ✅ FIXED IMPORT
 
 const app = express();
 
@@ -14,7 +14,7 @@ const app = express();
    APP CONFIG
 ========================= */
 
-// 🔒 Needed for secure cookies behind proxies (Render, Railway, etc.)
+// 🔒 Needed for secure cookies behind proxies
 app.set("trust proxy", 1);
 
 /* =========================
@@ -22,13 +22,13 @@ app.set("trust proxy", 1);
 ========================= */
 app.use(
   cors({
-    origin: "http://localhost:5173", // frontend URL
-    credentials: true,               // 🔥 allow cookies
+    origin: "http://localhost:5173",
+    credentials: true,
   })
 );
 
 app.use(express.json());
-app.use(cookieParser()); // 🔥 parse JWT from cookies
+app.use(cookieParser());
 
 /* =========================
    HEALTH CHECK
@@ -41,10 +41,10 @@ app.get("/", (_req: Request, res: Response) => {
    ROUTES
 ========================= */
 
-// 🔐 Auth routes (login, google oauth, me, logout)
+// 🔐 Auth routes
 app.use("/api/auth", authRoutes);
 
-// 📍 Meetpoint routes (protected internally)
+// 📍 Meetpoint routes
 app.use("/api/meetpoint", meetpointRoutes);
 
 // 📍 Place routes
@@ -53,8 +53,8 @@ app.use("/api/places", placeRoutes);
 // 🔍 Search routes
 app.use("/api/search", searchRoutes);
 
-//otp routes
-app.use("/api/otp", otpRoutes);
+// ✅ OTP route (correct file now)
+app.use("/api/otp", routeRoutes);
 
 /* =========================
    GLOBAL ERROR HANDLER

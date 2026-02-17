@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Search, MapPin, X } from "lucide-react";
-import { motion } from "framer-motion";
 import { RealMap } from "./Map";
 import { Header } from "./Header";
 
@@ -72,9 +70,9 @@ export const TravelView = () => {
 
   const handleRoute = async () => {
     if (!coordsA || !coordsB) return;
-  
+
     setLoading(true);
-  
+
     try {
       const res = await fetch("http://localhost:5001/api/otp/route", {
         method: "POST",
@@ -86,10 +84,13 @@ export const TravelView = () => {
           to: { lat: coordsB.lat, lng: coordsB.lng },
         }),
       });
-  
+
       const data = await res.json();
-      console.log("OTP route result:", data);
-  
+      //console.log("OTP route result:", data);
+      console.log("FULL RESPONSE:", data);
+      console.log("PLAN DIRECT:", data.plan);
+      console.log("PLAN IN DATA:", data.data?.plan);
+
       setRouteData(data);
     } catch (err) {
       console.error("Route error:", err);
@@ -125,6 +126,7 @@ export const TravelView = () => {
               ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB }]
               : []),
           ]}
+          routeData={routeData}
         />
       </div>
 
@@ -186,12 +188,12 @@ export const TravelView = () => {
 
         {coordsA && coordsB && (
           <button
-          onClick={handleRoute}
-          className="w-full bg-emerald-600 py-3 rounded-xl font-medium disabled:opacity-50"
-          disabled={loading}
-        >
-          {loading ? "Finding Route..." : "Find Route"}
-        </button>
+            onClick={handleRoute}
+            className="w-full bg-emerald-600 py-3 rounded-xl font-medium disabled:opacity-50"
+            disabled={loading}
+          >
+            {loading ? "Finding Route..." : "Find Route"}
+          </button>
         )}
       </div>
     </div>

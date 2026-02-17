@@ -3,6 +3,6 @@ import { getRouteFromOTP } from "../controller/route.controller";
 
 const router = express.Router();
 
-router.get("/route", getRouteFromOTP);
+router.post("/route", getRouteFromOTP);
 
 export default router;

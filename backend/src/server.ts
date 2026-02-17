@@ -15,7 +15,7 @@ const startServer = async () => {
     // Enable CORS (important for frontend connection)
     app.use(
       cors({
-        origin: "http://localhost:3000", // frontend port
+        origin: "http://localhost:5173", // frontend port
         credentials: true,
       })
     );
