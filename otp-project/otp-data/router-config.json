@@ -1,0 +1,12 @@
+{
+  "routingDefaults": {
+    "numItineraries": 5
+  },
+  "transit": {
+    "stopTransferCost": 0
+  },
+  "api": {
+    "enableGraphQl": true,
+    "enableRestApi": true
+  }
+}

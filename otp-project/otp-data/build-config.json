@@ -1,0 +1,16 @@
+{
+  "osm": [
+    {
+      "source": "mumbai.osm.pbf"
+    }
+  ],
+  "transitFeeds": [
+    {
+      "type": "gtfs",
+      "source": "GTFS"
+    }
+  ],
+  "streetLinking": {
+    "maxLinkDistance": 5000
+  }
+}

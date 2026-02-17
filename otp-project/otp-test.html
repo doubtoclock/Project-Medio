@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Half Way - Metro Route</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input { width: 300px; padding: 8px; margin: 5px 0; }
+    button { padding: 8px 15px; }
+    #results { margin-top: 20px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+
+<h2>Half Way - Metro Route</h2>
+
+<label>From:</label><br>
+<input type="text" id="from" placeholder="Andheri"><br>
+
+<label>To:</label><br>
+<input type="text" id="to" placeholder="Ghatkopar"><br>
+
+<button onclick="planRoute()">Find Route</button>
+
+<div id="results"></div>
+
+<script>
+
+// 🚇 Your GTFS Metro Stops
+const stations = {
+  "Andheri": { lat: 19.120834697188066, lon: 72.8488244593078 },
+  "Ghatkopar": { lat: 19.086981962227256, lon: 72.90813999744641 },
+  "Versova": { lat: 19.13045665448233, lon: 72.82141562443434 },
+  "Dahisar East": { lat: 19.25113, lon: 72.86681 }
+};
+
+async function planRoute() {
+
+  const fromName = document.getElementById("from").value.trim();
+  const toName = document.getElementById("to").value.trim();
+
+  if (!stations[fromName] || !stations[toName]) {
+    alert("Station not found in database.");
+    return;
+  }
+
+  const from = stations[fromName];
+  const to = stations[toName];
+
+  // ⏰ Use current time automatically
+  const now = new Date();
+  const date = now.toISOString().split("T")[0];
+  const time = now.toTimeString().split(" ")[0].substring(0,5);
+
+  const query = {
+    query: `
+      query {
+        plan(
+          from: { lat: ${from.lat}, lon: ${from.lon} }
+          to: { lat: ${to.lat}, lon: ${to.lon} }
+          date: "${date}"
+          time: "${time}"
+          arriveBy: false
+          transportModes: [
+            { mode: WALK },
+            { mode: RAIL }
+          ]
+        ) {
+          itineraries {
+            duration
+            legs {
+              mode
+              from { name }
+              to { name }
+            }
+          }
+        }
+      }
+    `
+  };
+
+  try {
+    const response = await fetch(
+      "http://localhost:8080/otp/routers/default/index/graphql",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(query)
+      }
+    );
+
+    const result = await response.json();
+
+    if (!result.data.plan.itineraries.length) {
+      document.getElementById("results").textContent =
+        "No transit found. Possibly outside service time or stops not linked.";
+      return;
+    }
+
+    document.getElementById("results").textContent =
+      JSON.stringify(result, null, 2);
+
+  } catch (error) {
+    document.getElementById("results").textContent =
+      "Error connecting to OTP server.";
+  }
+}
+
+</script>
+
+</body>
+</html>

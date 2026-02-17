@@ -1,0 +1,9 @@
+{
+  "otpFeatures": {
+    "SandboxAPIGeocoder": true
+  },
+  "geocoder": {
+    "type": "nominatim",
+    "url": "https://nominatim.openstreetmap.org/"
+  }
+}
