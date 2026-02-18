@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
-import meetpointRoutes from "./routes/meetpoint.routes";
+import meetRoutes from "./routes/meet.routes";
 import authRoutes from "./routes/auth.routes";
 import placeRoutes from "./routes/place.routes";
 import searchRoutes from "./routes/search.routes";
@@ -45,7 +45,7 @@ app.get("/", (_req: Request, res: Response) => {
 app.use("/api/auth", authRoutes);
 
 // 📍 Meetpoint routes
-app.use("/api/meetpoint", meetpointRoutes);
+app.use("/api/meet", meetRoutes);
 
 // 📍 Place routes
 app.use("/api/places", placeRoutes);

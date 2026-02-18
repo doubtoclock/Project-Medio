@@ -30,9 +30,10 @@ export const MeetView = () => {
   const [locB, setLocB] = useState('');
   const [debouncedA, setDebouncedA] = useState('');
   const [debouncedB, setDebouncedB] = useState('');
+  const buffer=10;//10 minutes buffer in midpoint
 
-  const [coordsA, setCoordsA] = useState<{ lat: number; lng: number } | null>(null);
-  const [coordsB, setCoordsB] = useState<{ lat: number; lng: number } | null>(null);
+  const [coordsA, setCoordsA] = useState<LocationResult | null>(null);
+  const [coordsB, setCoordsB] = useState<LocationResult | null>(null);
 
   const [activeField, setActiveField] = useState<'A' | 'B' | null>(null);
 
@@ -85,13 +86,14 @@ useEffect(() => {
 
   const handleSelectLocation = (location: LocationResult, type: 'A' | 'B')  => {
     console.log('Selected location:', location, 'Type:', type);
+    console.log('Coordinates:', { lat: location.lat, lng: location.lng });
     if (type === 'A') {
       setLocA(location.name);
-      setCoordsA({ lat: location.lat, lng: location.lng });
+      setCoordsA(location);
       setSuggestionsA([]);
     } else {
       setLocB(location.name);
-      setCoordsB({ lat: location.lat, lng: location.lng });
+      setCoordsB(location);
       setSuggestionsB([]);
     }
     setActiveField(null);
@@ -101,9 +103,11 @@ useEffect(() => {
     if (!coordsA || !coordsB) return;
 
     console.log('Sending to backend:', { coordsA, coordsB });
-    const response = await fetch('http://localhost:5001/api/meeting-point', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    console.log('Point A coordinates:', { lat: coordsA.lat, lng: coordsA.lng });
+    console.log('Point B coordinates:', { lat: coordsB.lat, lng: coordsB.lng });
+    const response = await fetch("http://localhost:5001/api/meet/candidates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         pointA: { lat: coordsA.lat, lng: coordsA.lng },
         pointB: { lat: coordsB.lat, lng: coordsB.lng },
@@ -112,7 +116,6 @@ useEffect(() => {
 
     const data = await response.json();
     console.log('Meeting point response:', data);
-    setEquidistantPoints(data.equidistantPoints);
   };
 
   const clearLocation = (type: 'A' | 'B') => {
