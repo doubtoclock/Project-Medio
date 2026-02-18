@@ -13,10 +13,10 @@ export const getRouteFromOTP = async (req: Request, res: Response) => {
 
     const graphqlQuery = {
       query: `
-        {
+        query Plan($fromLat: Float!, $fromLon: Float!, $toLat: Float!, $toLon: Float!) {
           plan(
-            from: { lat: ${from.lat}, lon: ${from.lng} }
-            to: { lat: ${to.lat}, lon: ${to.lng} }
+            from: { lat: $fromLat, lon: $fromLon }
+            to: { lat: $toLat, lon: $toLon }
             transportModes: [
               { mode: WALK }
               { mode: TRANSIT }
@@ -29,8 +29,23 @@ export const getRouteFromOTP = async (req: Request, res: Response) => {
               endTime
               legs {
                 mode
+                distance
                 startTime
                 endTime
+
+                from {
+                  name
+                }
+
+                to {
+                  name
+                }
+
+                route {
+                  shortName
+                  longName
+                }
+
                 legGeometry {
                   points
                 }
@@ -39,6 +54,12 @@ export const getRouteFromOTP = async (req: Request, res: Response) => {
           }
         }
       `,
+      variables: {
+        fromLat: from.lat,
+        fromLon: from.lng,
+        toLat: to.lat,
+        toLon: to.lng,
+      },
     };
 
     const otpResponse = await axios.post(
@@ -51,19 +72,22 @@ export const getRouteFromOTP = async (req: Request, res: Response) => {
       }
     );
 
+    // Debug first leg safely
+    const firstLeg =
+      otpResponse.data?.data?.plan?.itineraries?.[0]?.legs?.[0];
+
     console.log(
-      "RAW OTP GRAPHQL:",
-      JSON.stringify(
-        otpResponse.data?.data?.plan?.itineraries?.[0]?.legs?.[0],
-        null,
-        2
-      )
+      "RAW OTP LEG:",
+      JSON.stringify(firstLeg, null, 2)
     );
 
     return res.json(otpResponse.data);
 
   } catch (error: any) {
-    console.error("OTP GRAPHQL ERROR:", error.response?.data || error.message);
+    console.error(
+      "OTP GRAPHQL ERROR:",
+      error.response?.data || error.message
+    );
 
     return res.status(500).json({
       message: "Failed to fetch route from OTP",

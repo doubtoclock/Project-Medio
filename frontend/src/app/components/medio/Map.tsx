@@ -1,10 +1,16 @@
 "use client";
 import React, { useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Polyline,
+} from "react-leaflet";
 import L from "leaflet";
 import polyline from "@mapbox/polyline";
 
-// Fix default marker icon issue in React
+// Fix default marker icon issue
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -19,39 +25,43 @@ type RealMapProps = {
   lat?: number;
   lng?: number;
   zoom?: number;
-  markers?: Array<{ lat: number; lng: number; name: string; color?: string }>;
+  markers?: Array<{ lat: number; lng: number; name: string }>;
   routeData?: any;
+  selectedIndex?: number; // 🔥 NEW
 };
 
 export const RealMap: React.FC<RealMapProps> = ({
-  lat = 19.0760,
+  lat = 19.076,
   lng = 72.8777,
   zoom = 12,
   markers = [],
   routeData,
+  selectedIndex = 0, // default first route
 }) => {
-
   const decodedLines = useMemo(() => {
-    const lines: [number, number][][] = [];
+    const lines: {
+      positions: [number, number][];
+      mode: string;
+    }[] = [];
 
-    // 🔥 GraphQL structure
     const plan = routeData?.data?.plan;
-
     if (!plan) return lines;
 
-    if (plan.itineraries && plan.itineraries.length > 0) {
-      const legs = plan.itineraries[0].legs;
+    const itinerary = plan.itineraries?.[selectedIndex];
+    if (!itinerary) return lines;
 
-      legs.forEach((leg: any) => {
-        if (leg?.legGeometry?.points) {
-          const decoded = polyline.decode(leg.legGeometry.points);
-          lines.push(decoded as [number, number][]);
-        }
-      });
-    }
+    itinerary.legs.forEach((leg: any) => {
+      if (leg?.legGeometry?.points) {
+        const decoded = polyline.decode(leg.legGeometry.points);
+        lines.push({
+          positions: decoded as [number, number][],
+          mode: leg.mode,
+        });
+      }
+    });
 
     return lines;
-  }, [routeData]);
+  }, [routeData, selectedIndex]);
 
   return (
     <div className="absolute inset-0">
@@ -62,7 +72,7 @@ export const RealMap: React.FC<RealMapProps> = ({
         className="h-full w-full"
       >
         <TileLayer
-          attribution="©️ OpenStreetMap contributors"
+          attribution="© OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
@@ -73,12 +83,22 @@ export const RealMap: React.FC<RealMapProps> = ({
           </Marker>
         ))}
 
-        {/* Route */}
+        {/* Route with Different Colors */}
         {decodedLines.map((line, index) => (
           <Polyline
             key={index}
-            positions={line}
-            pathOptions={{ color: "#10b981", weight: 5 }}
+            positions={line.positions}
+            pathOptions={{
+              color:
+                line.mode === "WALK"
+                  ? "#6b7280" // Gray for walking
+                  : line.mode === "SUBWAY"
+                  ? "#10b981" // Green for metro
+                  : line.mode === "BUS"
+                  ? "#3b82f6" // Blue for bus
+                  : "#ef4444", // Fallback red
+              weight: 5,
+            }}
           />
         ))}
       </MapContainer>
