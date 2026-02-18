@@ -1,6 +1,7 @@
 {
   "otpFeatures": {
-    "SandboxAPIGeocoder": true
+    "SandboxAPIGeocoder": true,
+    "SandboxAPITravelTime": true
   },
   "geocoder": {
     "type": "nominatim",
