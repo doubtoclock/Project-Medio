@@ -278,7 +278,7 @@ export const TravelView = () => {
 
     {/* Expandable Content */}
     {isExpanded && (
-      <div className="px-4 pb-4 overflow-y-auto h-[calc(75vh-80px)]">
+      <div className="px-4 pb-24 overflow-y-auto h-[calc(75vh-100px)]">
         {steps?.map((step: any, index: number) => (
           <div
             key={index}

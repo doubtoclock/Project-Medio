@@ -21,13 +21,21 @@ L.Icon.Default.mergeOptions({
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
+/* 🔥 Metro Line → Color Mapping (MATCH YOUR REAL ROUTE NAMES) */
+const metroLineColors: Record<string, string> = {
+  L1: "#2563eb",   // Blue
+  L2A: "#facc15",  // Yellow
+  L3: "#06b6d4",   // Aqua
+  L7: "#ef4444",   // Red
+};
+
 type RealMapProps = {
   lat?: number;
   lng?: number;
   zoom?: number;
   markers?: Array<{ lat: number; lng: number; name: string }>;
   routeData?: any;
-  selectedIndex?: number; // 🔥 NEW
+  selectedIndex?: number;
 };
 
 export const RealMap: React.FC<RealMapProps> = ({
@@ -36,12 +44,13 @@ export const RealMap: React.FC<RealMapProps> = ({
   zoom = 12,
   markers = [],
   routeData,
-  selectedIndex = 0, // default first route
+  selectedIndex = 0,
 }) => {
   const decodedLines = useMemo(() => {
     const lines: {
       positions: [number, number][];
       mode: string;
+      routeName: string;
     }[] = [];
 
     const plan = routeData?.data?.plan;
@@ -53,9 +62,12 @@ export const RealMap: React.FC<RealMapProps> = ({
     itinerary.legs.forEach((leg: any) => {
       if (leg?.legGeometry?.points) {
         const decoded = polyline.decode(leg.legGeometry.points);
+
         lines.push({
           positions: decoded as [number, number][],
           mode: leg.mode,
+          routeName:
+            (leg.route?.shortName || leg.route?.longName || "").toUpperCase(),
         });
       }
     });
@@ -83,7 +95,7 @@ export const RealMap: React.FC<RealMapProps> = ({
           </Marker>
         ))}
 
-        {/* Route with Different Colors */}
+        {/* 🔥 Smart Route Coloring */}
         {decodedLines.map((line, index) => (
           <Polyline
             key={index}
@@ -91,13 +103,11 @@ export const RealMap: React.FC<RealMapProps> = ({
             pathOptions={{
               color:
                 line.mode === "WALK"
-                  ? "#6b7280" // Gray for walking
-                  : line.mode === "SUBWAY"
-                  ? "#10b981" // Green for metro
-                  : line.mode === "BUS"
-                  ? "#3b82f6" // Blue for bus
-                  : "#ef4444", // Fallback red
-              weight: 5,
+                  ? "#a855f7" // Purple walking
+                  : metroLineColors[line.routeName]
+                  ? metroLineColors[line.routeName]
+                  : "#10b981", // Fallback green
+              weight: 6,
             }}
           />
         ))}
