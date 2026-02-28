@@ -5,19 +5,40 @@ import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 
 /* =========================
+   ENV HELPERS
+========================= */
+
+// Detect environment safely
+const isCodespace =
+  process.env.CODESPACE_NAME &&
+  process.env.CODESPACE_NAME.length > 0;
+
+// Frontend URL
+const FRONTEND_URL = isCodespace
+  ? `https://${process.env.CODESPACE_NAME}-5173.app.github.dev`
+  : "http://localhost:5173";
+
+// Backend URL
+const BACKEND_URL = isCodespace
+  ? `https://${process.env.CODESPACE_NAME}-5001.app.github.dev`
+  : "http://localhost:5001";
+
+/* =========================
    GOOGLE OAUTH CLIENT
 ========================= */
+
 const googleClient = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  "http://localhost:5001/api/auth/google/callback"
+  `${BACKEND_URL}/api/auth/google/callback`
 );
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
 /* =========================
-   REGISTER CONTROLLER
+   REGISTER
 ========================= */
+
 export const register = async (req: Request, res: Response) => {
   try {
     const parsed = registerSchema.safeParse(req.body);
@@ -44,8 +65,9 @@ export const register = async (req: Request, res: Response) => {
 };
 
 /* =========================
-   LOGIN CONTROLLER
+   LOGIN
 ========================= */
+
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -58,18 +80,17 @@ export const login = async (req: Request, res: Response) => {
 
     const token = await loginUser({ email, password });
 
-    // ✅ SET JWT COOKIE
     res.cookie("token", token, {
       httpOnly: true,
       sameSite: "lax",
-      secure: false, // true in production (HTTPS)
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      secure: isCodespace ? true : false, // secure in codespace
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return res.status(200).json({
       message: "Login successful",
     });
-  } catch (error) {
+  } catch {
     return res.status(401).json({
       message: "Invalid credentials",
     });
@@ -77,12 +98,9 @@ export const login = async (req: Request, res: Response) => {
 };
 
 /* =========================
-   GOOGLE LOGIN (REDIRECT)
+   GOOGLE LOGIN
 ========================= */
 
-/**
- * STEP 1: Redirect user to Google
- */
 export const googleRedirectLogin = (_req: Request, res: Response) => {
   const url = googleClient.generateAuthUrl({
     access_type: "offline",
@@ -93,15 +111,15 @@ export const googleRedirectLogin = (_req: Request, res: Response) => {
   res.redirect(url);
 };
 
-/**
- * STEP 2: Google redirects back here
- */
-export const googleRedirectCallback = async (req: Request, res: Response) => {
+export const googleRedirectCallback = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const { code } = req.query;
 
     if (!code) {
-      return res.redirect("http://localhost:5173/login?error=google");
+      return res.redirect(`${FRONTEND_URL}/login?error=google`);
     }
 
     const { tokens } = await googleClient.getToken(code as string);
@@ -114,10 +132,9 @@ export const googleRedirectCallback = async (req: Request, res: Response) => {
     const payload = ticket.getPayload();
 
     if (!payload?.email) {
-      return res.redirect("http://localhost:5173/login?error=google");
+      return res.redirect(`${FRONTEND_URL}/login?error=google`);
     }
 
-    // ✅ CREATE APP JWT (MATCHES auth.middleware.ts)
     const appToken = jwt.sign(
       {
         email: payload.email,
@@ -128,30 +145,29 @@ export const googleRedirectCallback = async (req: Request, res: Response) => {
       { expiresIn: "7d" }
     );
 
-    // ✅ SET COOKIE
     res.cookie("token", appToken, {
       httpOnly: true,
       sameSite: "lax",
-      secure: false, // true in production
+      secure: isCodespace ? true : false,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    // 🔥 Redirect back to login with success flag
-    res.redirect("http://localhost:5173/login?login=success");
+    res.redirect(`${FRONTEND_URL}/login?login=success`);
   } catch (error) {
     console.error("Google OAuth Error:", error);
-    res.redirect("http://localhost:5173/login?error=google");
+    res.redirect(`${FRONTEND_URL}/login?error=google`);
   }
 };
 
 /* =========================
-   LOGOUT CONTROLLER
+   LOGOUT
 ========================= */
+
 export const logout = (_req: Request, res: Response) => {
   res.clearCookie("token", {
     httpOnly: true,
     sameSite: "lax",
-    secure: false, // true in production
+    secure: isCodespace ? true : false,
   });
 
   return res.status(200).json({

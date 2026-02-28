@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, X } from 'lucide-react';
+import { MapPin, X } from 'lucide-react';
 import { Header } from './Header';
 import { RealMap } from './Map';
 
@@ -10,15 +9,14 @@ interface LocationResult {
   lng: number;
 }
 
-// Function to fetch suggestions from backend
+// Fetch search suggestions
 const fetchLocationSuggestions = async (query: string) => {
   try {
-    const response = await fetch(`http://localhost:5001/api/search?q=${encodeURIComponent(query)}`);
-
+    const response = await fetch(
+      `http://localhost:5001/api/search?q=${encodeURIComponent(query)}`
+    );
     if (!response.ok) return [];
-
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
     console.error("Error fetching suggestions:", error);
     return [];
@@ -30,7 +28,6 @@ export const MeetView = () => {
   const [locB, setLocB] = useState('');
   const [debouncedA, setDebouncedA] = useState('');
   const [debouncedB, setDebouncedB] = useState('');
-  const buffer=10;//10 minutes buffer in midpoint
 
   const [coordsA, setCoordsA] = useState<LocationResult | null>(null);
   const [coordsB, setCoordsB] = useState<LocationResult | null>(null);
@@ -40,26 +37,24 @@ export const MeetView = () => {
   const [suggestionsA, setSuggestionsA] = useState<LocationResult[]>([]);
   const [suggestionsB, setSuggestionsB] = useState<LocationResult[]>([]);
 
-  const [equidistantPoints, setEquidistantPoints] = useState<{ lat: number; lng: number }[]>([]);
+  // 🔥 NEW STATE FOR MEET RESULTS
+  const [meetResults, setMeetResults] = useState<any[]>([]);
+  const [selectedMeet, setSelectedMeet] = useState<any | null>(null);
+  const [loadingMeet, setLoadingMeet] = useState(false);
+
+  // Debounce logic
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedA(locA), 400);
+    return () => clearTimeout(timer);
+  }, [locA]);
 
   useEffect(() => {
-  const timer = setTimeout(() => {
-    setDebouncedA(locA);
-  }, 400);
-
-  return () => clearTimeout(timer);
-}, [locA]);
-
-useEffect(() => {
-  const timer = setTimeout(() => {
-    setDebouncedB(locB);
-  }, 400);
-
-  return () => clearTimeout(timer);
-}, [locB]);
+    const timer = setTimeout(() => setDebouncedB(locB), 400);
+    return () => clearTimeout(timer);
+  }, [locB]);
 
   useEffect(() => {
-  if (debouncedA.length > 2) {
+    if (debouncedA.length > 2) {
       fetchLocationSuggestions(debouncedA).then(setSuggestionsA);
     } else {
       setSuggestionsA([]);
@@ -74,19 +69,7 @@ useEffect(() => {
     }
   }, [debouncedB]);
 
-  const handleInputChangeA = (value: string) => {
-    setLocA(value);
-    setActiveField('A');
-  };
-
-  const handleInputChangeB = (value: string) => {
-    setLocB(value);
-    setActiveField('B');
-  };
-
-  const handleSelectLocation = (location: LocationResult, type: 'A' | 'B')  => {
-    console.log('Selected location:', location, 'Type:', type);
-    console.log('Coordinates:', { lat: location.lat, lng: location.lng });
+  const handleSelectLocation = (location: LocationResult, type: 'A' | 'B') => {
     if (type === 'A') {
       setLocA(location.name);
       setCoordsA(location);
@@ -102,20 +85,30 @@ useEffect(() => {
   const handleFindMeetingPoint = async () => {
     if (!coordsA || !coordsB) return;
 
-    console.log('Sending to backend:', { coordsA, coordsB });
-    console.log('Point A coordinates:', { lat: coordsA.lat, lng: coordsA.lng });
-    console.log('Point B coordinates:', { lat: coordsB.lat, lng: coordsB.lng });
-    const response = await fetch("http://localhost:5001/api/meet/candidates", {
+    setLoadingMeet(true);
+    setMeetResults([]);
+    setSelectedMeet(null);
+
+    const response = await fetch("http://localhost:5001/api/meet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        pointA: { lat: coordsA.lat, lng: coordsA.lng },
-        pointB: { lat: coordsB.lat, lng: coordsB.lng },
+        latA: coordsA.lat,
+        lonA: coordsA.lng,
+        latB: coordsB.lat,
+        lonB: coordsB.lng,
+        minutes: 40
       }),
     });
 
     const data = await response.json();
-    console.log('Meeting point response:', data);
+    setMeetResults(data);
+
+    if (data.length > 0) {
+      setSelectedMeet(data[0]); // Auto-select best
+    }
+
+    setLoadingMeet(false);
   };
 
   const clearLocation = (type: 'A' | 'B') => {
@@ -133,14 +126,19 @@ useEffect(() => {
   return (
     <div className="h-screen bg-zinc-950 text-zinc-100 relative overflow-hidden">
       <Header />
-      
-      {/* Map Background */}
+
+      {/* Map */}
       <div className="absolute inset-0 -z-0">
-        <RealMap 
+        <RealMap
           markers={[
             ...(coordsA ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA, color: 'green' }] : []),
             ...(coordsB ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB, color: 'red' }] : []),
-            ...equidistantPoints.map((point) => ({ lat: point.lat, lng: point.lng, name: 'Equidistant', color: 'blue' })),
+            ...meetResults.map((place) => ({
+              lat: place.lat,
+              lng: place.lon,
+              name: place.name,
+              color: selectedMeet?.id === place.id ? 'yellow' : 'blue'
+            }))
           ]}
         />
       </div>
@@ -148,39 +146,33 @@ useEffect(() => {
       {/* Search Container */}
       <div className="absolute top-[80px] left-0 right-0 z-50 px-4 pt-4">
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl p-4 space-y-4">
-          
+
           {/* Location A */}
           <div className="relative">
-            <label className="text-xs text-zinc-400 font-medium mb-1 block">Your Location</label>
+            <label className="text-xs text-zinc-400 mb-1 block">Your Location</label>
             <div className="flex items-center gap-2 bg-zinc-800 rounded-lg px-3 py-2 border border-zinc-700">
-              <MapPin size={16} className="text-emerald-500 flex-shrink-0" />
+              <MapPin size={16} className="text-emerald-500" />
               <input
-                type="text"
-                placeholder="Search location..."
                 value={locA}
-                onChange={(e) => handleInputChangeA(e.target.value)}
-                className="bg-transparent flex-1 outline-none text-sm text-zinc-100 placeholder:text-zinc-500"
+                onChange={(e) => {
+                  setLocA(e.target.value);
+                  setActiveField('A');
+                }}
+                placeholder="Search location..."
+                className="bg-transparent flex-1 outline-none text-sm"
               />
-              {locA && (
-                <X 
-                  size={16} 
-                  className="cursor-pointer text-zinc-500 hover:text-zinc-300 flex-shrink-0"
-                  onClick={() => clearLocation('A')} 
-                />
-              )}
+              {locA && <X size={16} onClick={() => clearLocation('A')} />}
             </div>
 
-            {/* Suggestions Dropdown A - Opaque */}
             {activeField === 'A' && suggestionsA.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-800 border border-zinc-700 rounded-lg overflow-hidden shadow-lg z-50">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-800 border border-zinc-700 rounded-lg z-50">
                 {suggestionsA.map((location) => (
                   <button
                     key={`${location.name}-${location.lat}`}
                     onClick={() => handleSelectLocation(location, 'A')}
-                    className="w-full px-4 py-3 text-left text-sm text-zinc-100 hover:bg-zinc-700 transition-colors flex items-center gap-2 border-b border-zinc-700 last:border-b-0"
+                    className="w-full px-4 py-3 text-left hover:bg-zinc-700"
                   >
-                    <MapPin size={14} className="text-emerald-500 flex-shrink-0" />
-                    <span>{location.name}</span>
+                    {location.name}
                   </button>
                 ))}
               </div>
@@ -189,36 +181,30 @@ useEffect(() => {
 
           {/* Location B */}
           <div className="relative">
-            <label className="text-xs text-zinc-400 font-medium mb-1 block">Friend's Location</label>
+            <label className="text-xs text-zinc-400 mb-1 block">Friend's Location</label>
             <div className="flex items-center gap-2 bg-zinc-800 rounded-lg px-3 py-2 border border-zinc-700">
-              <MapPin size={16} className="text-red-500 flex-shrink-0" />
+              <MapPin size={16} className="text-red-500" />
               <input
-                type="text"
-                placeholder="Search location..."
                 value={locB}
-                onChange={(e) => handleInputChangeB(e.target.value)}
-                className="bg-transparent flex-1 outline-none text-sm text-zinc-100 placeholder:text-zinc-500"
+                onChange={(e) => {
+                  setLocB(e.target.value);
+                  setActiveField('B');
+                }}
+                placeholder="Search location..."
+                className="bg-transparent flex-1 outline-none text-sm"
               />
-              {locB && (
-                <X 
-                  size={16} 
-                  className="cursor-pointer text-zinc-500 hover:text-zinc-300 flex-shrink-0"
-                  onClick={() => clearLocation('B')} 
-                />
-              )}
+              {locB && <X size={16} onClick={() => clearLocation('B')} />}
             </div>
 
-            {/* Suggestions Dropdown B - Opaque */}
             {activeField === 'B' && suggestionsB.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-800 border border-zinc-700 rounded-lg overflow-hidden shadow-lg z-50">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-800 border border-zinc-700 rounded-lg z-50">
                 {suggestionsB.map((location) => (
                   <button
                     key={`${location.name}-${location.lat}`}
                     onClick={() => handleSelectLocation(location, 'B')}
-                    className="w-full px-4 py-3 text-left text-sm text-zinc-100 hover:bg-zinc-700 transition-colors flex items-center gap-2 border-b border-zinc-700 last:border-b-0"
+                    className="w-full px-4 py-3 text-left hover:bg-zinc-700"
                   >
-                    <MapPin size={14} className="text-red-500 flex-shrink-0" />
-                    <span>{location.name}</span>
+                    {location.name}
                   </button>
                 ))}
               </div>
@@ -226,13 +212,49 @@ useEffect(() => {
           </div>
 
           {coordsA && coordsB && (
-            <button 
+            <button
               onClick={handleFindMeetingPoint}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg transition-colors text-sm mt-4"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 py-2 rounded-lg"
             >
               Find Meeting Point
             </button>
           )}
+
+          {loadingMeet && (
+            <p className="text-sm text-zinc-400 mt-2">
+              Finding best meeting spots...
+            </p>
+          )}
+
+          {meetResults.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <h3 className="text-sm font-semibold">Top 5 Meeting Spots</h3>
+
+              {meetResults.map((place, index) => (
+                <div
+                  key={place.id}
+                  onClick={() => setSelectedMeet(place)}
+                  className={`p-3 rounded-lg cursor-pointer ${
+                    selectedMeet?.id === place.id
+                      ? "bg-emerald-700"
+                      : "bg-zinc-800 hover:bg-zinc-700"
+                  }`}
+                >
+                  <div className="font-medium">
+                    {index === 0 && "⭐ "}
+                    {place.name}
+                  </div>
+                  <div className="text-xs text-zinc-400">
+                    You: {place.travelTimeA} min | Friend: {place.travelTimeB} min
+                  </div>
+                  <div className="text-xs text-zinc-500">
+                    Difference: {place.difference} min
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
         </div>
       </div>
     </div>
