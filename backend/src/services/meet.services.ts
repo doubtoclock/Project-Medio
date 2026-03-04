@@ -1,77 +1,8 @@
 import * as turf from "@turf/turf";
-import { Feature, Geometry } from "geojson";
-import { generateIsochrone, Coordinates } from "./isochrone.services";
+import { Coordinates } from "./isochrone.services";
 import { fetchMeetingPOIs } from "./poi.services";
-
-/* =====================================
-   🔥 SIMPLE IN-MEMORY OTP CACHE
-===================================== */
-
-const otpCache = new Map<string, number>();
-
-/* ==============================
-   OTP TRAVEL TIME HELPER
-============================== */
-
-async function getOtpDuration(
-  fromLat: number,
-  fromLon: number,
-  toLat: number,
-  toLon: number
-): Promise<number | null> {
-
-  const cacheKey = `${fromLat},${fromLon}->${toLat},${toLon}`;
-
-  // ✅ Return cached result if available
-  if (otpCache.has(cacheKey)) {
-    return otpCache.get(cacheKey)!;
-  }
-
-  const today = new Date();
-  const date = today.toISOString().split("T")[0];
-  const time = today.toTimeString().slice(0, 5);
-
-  const query = {
-    query: `{ 
-      plan(
-        from: { lat: ${fromLat}, lon: ${fromLon} }
-        to: { lat: ${toLat}, lon: ${toLon} }
-        transportModes: [{ mode: WALK }, { mode: TRANSIT }]
-        date: "${date}"
-        time: "${time}"
-        numItineraries: 1
-      ) {
-        itineraries {
-          duration
-        }
-      }
-    }`
-  };
-
-  try {
-    const response = await fetch(
-      "http://localhost:8080/otp/routers/default/index/graphql",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(query),
-      }
-    );
-
-    const data: any = await response.json();
-    const duration = data?.data?.plan?.itineraries?.[0]?.duration ?? null;
-
-    if (duration != null) {
-      otpCache.set(cacheKey, duration);
-    }
-
-    return duration;
-
-  } catch (err) {
-    console.error("OTP error:", err);
-    return null;
-  }
-}
+import { generateSurfaceIntersection } from "./surface.services";
+import { getOtpDuration } from "./otp.services";
 
 /* ==============================
    MAIN FIND FUNCTION
@@ -79,120 +10,288 @@ async function getOtpDuration(
 
 export async function findMeetPoints(
   A: Coordinates,
-  B: Coordinates,
-  minutes: number
+  B: Coordinates
 ) {
 
-  console.log("=== GENERATING ISOCHRONES ===");
+  console.log("=== CALCULATING A→B TRAVEL TIME ===");
 
-  const isoA = await generateIsochrone(A, minutes);
-  const isoB = await generateIsochrone(B, minutes);
+  let totalDuration = await getOtpDuration(
+    A.lat,
+    A.lon,
+    B.lat,
+    B.lon
+  );
 
-  if (!isoA || !isoB) {
-    console.log("❌ Isochrone generation failed.");
+  /* =====================================
+     FALLBACK IF OTP FAILS
+  ===================================== */
+
+  if (!totalDuration || totalDuration <= 0) {
+
+    console.log("⚠️ OTP could not calculate A→B duration. Using fallback.");
+
+    const distance = turf.distance(
+      turf.point([A.lon, A.lat]),
+      turf.point([B.lon, B.lat]),
+      { units: "kilometers" }
+    );
+
+    let avgSpeed;
+
+    if (distance < 3) {
+      avgSpeed = 5; // walking
+    } 
+    else if (distance < 15) {
+      avgSpeed = 12; // short transit
+    } 
+    else {
+      avgSpeed = 18; // long transit
+    }
+
+    totalDuration = (distance / avgSpeed) * 3600;
+
+    console.log(
+      `Fallback distance=${distance.toFixed(2)}km speed=${avgSpeed}km/h`
+    );
+  }
+
+  console.log("Total A→B duration (seconds):", totalDuration);
+
+  /* =====================================
+     INITIAL MEETING TIME
+  ===================================== */
+
+  let meetingMinutes = Math.ceil(totalDuration / 2 / 60);
+
+  const MAX_REASONABLE = 180;
+
+  if (meetingMinutes > MAX_REASONABLE) {
+
+    console.log(
+      `Travel time too large (${meetingMinutes} mins). Limiting to ${MAX_REASONABLE}`
+    );
+
+    meetingMinutes = MAX_REASONABLE;
+  }
+
+  const MAX_LIMIT = 360;
+  const STEP = 15;
+
+  let polygon: any = null;
+
+  console.log("Initial meeting time:", meetingMinutes, "minutes");
+
+  /* =====================================
+     AUTO-EXPANDING SURFACE SEARCH
+  ===================================== */
+
+  while (meetingMinutes <= MAX_LIMIT) {
+
+    console.log("Trying with", meetingMinutes, "minutes");
+
+    try {
+
+      polygon = await generateSurfaceIntersection(
+        A,
+        B,
+        meetingMinutes
+      );
+
+      if (polygon) {
+
+        console.log("✅ Surface intersection found");
+
+        break;
+      }
+
+    } catch (err) {
+
+      console.log("⚠️ Surface generation failed:", err);
+    }
+
+    meetingMinutes += STEP;
+  }
+
+  if (!polygon) {
+
+    console.log("❌ No intersection even after expansion.");
+
     return [];
   }
 
-  let rawIntersection: Feature<Geometry> | null = null;
-
-  try {
-    const collection = turf.featureCollection([
-      isoA as any,
-      isoB as any,
-    ]);
-
-    rawIntersection = turf.intersect(collection) as Feature<Geometry> | null;
-
-  } catch (err) {
-    console.error("❌ Intersection error:", err);
-    return [];
-  }
-
-  if (!rawIntersection) {
-    console.log("❌ No overlapping reachable area.");
-    return [];
-  }
+  /* =====================================
+     FETCH POIs INSIDE INTERSECTION
+  ===================================== */
 
   console.log("=== FETCHING POIS ===");
 
-  const pois = await fetchMeetingPOIs(rawIntersection);
+  let pois = await fetchMeetingPOIs(polygon);
+
+  /* =====================================
+     EXPAND AREA IF NO POIs
+  ===================================== */
 
   if (!pois || pois.length === 0) {
-    console.log("❌ No POIs found inside intersection.");
-    return [];
+
+    console.log("⚠️ No POIs found. Expanding search area by 2km.");
+
+    try {
+
+      const expandedPolygon = turf.buffer(
+        polygon,
+        2,
+        { units: "kilometers" }
+      );
+
+      pois = await fetchMeetingPOIs(expandedPolygon as any);
+
+    } catch {
+
+      console.log("⚠️ Polygon buffer failed.");
+    }
+
+    if (!pois || pois.length === 0) {
+
+      console.log("❌ Still no POIs after expansion.");
+
+      return [];
+    }
+
+    console.log("POIs found after expansion:", pois.length);
   }
 
   console.log("POIs found:", pois.length);
 
-  /* ==================================
-     🔥 OPTIMIZATION 1: MIDPOINT FILTER
-  ================================== */
+  /* =====================================
+     MIDPOINT CALCULATION
+  ===================================== */
 
   const midpoint = turf.midpoint(
     turf.point([A.lon, A.lat]),
     turf.point([B.lon, B.lat])
   );
 
-  const filteredPois = pois
+  /* =====================================
+     SMART POI PRE-FILTER
+  ===================================== */
+
+  const candidatePois = pois
     .map(poi => {
-      const dist = turf.distance(
+
+      const distMid = turf.distance(
         midpoint,
         turf.point([poi.lon, poi.lat]),
         { units: "kilometers" }
       );
-      return { ...poi, dist };
+
+      const distA = turf.distance(
+        turf.point([A.lon, A.lat]),
+        turf.point([poi.lon, poi.lat]),
+        { units: "kilometers" }
+      );
+
+      const distB = turf.distance(
+        turf.point([B.lon, B.lat]),
+        turf.point([poi.lon, poi.lat]),
+        { units: "kilometers" }
+      );
+
+      return {
+        ...poi,
+        distMid,
+        balance: Math.abs(distA - distB)
+      };
+
     })
-    .sort((a, b) => a.dist - b.dist)
-    .slice(0, 12); // Reduced further for speed
+    .sort((a, b) => {
 
-  console.log("Filtered POIs (for OTP check):", filteredPois.length);
+      if (a.balance !== b.balance) {
+        return a.balance - b.balance;
+      }
 
-  /* ==================================
-     ⚡ OPTIMIZATION 2: FULL PARALLEL RANKING
-  ================================== */
+      return a.distMid - b.distMid;
+    })
+    .slice(0, 15);
+
+  console.log("Candidate POIs after smart filter:", candidatePois.length);
+
+  /* =====================================
+     PARALLEL OTP RANKING
+  ===================================== */
 
   const enriched = await Promise.all(
-    filteredPois.map(async (poi) => {
 
-      const [timeA, timeB] = await Promise.all([
-        getOtpDuration(A.lat, A.lon, poi.lat, poi.lon),
-        getOtpDuration(B.lat, B.lon, poi.lat, poi.lon),
-      ]);
+    candidatePois.map(async (poi) => {
 
-      if (timeA == null || timeB == null) return null;
+      let timeA = await getOtpDuration(A.lat, A.lon, poi.lat, poi.lon);
+      let timeB = await getOtpDuration(B.lat, B.lon, poi.lat, poi.lon);
+
+      /* fallback if OTP fails */
+
+      if (!timeA || !timeB) {
+
+        const distA = turf.distance(
+          turf.point([A.lon, A.lat]),
+          turf.point([poi.lon, poi.lat]),
+          { units: "kilometers" }
+        );
+
+        const distB = turf.distance(
+          turf.point([B.lon, B.lat]),
+          turf.point([poi.lon, poi.lat]),
+          { units: "kilometers" }
+        );
+
+        const avgSpeed = 15;
+
+        timeA = (distA / avgSpeed) * 3600;
+        timeB = (distB / avgSpeed) * 3600;
+      }
 
       const diff = Math.abs(timeA - timeB);
 
       return {
+
         id: poi.id,
         name: poi.tags?.name || "Unnamed",
         lat: poi.lat,
         lon: poi.lon,
+
         travelTimeA: Math.round(timeA / 60),
         travelTimeB: Math.round(timeB / 60),
+
         difference: Math.round(diff / 60),
         average: Math.round((timeA + timeB) / 2 / 60)
       };
+
     })
   );
 
   const valid = enriched.filter(Boolean);
 
   if (valid.length === 0) {
-    console.log("❌ No valid ranked POIs after OTP filtering.");
+
+    console.log("❌ No valid ranked POIs.");
+
     return [];
   }
 
+  /* =====================================
+     FINAL RANKING
+  ===================================== */
+
   const ranked = valid
     .sort((a: any, b: any) => {
+
       if (a.difference !== b.difference) {
         return a.difference - b.difference;
       }
+
       return a.average - b.average;
     })
     .slice(0, 5);
 
-  console.log("Top ranked:", ranked.length);
+  console.log("🏆 Final Top 5 Ready");
 
   return ranked;
 }
