@@ -1,6 +1,24 @@
 import { Request, Response } from "express";
 import { Place } from "../models/place";          // ✅ lowercase
 import { History } from "../models/history";      // ✅ recent history
+import { User } from "../models/user";
+
+const getUserId = async (req: Request): Promise<string | null> => {
+  const decoded = (req as any).user;
+  if (!decoded?.email) return null;
+
+  let user = await User.findOne({ email: decoded.email });
+
+  if (!user) {
+    user = await User.create({
+      email: decoded.email,
+      name: decoded.name || "",
+      password: "google-oauth",
+    });
+  }
+
+  return user._id.toString();
+};
 
 /**
  * CREATE PLACE
@@ -16,7 +34,12 @@ export const createPlace = async (req: Request, res: Response) => {
       });
     }
 
-    const userId = (req as any).user.userId;
+    const userId = await getUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        message: "Not authenticated - user not found"
+      });
+    }
 
     const place = await Place.create({
       userId,
@@ -51,7 +74,12 @@ export const createPlace = async (req: Request, res: Response) => {
  */
 export const getMyPlaces = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = await getUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        message: "Not authenticated"
+      });
+    }
 
     const places = await Place.find({ userId }).sort({ createdAt: -1 });
 
@@ -73,7 +101,13 @@ export const getMyPlaces = async (req: Request, res: Response) => {
  */
 export const deletePlace = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = await getUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        message: "Not authenticated"
+      });
+    }
+
     const placeId = req.params.id;
 
     const place = await Place.findOne({

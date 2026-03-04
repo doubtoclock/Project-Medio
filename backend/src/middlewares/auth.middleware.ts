@@ -15,8 +15,17 @@ export const authMiddleware = (
   next: NextFunction
 ) => {
   try {
-    // 🔥 READ JWT FROM COOKIE
-    const token = req.cookies?.token;
+    // Try cookie first, then Authorization header as fallback
+    let token = req.cookies?.token;
+
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith("Bearer ")) {
+        token = authHeader.slice(7);
+      }
+    }
+
+    console.log("authMiddleware - cookie token:", !!req.cookies?.token, "header token:", !!req.headers.authorization);
 
     if (!token) {
       return res.status(401).json({
