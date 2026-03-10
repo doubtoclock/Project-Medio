@@ -1,6 +1,0 @@
-agency_id,agency_name,agency_url,agency_timezone
-WR,Western Railway,https://wr.indianrailways.gov.in,Asia/Kolkata
-CR,Central Railway,https://cr.indianrailways.gov.in,Asia/Kolkata
-MMRDA,Mumbai Metro,https://mmrda.maharashtra.gov.in,Asia/Kolkata
-MRM,Mumbai Monorail,https://mmrda.maharashtra.gov.in,Asia/Kolkata
-BEST,BEST Bus,http://www.bestundertaking.com,Asia/Kolkata
