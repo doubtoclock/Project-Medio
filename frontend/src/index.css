@@ -1,31 +1,89 @@
+/* ---------------- TAILWIND BASE ---------------- */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------- GLOBAL RESET ---------------- */
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: "Inter", sans-serif;
+}
+
+/* Smooth text rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: max(884px, 100dvh);
+  background-color: #101722;
+  color: #f1f5f9;
+}
+
+/* ---------------- MEDIO UI EFFECTS ---------------- */
+
+/* Topographic background pattern */
+.topo-pattern {
+  background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4Rz1kq0jtYA_Vtb0lYwleiAK845V7K1-xf-Kk3_yAyUFOJPEFL8PEc8BqD757-tJaoMocsj1DKAE2dS1LJ9ygBf58cJ5Wxj5Iiq-S1vyBCZbexxkhe6uahNz0KPVyxdv_qQlLDge9i8HtGbpEnmjMmxiU8gqGbMLBhIl_snYFc0-vYlup0WfXDz4ed9payO2oshuFBQu0Ivoa5Z_FdPTRfEdJ5BXa1ZYjzOant0VhSMSSkFeDST1U3DfXI7gzyHiJuJ6Pp_m21LE");
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0.1;
+}
+
+/* MEDIO logo glow */
+.glow-effect {
+  text-shadow:
+    0 0 20px rgba(13,108,242,0.6),
+    0 0 40px rgba(13,108,242,0.3);
+}
+
+/* Soft ambient light effect used behind splash screens */
+.ambient-light {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(120px);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ---------------- LEAFLET FIXES ---------------- */
+
 /* Constrain Leaflet to its own stacking context */
 .leaflet-container {
   z-index: 0 !important;
 }
 
-/* Force ALL leaflet internal layers to stay within the container's stacking context */
+/* Force all Leaflet internal layers to stay within container */
 .leaflet-pane {
   z-index: 1 !important;
 }
+
 .leaflet-tile-pane {
   z-index: 1 !important;
 }
+
 .leaflet-overlay-pane {
   z-index: 2 !important;
 }
+
 .leaflet-marker-pane {
   z-index: 3 !important;
 }
+
 .leaflet-tooltip-pane {
   z-index: 4 !important;
 }
+
 .leaflet-popup-pane {
   z-index: 5 !important;
 }
+
 .leaflet-top,
-.leaflet-bottom {
-  z-index: 6 !important;
-}
+.leaflet-bottom,
 .leaflet-control {
   z-index: 6 !important;
 }

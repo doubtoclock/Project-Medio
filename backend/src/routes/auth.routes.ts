@@ -4,7 +4,10 @@ import {
   login,
   googleRedirectLogin,
   googleRedirectCallback,
+  checkAuth,
+  logout,
 } from "../controller/auth.controller";
+
 import { authMiddleware } from "../middlewares/auth.middleware";
 
 const router = Router();
@@ -47,28 +50,28 @@ router.get("/google", googleRedirectLogin);
 router.get("/google/callback", googleRedirectCallback);
 
 /* =========================
+   AUTH STATUS
+========================= */
+
+// Used by frontend when page loads
+router.get("/me", checkAuth);
+
+/* =========================
    PROTECTED ROUTES
 ========================= */
 
-// 🔐 Check logged-in user
-router.get("/me", authMiddleware, (req: Request, res: Response) => {
+// Example protected route
+router.get("/protected", authMiddleware, (req: Request, res: Response) => {
   res.status(200).json({
     message: "You are authenticated",
     user: (req as any).user,
   });
 });
 
-// 🚪 Logout (clear cookie)
-router.post("/logout", (_req: Request, res: Response) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: false, // true in production
-  });
+/* =========================
+   LOGOUT
+========================= */
 
-  res.status(200).json({
-    message: "Logged out successfully",
-  });
-});
+router.post("/logout", logout);
 
 export default router;

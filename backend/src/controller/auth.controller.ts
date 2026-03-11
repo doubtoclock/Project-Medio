@@ -8,32 +8,33 @@ import jwt from "jsonwebtoken";
    ENV HELPERS
 ========================= */
 
-// Detect environment safely
-const isCodespace =
-  process.env.CODESPACE_NAME &&
-  process.env.CODESPACE_NAME.length > 0;
+const isCodespace = Boolean(process.env.CODESPACE_NAME);
 
-// Frontend URL
 const FRONTEND_URL = isCodespace
   ? `https://${process.env.CODESPACE_NAME}-5173.app.github.dev`
   : "http://localhost:5173";
 
-// Backend URL
-const BACKEND_URL = isCodespace
-  ? `https://${process.env.CODESPACE_NAME}-5001.app.github.dev`
-  : "http://localhost:5001";
+/* =========================
+   REQUIRED ENV VARIABLES
+========================= */
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID as string;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET as string;
+const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL as string;
+const JWT_SECRET = process.env.JWT_SECRET as string;
+
+if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_CALLBACK_URL) {
+  throw new Error("Google OAuth environment variables are missing");
+}
 
 /* =========================
    GOOGLE OAUTH CLIENT
 ========================= */
 
 const googleClient = new OAuth2Client(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  `${BACKEND_URL}/api/auth/google/callback`
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET
 );
-
-const JWT_SECRET = process.env.JWT_SECRET as string;
 
 /* =========================
    REGISTER
@@ -82,8 +83,8 @@ export const login = async (req: Request, res: Response) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      sameSite: "lax",
-      secure: isCodespace ? true : false, // secure in codespace
+      sameSite: isCodespace ? "none" : "lax",
+      secure: Boolean(isCodespace),
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -102,13 +103,24 @@ export const login = async (req: Request, res: Response) => {
 ========================= */
 
 export const googleRedirectLogin = (_req: Request, res: Response) => {
-  const url = googleClient.generateAuthUrl({
-    access_type: "offline",
-    scope: ["profile", "email"],
-    prompt: "select_account",
-  });
+  try {
+    console.log("➡️ Google login route hit");
+    console.log("Callback URL:", GOOGLE_CALLBACK_URL);
 
-  res.redirect(url);
+    const url = googleClient.generateAuthUrl({
+      access_type: "offline",
+      scope: ["profile", "email"],
+      prompt: "select_account",
+      redirect_uri: GOOGLE_CALLBACK_URL,
+    });
+
+    console.log("Redirecting to Google:", url);
+
+    res.redirect(url);
+  } catch (error) {
+    console.error("Google redirect error:", error);
+    res.status(500).json({ message: "Failed to start Google login" });
+  }
 };
 
 export const googleRedirectCallback = async (
@@ -118,21 +130,26 @@ export const googleRedirectCallback = async (
   try {
     const { code } = req.query;
 
+    console.log("Google callback hit");
+
     if (!code) {
-      return res.redirect(`${FRONTEND_URL}/login?error=google`);
+      return res.redirect(FRONTEND_URL);
     }
 
-    const { tokens } = await googleClient.getToken(code as string);
+    const { tokens } = await googleClient.getToken({
+      code: code as string,
+      redirect_uri: GOOGLE_CALLBACK_URL,
+    });
 
     const ticket = await googleClient.verifyIdToken({
       idToken: tokens.id_token as string,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: GOOGLE_CLIENT_ID,
     });
 
     const payload = ticket.getPayload();
 
     if (!payload?.email) {
-      return res.redirect(`${FRONTEND_URL}/login?error=google`);
+      return res.redirect(FRONTEND_URL);
     }
 
     const appToken = jwt.sign(
@@ -147,15 +164,44 @@ export const googleRedirectCallback = async (
 
     res.cookie("token", appToken, {
       httpOnly: true,
-      sameSite: "lax",
-      secure: isCodespace ? true : false,
+      sameSite: isCodespace ? "none" : "lax",
+      secure: Boolean(isCodespace),
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.redirect(`${FRONTEND_URL}/login?login=success`);
+    console.log("User authenticated:", payload.email);
+
+    res.redirect(FRONTEND_URL);
   } catch (error) {
     console.error("Google OAuth Error:", error);
-    res.redirect(`${FRONTEND_URL}/login?error=google`);
+    res.redirect(FRONTEND_URL);
+  }
+};
+
+/* =========================
+   CHECK AUTH (for frontend)
+========================= */
+
+export const checkAuth = (req: Request, res: Response) => {
+  try {
+    const token = req.cookies?.token;
+
+    if (!token) {
+      return res.status(200).json({
+        authenticated: false,
+      });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    return res.status(200).json({
+      authenticated: true,
+      user: decoded,
+    });
+  } catch {
+    return res.status(200).json({
+      authenticated: false,
+    });
   }
 };
 
@@ -166,8 +212,8 @@ export const googleRedirectCallback = async (
 export const logout = (_req: Request, res: Response) => {
   res.clearCookie("token", {
     httpOnly: true,
-    sameSite: "lax",
-    secure: isCodespace ? true : false,
+    sameSite: isCodespace ? "none" : "lax",
+    secure: Boolean(isCodespace),
   });
 
   return res.status(200).json({

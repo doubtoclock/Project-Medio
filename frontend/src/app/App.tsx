@@ -4,10 +4,12 @@ import { BottomNav } from "./components/medio/BottomNav";
 import { MeetView } from "./components/medio/MeetView";
 import { TravelView } from "./components/medio/TravelView";
 import { UserGuideView } from "./components/medio/UserGuideView";
-import { ProfileView } from "./components/medio/ProfileView"; // 👈 NEW
+import { ProfileView } from "./components/medio/ProfileView";
 
 import { LoginPage } from "./components/medio/auth/Login";
 import { ProtectedRoute } from "./components/medio/auth/ProtectedRoute";
+
+import SplashScreen from "./components/medio/SplashScreen"; // 👈 NEW
 
 /**
  * Layout shown ONLY when user is authenticated
@@ -25,10 +27,15 @@ export default function App() {
   return (
     <div className="bg-zinc-950 min-h-screen text-zinc-100 font-sans overflow-x-hidden">
       <Routes>
+
+        {/* 🌟 SPLASH SCREEN (FIRST PAGE) */}
+        <Route path="/" element={<SplashScreen />} />
+
         {/* 🔐 LOGIN (PUBLIC) */}
         <Route path="/login" element={<LoginPage />} />
 
         {/* 🔒 PROTECTED ROUTES */}
+
         <Route
           path="/meet"
           element={
@@ -73,7 +80,9 @@ export default function App() {
           }
         />
 
-        <Route path="*" element={<Navigate to="/meet" replace />} />
+        {/* FALLBACK ROUTE */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+
       </Routes>
     </div>
   );

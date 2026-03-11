@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, X } from 'lucide-react';
-import { Header } from './Header';
-import { RealMap } from './Map';
+import React, { useState, useEffect } from "react";
+import { MapPin, X } from "lucide-react";
+import { Header } from "./Header";
+import { RealMap } from "./Map";
 
 interface LocationResult {
   name: string;
@@ -23,36 +23,37 @@ const fetchLocationSuggestions = async (query: string) => {
   }
 };
 
-export const MeetView = () => {
-  const [locA, setLocA] = useState('');
-  const [locB, setLocB] = useState('');
-  const [debouncedA, setDebouncedA] = useState('');
-  const [debouncedB, setDebouncedB] = useState('');
+export const MeetView: React.FC = () => {
+  const [locA, setLocA] = useState("");
+  const [locB, setLocB] = useState("");
+  const [debouncedA, setDebouncedA] = useState("");
+  const [debouncedB, setDebouncedB] = useState("");
 
   const [coordsA, setCoordsA] = useState<LocationResult | null>(null);
   const [coordsB, setCoordsB] = useState<LocationResult | null>(null);
 
-  const [activeField, setActiveField] = useState<'A' | 'B' | null>(null);
+  const [activeField, setActiveField] = useState<"A" | "B" | null>(null);
 
   const [suggestionsA, setSuggestionsA] = useState<LocationResult[]>([]);
   const [suggestionsB, setSuggestionsB] = useState<LocationResult[]>([]);
 
-  // 🔥 NEW STATE FOR MEET RESULTS
   const [meetResults, setMeetResults] = useState<any[]>([]);
   const [selectedMeet, setSelectedMeet] = useState<any | null>(null);
   const [loadingMeet, setLoadingMeet] = useState(false);
 
-  // Debounce logic
+  // Debounce A
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedA(locA), 400);
     return () => clearTimeout(timer);
   }, [locA]);
 
+  // Debounce B
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedB(locB), 400);
     return () => clearTimeout(timer);
   }, [locB]);
 
+  // Fetch suggestions
   useEffect(() => {
     if (debouncedA.length > 2) {
       fetchLocationSuggestions(debouncedA).then(setSuggestionsA);
@@ -69,8 +70,8 @@ export const MeetView = () => {
     }
   }, [debouncedB]);
 
-  const handleSelectLocation = (location: LocationResult, type: 'A' | 'B') => {
-    if (type === 'A') {
+  const handleSelectLocation = (location: LocationResult, type: "A" | "B") => {
+    if (type === "A") {
       setLocA(location.name);
       setCoordsA(location);
       setSuggestionsA([]);
@@ -97,80 +98,94 @@ export const MeetView = () => {
         lonA: coordsA.lng,
         latB: coordsB.lat,
         lonB: coordsB.lng,
-        minutes: 40
+        minutes: 40,
       }),
     });
 
     const data = await response.json();
     setMeetResults(data);
 
-    if (data.length > 0) {
-      setSelectedMeet(data[0]); // Auto-select best
-    }
+    if (data.length > 0) setSelectedMeet(data[0]);
 
     setLoadingMeet(false);
   };
 
-  const clearLocation = (type: 'A' | 'B') => {
-    if (type === 'A') {
-      setLocA('');
+  const clearLocation = (type: "A" | "B") => {
+    if (type === "A") {
+      setLocA("");
       setCoordsA(null);
       setSuggestionsA([]);
     } else {
-      setLocB('');
+      setLocB("");
       setCoordsB(null);
       setSuggestionsB([]);
     }
   };
 
   return (
-    <div className="h-screen bg-zinc-950 text-zinc-100 relative overflow-hidden">
+    <div className="relative min-h-screen bg-background-dark text-slate-100">
+
       <Header />
 
-      {/* Map */}
-      <div className="absolute inset-0 -z-0">
+      {/* MAP */}
+      <div className="absolute inset-0 z-0">
         <RealMap
           markers={[
-            ...(coordsA ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA, color: 'green' }] : []),
-            ...(coordsB ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB, color: 'red' }] : []),
+            ...(coordsA
+              ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA, color: "green" }]
+              : []),
+            ...(coordsB
+              ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB, color: "red" }]
+              : []),
             ...meetResults.map((place) => ({
               lat: place.lat,
               lng: place.lon,
               name: place.name,
-              color: selectedMeet?.id === place.id ? 'yellow' : 'blue'
-            }))
+              color: selectedMeet?.id === place.id ? "yellow" : "blue",
+            })),
           ]}
         />
       </div>
 
-      {/* Search Container */}
-      <div className="absolute top-[80px] left-0 right-0 z-50 px-4 pt-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl p-4 space-y-4">
+      {/* SEARCH PANEL */}
+      <div className="absolute top-[80px] left-0 right-0 px-4 z-40">
+        <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl p-4 space-y-4 shadow-xl">
 
-          {/* Location A */}
+          {/* LOCATION A */}
           <div className="relative">
-            <label className="text-xs text-zinc-400 mb-1 block">Your Location</label>
-            <div className="flex items-center gap-2 bg-zinc-800 rounded-lg px-3 py-2 border border-zinc-700">
-              <MapPin size={16} className="text-emerald-500" />
+            <label className="text-xs text-slate-400 mb-1 block">
+              Your Location
+            </label>
+
+            <div className="flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-3 border border-slate-700">
+              <MapPin size={16} className="text-primary" />
+
               <input
                 value={locA}
                 onChange={(e) => {
                   setLocA(e.target.value);
-                  setActiveField('A');
+                  setActiveField("A");
                 }}
                 placeholder="Search location..."
                 className="bg-transparent flex-1 outline-none text-sm"
               />
-              {locA && <X size={16} onClick={() => clearLocation('A')} />}
+
+              {locA && (
+                <X
+                  size={16}
+                  className="cursor-pointer"
+                  onClick={() => clearLocation("A")}
+                />
+              )}
             </div>
 
-            {activeField === 'A' && suggestionsA.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-800 border border-zinc-700 rounded-lg z-50">
+            {activeField === "A" && suggestionsA.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
                 {suggestionsA.map((location) => (
                   <button
                     key={`${location.name}-${location.lat}`}
-                    onClick={() => handleSelectLocation(location, 'A')}
-                    className="w-full px-4 py-3 text-left hover:bg-zinc-700"
+                    onClick={() => handleSelectLocation(location, "A")}
+                    className="w-full text-left px-4 py-3 hover:bg-slate-700"
                   >
                     {location.name}
                   </button>
@@ -179,30 +194,41 @@ export const MeetView = () => {
             )}
           </div>
 
-          {/* Location B */}
+          {/* LOCATION B */}
           <div className="relative">
-            <label className="text-xs text-zinc-400 mb-1 block">Friend's Location</label>
-            <div className="flex items-center gap-2 bg-zinc-800 rounded-lg px-3 py-2 border border-zinc-700">
-              <MapPin size={16} className="text-red-500" />
+            <label className="text-xs text-slate-400 mb-1 block">
+              Friend's Location
+            </label>
+
+            <div className="flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-3 border border-slate-700">
+              <MapPin size={16} className="text-indigo-400" />
+
               <input
                 value={locB}
                 onChange={(e) => {
                   setLocB(e.target.value);
-                  setActiveField('B');
+                  setActiveField("B");
                 }}
                 placeholder="Search location..."
                 className="bg-transparent flex-1 outline-none text-sm"
               />
-              {locB && <X size={16} onClick={() => clearLocation('B')} />}
+
+              {locB && (
+                <X
+                  size={16}
+                  className="cursor-pointer"
+                  onClick={() => clearLocation("B")}
+                />
+              )}
             </div>
 
-            {activeField === 'B' && suggestionsB.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-800 border border-zinc-700 rounded-lg z-50">
+            {activeField === "B" && suggestionsB.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
                 {suggestionsB.map((location) => (
                   <button
                     key={`${location.name}-${location.lat}`}
-                    onClick={() => handleSelectLocation(location, 'B')}
-                    className="w-full px-4 py-3 text-left hover:bg-zinc-700"
+                    onClick={() => handleSelectLocation(location, "B")}
+                    className="w-full text-left px-4 py-3 hover:bg-slate-700"
                   >
                     {location.name}
                   </button>
@@ -211,52 +237,58 @@ export const MeetView = () => {
             )}
           </div>
 
+          {/* FIND BUTTON */}
           {coordsA && coordsB && (
             <button
               onClick={handleFindMeetingPoint}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 py-2 rounded-lg"
+              className="w-full bg-primary hover:bg-primary/90 py-3 rounded-xl font-semibold"
             >
               Find Meeting Point
             </button>
           )}
 
           {loadingMeet && (
-            <p className="text-sm text-zinc-400 mt-2">
-              Finding best meeting spots...
+            <p className="text-sm text-slate-400">
+              Calculating optimal meeting spots...
             </p>
           )}
-
-          {meetResults.length > 0 && (
-            <div className="mt-4 space-y-2">
-              <h3 className="text-sm font-semibold">Top 5 Meeting Spots</h3>
-
-              {meetResults.map((place, index) => (
-                <div
-                  key={place.id}
-                  onClick={() => setSelectedMeet(place)}
-                  className={`p-3 rounded-lg cursor-pointer ${
-                    selectedMeet?.id === place.id
-                      ? "bg-emerald-700"
-                      : "bg-zinc-800 hover:bg-zinc-700"
-                  }`}
-                >
-                  <div className="font-medium">
-                    {index === 0 && "⭐ "}
-                    {place.name}
-                  </div>
-                  <div className="text-xs text-zinc-400">
-                    You: {place.travelTimeA} min | Friend: {place.travelTimeB} min
-                  </div>
-                  <div className="text-xs text-zinc-500">
-                    Difference: {place.difference} min
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
         </div>
       </div>
+
+      {/* RESULT CARDS */}
+      {meetResults.length > 0 && (
+        <div className="absolute bottom-0 left-0 right-0 max-h-[40vh] overflow-y-auto px-4 pb-32 space-y-3">
+
+          <h3 className="text-xs uppercase tracking-widest text-slate-400">
+            Optimized Meeting Points
+          </h3>
+
+          {meetResults.map((place, index) => (
+            <div
+              key={place.id}
+              onClick={() => setSelectedMeet(place)}
+              className={`p-4 rounded-xl border cursor-pointer ${
+                selectedMeet?.id === place.id
+                  ? "bg-primary/20 border-primary"
+                  : "bg-slate-900 border-slate-800"
+              }`}
+            >
+              <div className="font-semibold">
+                {index === 0 && "⭐ "} {place.name}
+              </div>
+
+              <div className="text-xs text-slate-400 mt-1">
+                You: {place.travelTimeA} min • Friend: {place.travelTimeB} min
+              </div>
+
+              <div className="text-xs text-slate-500">
+                Difference: {place.difference} min
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
+

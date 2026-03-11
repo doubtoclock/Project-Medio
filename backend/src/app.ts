@@ -6,7 +6,7 @@ import meetRoutes from "./routes/meet.routes";
 import authRoutes from "./routes/auth.routes";
 import placeRoutes from "./routes/place.routes";
 import searchRoutes from "./routes/search.routes";
-import routeRoutes from "./routes/route.routes"; // ✅ FIXED IMPORT
+import routeRoutes from "./routes/route.routes";
 
 const app = express();
 
@@ -14,15 +14,26 @@ const app = express();
    APP CONFIG
 ========================= */
 
-// 🔒 Needed for secure cookies behind proxies
+// Needed for secure cookies behind proxies (Codespaces / cloud)
 app.set("trust proxy", 1);
+
+/* =========================
+   ENV DETECTION
+========================= */
+
+const isCodespace = Boolean(process.env.CODESPACE_NAME);
+
+const FRONTEND_URL = isCodespace
+  ? `https://${process.env.CODESPACE_NAME}-5173.app.github.dev`
+  : "http://localhost:5173";
 
 /* =========================
    MIDDLEWARES
 ========================= */
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: FRONTEND_URL,
     credentials: true,
   })
 );
@@ -33,6 +44,7 @@ app.use(cookieParser());
 /* =========================
    HEALTH CHECK
 ========================= */
+
 app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({ message: "Server is running 🚀" });
 });
@@ -53,12 +65,13 @@ app.use("/api/places", placeRoutes);
 // 🔍 Search routes
 app.use("/api/search", searchRoutes);
 
-// ✅ OTP route (correct file now)
+// OTP routes
 app.use("/api/otp", routeRoutes);
 
 /* =========================
    GLOBAL ERROR HANDLER
 ========================= */
+
 app.use(
   (
     err: Error,
