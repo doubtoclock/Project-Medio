@@ -21,19 +21,19 @@ L.Icon.Default.mergeOptions({
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-/* 🔥 Metro Line → Color Mapping (MATCH YOUR REAL ROUTE NAMES) */
+/* Metro Line → Color Mapping */
 const metroLineColors: Record<string, string> = {
-  L1: "#2563eb",   // Blue
-  L2A: "#facc15",  // Yellow
-  L3: "#06b6d4",   // Aqua
-  L7: "#ef4444",   // Red
+  L1: "#2563eb",
+  L2A: "#facc15",
+  L3: "#06b6d4",
+  L7: "#ef4444",
 };
 
 type RealMapProps = {
   lat?: number;
   lng?: number;
   zoom?: number;
-  markers?: Array<{ lat: number; lng: number; name: string }>;
+  markers?: Array<{ lat: number; lng: number; name: string; color?: string }>;
   routeData?: any;
   selectedIndex?: number;
 };
@@ -76,12 +76,12 @@ export const RealMap: React.FC<RealMapProps> = ({
   }, [routeData, selectedIndex]);
 
   return (
-    <div className="absolute inset-0">
+    <div className="w-full h-full">
       <MapContainer
         center={[lat, lng]}
         zoom={zoom}
         scrollWheelZoom
-        className="h-full w-full"
+        className="w-full h-full"
       >
         <TileLayer
           attribution="© OpenStreetMap contributors"
@@ -95,7 +95,7 @@ export const RealMap: React.FC<RealMapProps> = ({
           </Marker>
         ))}
 
-        {/* 🔥 Smart Route Coloring */}
+        {/* Route lines */}
         {decodedLines.map((line, index) => (
           <Polyline
             key={index}
@@ -103,10 +103,8 @@ export const RealMap: React.FC<RealMapProps> = ({
             pathOptions={{
               color:
                 line.mode === "WALK"
-                  ? "#a855f7" // Purple walking
-                  : metroLineColors[line.routeName]
-                  ? metroLineColors[line.routeName]
-                  : "#10b981", // Fallback green
+                  ? "#a855f7"
+                  : metroLineColors[line.routeName] || "#10b981",
               weight: 6,
             }}
           />
@@ -115,3 +113,4 @@ export const RealMap: React.FC<RealMapProps> = ({
     </div>
   );
 };
+

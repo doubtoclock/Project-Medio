@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, X } from 'lucide-react';
-import { Header } from './Header';
-import { RealMap } from './Map';
+import React, { useState, useEffect } from "react";
+import { MapPin, X } from "lucide-react";
+import { RealMap } from "./Map";
+import { Link } from "react-router-dom";
+
 
 interface LocationResult {
   name: string;
@@ -9,40 +10,37 @@ interface LocationResult {
   lng: number;
 }
 
-// Fetch search suggestions
 const fetchLocationSuggestions = async (query: string) => {
   try {
-    const response = await fetch(
+    const res = await fetch(
       `http://localhost:5001/api/search?q=${encodeURIComponent(query)}`
     );
-    if (!response.ok) return [];
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching suggestions:", error);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
     return [];
   }
 };
 
-export const MeetView = () => {
-  const [locA, setLocA] = useState('');
-  const [locB, setLocB] = useState('');
-  const [debouncedA, setDebouncedA] = useState('');
-  const [debouncedB, setDebouncedB] = useState('');
+export const MeetView: React.FC = () => {
+  const [locA, setLocA] = useState("");
+  const [locB, setLocB] = useState("");
+
+  const [debouncedA, setDebouncedA] = useState("");
+  const [debouncedB, setDebouncedB] = useState("");
 
   const [coordsA, setCoordsA] = useState<LocationResult | null>(null);
   const [coordsB, setCoordsB] = useState<LocationResult | null>(null);
 
-  const [activeField, setActiveField] = useState<'A' | 'B' | null>(null);
+  const [activeField, setActiveField] = useState<"A" | "B" | null>(null);
 
   const [suggestionsA, setSuggestionsA] = useState<LocationResult[]>([]);
   const [suggestionsB, setSuggestionsB] = useState<LocationResult[]>([]);
 
-  // 🔥 NEW STATE FOR MEET RESULTS
   const [meetResults, setMeetResults] = useState<any[]>([]);
   const [selectedMeet, setSelectedMeet] = useState<any | null>(null);
   const [loadingMeet, setLoadingMeet] = useState(false);
 
-  // Debounce logic
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedA(locA), 400);
     return () => clearTimeout(timer);
@@ -69,8 +67,8 @@ export const MeetView = () => {
     }
   }, [debouncedB]);
 
-  const handleSelectLocation = (location: LocationResult, type: 'A' | 'B') => {
-    if (type === 'A') {
+  const handleSelectLocation = (location: LocationResult, type: "A" | "B") => {
+    if (type === "A") {
       setLocA(location.name);
       setCoordsA(location);
       setSuggestionsA([]);
@@ -87,9 +85,8 @@ export const MeetView = () => {
 
     setLoadingMeet(true);
     setMeetResults([]);
-    setSelectedMeet(null);
 
-    const response = await fetch("http://localhost:5001/api/meet", {
+    const res = await fetch("http://localhost:5001/api/meet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -97,166 +94,177 @@ export const MeetView = () => {
         lonA: coordsA.lng,
         latB: coordsB.lat,
         lonB: coordsB.lng,
-        minutes: 40
+        minutes: 40,
       }),
     });
 
-    const data = await response.json();
+    const data = await res.json();
     setMeetResults(data);
-
-    if (data.length > 0) {
-      setSelectedMeet(data[0]); // Auto-select best
-    }
+    if (data.length > 0) setSelectedMeet(data[0]);
 
     setLoadingMeet(false);
   };
 
-  const clearLocation = (type: 'A' | 'B') => {
-    if (type === 'A') {
-      setLocA('');
+  const clearLocation = (type: "A" | "B") => {
+    if (type === "A") {
+      setLocA("");
       setCoordsA(null);
       setSuggestionsA([]);
     } else {
-      setLocB('');
+      setLocB("");
       setCoordsB(null);
       setSuggestionsB([]);
     }
   };
 
   return (
-    <div className="h-screen bg-zinc-950 text-zinc-100 relative overflow-hidden">
-      <Header />
+    <div className="relative flex min-h-screen flex-col bg-background-dark text-slate-100">
 
-      {/* Map */}
-      <div className="absolute inset-0 -z-0">
-        <RealMap
-          markers={[
-            ...(coordsA ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA, color: 'green' }] : []),
-            ...(coordsB ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB, color: 'red' }] : []),
-            ...meetResults.map((place) => ({
-              lat: place.lat,
-              lng: place.lon,
-              name: place.name,
-              color: selectedMeet?.id === place.id ? 'yellow' : 'blue'
-            }))
-          ]}
-        />
-      </div>
+      {/* HEADER */}
+      <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-4 backdrop-blur-md bg-background-dark/80 border-b border-slate-800">
+        <div className="flex size-10 items-center justify-center rounded-full bg-slate-800">
+          <span className="material-symbols-outlined">menu</span>
+        </div>
 
-      {/* Search Container */}
-      <div className="absolute top-[80px] left-0 right-0 z-50 px-4 pt-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl p-4 space-y-4">
+        <h1 className="text-lg font-bold">Medio Meet</h1>
 
-          {/* Location A */}
-          <div className="relative">
-            <label className="text-xs text-zinc-400 mb-1 block">Your Location</label>
-            <div className="flex items-center gap-2 bg-zinc-800 rounded-lg px-3 py-2 border border-zinc-700">
-              <MapPin size={16} className="text-emerald-500" />
-              <input
-                value={locA}
-                onChange={(e) => {
-                  setLocA(e.target.value);
-                  setActiveField('A');
-                }}
-                placeholder="Search location..."
-                className="bg-transparent flex-1 outline-none text-sm"
-              />
-              {locA && <X size={16} onClick={() => clearLocation('A')} />}
-            </div>
+        <button className="relative flex items-center justify-center rounded-full">
+          <span className="material-symbols-outlined">notifications</span>
+          <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-primary"></span>
+        </button>
+      </header>
 
-            {activeField === 'A' && suggestionsA.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-800 border border-zinc-700 rounded-lg z-50">
-                {suggestionsA.map((location) => (
-                  <button
-                    key={`${location.name}-${location.lat}`}
-                    onClick={() => handleSelectLocation(location, 'A')}
-                    className="w-full px-4 py-3 text-left hover:bg-zinc-700"
-                  >
-                    {location.name}
-                  </button>
-                ))}
-              </div>
-            )}
+      {/* LOCATION INPUTS */}
+      <section className="flex flex-col gap-3 px-4 py-6 bg-slate-900/40">
+
+        {/* LOCATION A */}
+        <div className="relative">
+          <div className="flex items-center bg-slate-800 rounded-xl px-3 py-3 border border-slate-700">
+            <MapPin size={16} className="text-primary mr-2" />
+            <input
+              value={locA}
+              onChange={(e) => {
+                setLocA(e.target.value);
+                setActiveField("A");
+              }}
+              placeholder="Location A"
+              className="bg-transparent flex-1 outline-none text-sm"
+            />
+            {locA && <X size={16} onClick={() => clearLocation("A")} />}
           </div>
 
-          {/* Location B */}
-          <div className="relative">
-            <label className="text-xs text-zinc-400 mb-1 block">Friend's Location</label>
-            <div className="flex items-center gap-2 bg-zinc-800 rounded-lg px-3 py-2 border border-zinc-700">
-              <MapPin size={16} className="text-red-500" />
-              <input
-                value={locB}
-                onChange={(e) => {
-                  setLocB(e.target.value);
-                  setActiveField('B');
-                }}
-                placeholder="Search location..."
-                className="bg-transparent flex-1 outline-none text-sm"
-              />
-              {locB && <X size={16} onClick={() => clearLocation('B')} />}
-            </div>
-
-            {activeField === 'B' && suggestionsB.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-800 border border-zinc-700 rounded-lg z-50">
-                {suggestionsB.map((location) => (
-                  <button
-                    key={`${location.name}-${location.lat}`}
-                    onClick={() => handleSelectLocation(location, 'B')}
-                    className="w-full px-4 py-3 text-left hover:bg-zinc-700"
-                  >
-                    {location.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {coordsA && coordsB && (
-            <button
-              onClick={handleFindMeetingPoint}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 py-2 rounded-lg"
-            >
-              Find Meeting Point
-            </button>
-          )}
-
-          {loadingMeet && (
-            <p className="text-sm text-zinc-400 mt-2">
-              Finding best meeting spots...
-            </p>
-          )}
-
-          {meetResults.length > 0 && (
-            <div className="mt-4 space-y-2">
-              <h3 className="text-sm font-semibold">Top 5 Meeting Spots</h3>
-
-              {meetResults.map((place, index) => (
-                <div
-                  key={place.id}
-                  onClick={() => setSelectedMeet(place)}
-                  className={`p-3 rounded-lg cursor-pointer ${
-                    selectedMeet?.id === place.id
-                      ? "bg-emerald-700"
-                      : "bg-zinc-800 hover:bg-zinc-700"
-                  }`}
+          {activeField === "A" && suggestionsA.length > 0 && (
+            <div className="absolute top-full mt-2 bg-slate-800 border border-slate-700 rounded-xl w-full z-50">
+              {suggestionsA.map((s) => (
+                <button
+                  key={s.name}
+                  onClick={() => handleSelectLocation(s, "A")}
+                  className="block w-full text-left px-4 py-3 hover:bg-slate-700"
                 >
-                  <div className="font-medium">
-                    {index === 0 && "⭐ "}
-                    {place.name}
-                  </div>
-                  <div className="text-xs text-zinc-400">
-                    You: {place.travelTimeA} min | Friend: {place.travelTimeB} min
-                  </div>
-                  <div className="text-xs text-zinc-500">
-                    Difference: {place.difference} min
-                  </div>
-                </div>
+                  {s.name}
+                </button>
               ))}
             </div>
           )}
-
         </div>
-      </div>
+
+        {/* LOCATION B */}
+        <div className="relative">
+          <div className="flex items-center bg-slate-800 rounded-xl px-3 py-3 border border-slate-700">
+            <MapPin size={16} className="text-indigo-400 mr-2" />
+            <input
+              value={locB}
+              onChange={(e) => {
+                setLocB(e.target.value);
+                setActiveField("B");
+              }}
+              placeholder="Location B"
+              className="bg-transparent flex-1 outline-none text-sm"
+            />
+            {locB && <X size={16} onClick={() => clearLocation("B")} />}
+          </div>
+
+          {activeField === "B" && suggestionsB.length > 0 && (
+            <div className="absolute top-full mt-2 bg-slate-800 border border-slate-700 rounded-xl w-full z-50">
+              {suggestionsB.map((s) => (
+                <button
+                  key={s.name}
+                  onClick={() => handleSelectLocation(s, "B")}
+                  className="block w-full text-left px-4 py-3 hover:bg-slate-700"
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {coordsA && coordsB && (
+          <button
+            onClick={handleFindMeetingPoint}
+            className="w-full bg-primary py-3 rounded-xl font-semibold hover:bg-primary/90"
+          >
+            Find Meeting Point
+          </button>
+        )}
+
+        {loadingMeet && (
+          <p className="text-sm text-slate-400">
+            Finding best meeting spots...
+          </p>
+        )}
+      </section>
+
+      {/* MAP */}
+      <section className="px-4 pb-24">
+        <div className="w-full h-[40vh] sm:h-[45vh] lg:h-[55vh] overflow-hidden rounded-xl border border-slate-800 shadow-lg">
+          <RealMap
+            markers={[
+              ...(coordsA
+                ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA, color: "green" }]
+                : []),
+              ...(coordsB
+                ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB, color: "red" }]
+                : []),
+              ...meetResults.map((p) => ({
+                lat: p.lat,
+                lng: p.lon,
+                name: p.name,
+                color: selectedMeet?.id === p.id ? "yellow" : "blue",
+              })),
+            ]}
+          />
+        </div>
+      </section>
+
+
+        {/* BOTTOM NAV */}
+        <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center bg-slate-900/80 backdrop-blur-xl border-t border-slate-800 px-6 py-3">
+
+          <Link to="/meet" className="flex flex-1 flex-col items-center text-primary">
+            <span className="material-symbols-outlined">map</span>
+            <span className="text-[10px] font-bold">Meet</span>
+          </Link>
+
+          <Link to="/travel" className="flex flex-1 flex-col items-center text-slate-400">
+            <span className="material-symbols-outlined">commute</span>
+            <span className="text-[10px]">Travel</span>
+          </Link>
+
+          <Link to="/guide" className="flex flex-1 flex-col items-center text-slate-400">
+            <span className="material-symbols-outlined">explore</span>
+            <span className="text-[10px]">Guide</span>
+          </Link>
+
+          <Link to="/profile" className="flex flex-1 flex-col items-center text-slate-400">
+            <span className="material-symbols-outlined">person</span>
+            <span className="text-[10px]">Profile</span>
+          </Link>
+
+        </nav>
+
+
     </div>
   );
 };
+

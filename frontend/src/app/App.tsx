@@ -1,80 +1,85 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-
-import { BottomNav } from "./components/medio/BottomNav";
 import { MeetView } from "./components/medio/MeetView";
 import { TravelView } from "./components/medio/TravelView";
 import { UserGuideView } from "./components/medio/UserGuideView";
-import { ProfileView } from "./components/medio/ProfileView"; // 👈 NEW
+import { ProfileView } from "./components/medio/ProfileView";
 
 import { LoginPage } from "./components/medio/auth/Login";
 import { ProtectedRoute } from "./components/medio/auth/ProtectedRoute";
 
+import SplashScreen from "./components/medio/SplashScreen";
+
 /**
- * Layout shown ONLY when user is authenticated
+ * Minimal layout wrapper for protected pages
+ * (pages now control their own header and navigation)
  */
 const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <>
+    <div className="min-h-screen w-full">
       {children}
-      <BottomNav />
-    </>
+    </div>
   );
 };
 
 export default function App() {
   return (
-    <div className="bg-zinc-950 min-h-screen text-zinc-100 font-sans overflow-x-hidden">
-      <Routes>
-        {/* 🔐 LOGIN (PUBLIC) */}
-        <Route path="/login" element={<LoginPage />} />
+    <Routes>
 
-        {/* 🔒 PROTECTED ROUTES */}
-        <Route
-          path="/meet"
-          element={
-            <ProtectedRoute>
-              <ProtectedLayout>
-                <MeetView />
-              </ProtectedLayout>
-            </ProtectedRoute>
-          }
-        />
+      {/* Splash */}
+      <Route path="/" element={<SplashScreen />} />
 
-        <Route
-          path="/travel"
-          element={
-            <ProtectedRoute>
-              <ProtectedLayout>
-                <TravelView />
-              </ProtectedLayout>
-            </ProtectedRoute>
-          }
-        />
+      {/* Login */}
+      <Route path="/login" element={<LoginPage />} />
 
-        <Route
-          path="/guide"
-          element={
-            <ProtectedRoute>
-              <ProtectedLayout>
-                <UserGuideView />
-              </ProtectedLayout>
-            </ProtectedRoute>
-          }
-        />
+      {/* Meet page (full screen layout handled inside MeetView) */}
+      <Route
+        path="/meet"
+        element={
+          <ProtectedRoute>
+            <MeetView />
+          </ProtectedRoute>
+        }
+      />
 
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <ProtectedLayout>
-                <ProfileView />
-              </ProtectedLayout>
-            </ProtectedRoute>
-          }
-        />
+      {/* Travel */}
+      <Route
+        path="/travel"
+        element={
+          <ProtectedRoute>
+            <ProtectedLayout>
+              <TravelView />
+            </ProtectedLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        <Route path="*" element={<Navigate to="/meet" replace />} />
-      </Routes>
-    </div>
+      {/* Guide */}
+      <Route
+        path="/guide"
+        element={
+          <ProtectedRoute>
+            <ProtectedLayout>
+              <UserGuideView />
+            </ProtectedLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Profile */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProtectedLayout>
+              <ProfileView />
+            </ProtectedLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+
+    </Routes>
   );
 }
