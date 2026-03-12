@@ -1,83 +1,137 @@
-import React from 'react';
-import { Info, Shield, HelpCircle, ChevronRight } from 'lucide-react';
+import React from "react";
+import { Link } from "react-router-dom";
 
-export const UserGuideView = () => {
-    return (
-        <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 pb-24">
-             <header className="mb-10 mt-4">
-                <h1 className="text-4xl font-bold mb-2 text-white tracking-tight">Guide</h1>
-                <p className="text-zinc-500 text-sm">Everything you need to know about Medio.</p>
-             </header>
+export const UserGuideView: React.FC = () => {
+  return (
+    <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
 
-             <div className="space-y-8">
-                 <section>
-                    <div className="flex items-center gap-2 mb-4 text-emerald-400">
-                        <div className="p-1.5 bg-emerald-500/10 rounded-lg">
-                            <Info size={18} />
-                        </div>
-                        <h2 className="font-bold text-lg text-white">How it Works</h2>
-                    </div>
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-sm text-zinc-400 leading-relaxed space-y-3 shadow-sm">
-                        <p>
-                            <strong className="text-zinc-200">1. Enter Locations:</strong> Tap the search bar on the Meet tab and enter two starting locations.
-                        </p>
-                        <p>
-                            <strong className="text-zinc-200">2. Choose a Category:</strong> Filter by Food, Mall, or Movies to find the perfect spot.
-                        </p>
-                        <p>
-                            <strong className="text-zinc-200">3. Get Directions:</strong> Select a place to see travel times and public transport options for both parties.
-                        </p>
-                    </div>
-                 </section>
+      {/* HEADER */}
+      <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center p-4 justify-between max-w-2xl mx-auto w-full">
 
-                 <section>
-                    <div className="flex items-center gap-2 mb-4 text-indigo-400">
-                        <div className="p-1.5 bg-indigo-500/10 rounded-lg">
-                            <Shield size={18} />
-                        </div>
-                        <h2 className="font-bold text-lg text-white">Privacy & Terms</h2>
-                    </div>
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-sm text-zinc-400 leading-relaxed space-y-2 shadow-sm">
-                        <p>
-                            We do not store your location data permanently. All calculations are performed in real-time to ensure your privacy.
-                        </p>
-                        <div className="h-px bg-zinc-800 my-2"></div>
-                        <p className="text-xs">
-                            By using this app, you agree to our Terms of Service. Please respect public transport regulations in your area.
-                        </p>
-                    </div>
-                 </section>
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </div>
 
-                 <section>
-                    <div className="flex items-center gap-2 mb-4 text-amber-400">
-                        <div className="p-1.5 bg-amber-500/10 rounded-lg">
-                            <HelpCircle size={18} />
-                        </div>
-                        <h2 className="font-bold text-lg text-white">FAQ</h2>
-                    </div>
-                    <div className="space-y-3">
-                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center group cursor-pointer hover:border-zinc-700 transition-colors">
-                            <div>
-                                <h3 className="font-medium text-white mb-1">Is it free?</h3>
-                                <p className="text-xs text-zinc-500">Yes, Medio is completely free to use.</p>
-                            </div>
-                            <ChevronRight size={16} className="text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-                        </div>
-                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center group cursor-pointer hover:border-zinc-700 transition-colors">
-                            <div>
-                                <h3 className="font-medium text-white mb-1">Does it work offline?</h3>
-                                <p className="text-xs text-zinc-500">No, you need an active internet connection.</p>
-                            </div>
-                            <ChevronRight size={16} className="text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-                        </div>
-                    </div>
-                 </section>
-             </div>
-             
-             <div className="mt-16 text-center">
-                <p className="text-xs font-bold text-zinc-700 mb-1">Medio App v1.0.0</p>
-                <p className="text-[10px] text-zinc-800">&copy; 2026 Medio Inc. All rights reserved.</p>
-             </div>
+          <h2 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center">
+            Travel Guide
+          </h2>
+
+          <div className="flex size-10 items-center justify-center">
+            <button className="flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 size-10 text-slate-900 dark:text-slate-100">
+              <span className="material-symbols-outlined">search</span>
+            </button>
+          </div>
+
         </div>
-    );
+      </header>
+
+      {/* MAIN */}
+      <main className="flex-1 max-w-2xl mx-auto w-full pb-24">
+
+        {/* INTRO */}
+        <section className="px-4 pt-8 pb-4">
+          <h1 className="text-3xl font-bold leading-tight tracking-tight">
+            Travel help and tips
+          </h1>
+
+          <p className="text-slate-500 dark:text-slate-400 mt-2">
+            Everything you need to navigate your next adventure like a local.
+          </p>
+        </section>
+
+        {/* GUIDE CARDS */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+
+          {/* CARD 1 */}
+          <div className="relative group overflow-hidden rounded-xl aspect-[4/5] bg-slate-200 dark:bg-slate-800 flex flex-col justify-end p-6 border border-slate-200 dark:border-slate-800">
+
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+              style={{
+                backgroundImage:
+                  "linear-gradient(to top, rgba(16,23,34,0.9) 0%, rgba(16,23,34,0.2) 50%, rgba(16,23,34,0) 100%), url('https://lh3.googleusercontent.com/aida-public/AB6AXuB8slzAize78CNUi8RI5FZzIAtZvKlHr0NqFAdMdVvOoGzg5_dOEPEFeoT864l-Cv9z2ZbOt31qfLvlDZD6R0FZx-iRtnPIsWTF9WpvLO3t4DKH8squDuhYWDFsvoyvXNXAHSSkzt-FqkZz7hOM7e065zY3H6DUOoIiDBtzTQeZHwn1OIIynL0KFeS_mITUfuvR76syvG7Wd1-q4ubiIDCJ8csBzJsTZhcl7C2T8qFHg9_wDJAyYUBxnWGesF2cfCdEBBbku3X_4RU')",
+              }}
+            />
+
+            <div className="relative z-10">
+              <span className="inline-block px-2 py-1 rounded bg-primary text-[10px] font-bold uppercase tracking-wider text-white mb-2">
+                Navigation
+              </span>
+
+              <h3 className="text-xl font-bold text-white leading-tight">
+                City Navigation Tips
+              </h3>
+
+              <p className="text-slate-300 text-sm mt-2">
+                Master the art of getting around without getting lost in the urban jungle.
+              </p>
+            </div>
+
+          </div>
+
+          {/* CARD 2 */}
+          <div className="relative group overflow-hidden rounded-xl aspect-[4/5] bg-slate-200 dark:bg-slate-800 flex flex-col justify-end p-6 border border-slate-200 dark:border-slate-800">
+
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+              style={{
+                backgroundImage:
+                  "linear-gradient(to top, rgba(16,23,34,0.9) 0%, rgba(16,23,34,0.2) 50%, rgba(16,23,34,0) 100%), url('https://lh3.googleusercontent.com/aida-public/AB6AXuB_hZ9kzXYnwgGGUC2DjgZhDs559XSphtPH_mzmZeCR6uGdkKpxRiAZeyjYi2pr_iqzVZPvwOBeYV7HD5ASqeihHY6-7JqgSd8SmrGnsplAB2EVrLD5HufR51iNBNyuS2fJwqj5FD0D6yQY4Cmx4EzaTHN4W4gctawa65KJGsDtJmbCnoexugIXFgqiFchHWJFBG8_ga6HxuVPb273yTPCs66YMyhzlhRjOpSskgl6I_79yzxPCOLuilX0mFNlQxT2_vhpfCBeiG7s')",
+              }}
+            />
+
+            <div className="relative z-10">
+              <span className="inline-block px-2 py-1 rounded bg-primary text-[10px] font-bold uppercase tracking-wider text-white mb-2">
+                Transit
+              </span>
+
+              <h3 className="text-xl font-bold text-white leading-tight">
+                Public Transport Guide
+              </h3>
+
+              <p className="text-slate-300 text-sm mt-2">
+                Save money and time using local trains, buses, and metro systems worldwide.
+              </p>
+            </div>
+
+          </div>
+
+        </section>
+
+      </main>
+
+      {/* BOTTOM NAV */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background-light dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 backdrop-blur-xl">
+
+        <div className="flex max-w-2xl mx-auto px-4 py-2">
+
+          <Link to="/meet" className="flex flex-1 flex-col items-center gap-1 text-slate-400">
+            <span className="material-symbols-outlined">map</span>
+            <span className="text-[10px] font-medium">Meet</span>
+          </Link>
+
+          <Link to="/travel" className="flex flex-1 flex-col items-center gap-1 text-slate-400">
+            <span className="material-symbols-outlined">commute</span>
+            <span className="text-[10px] font-medium">Travel</span>
+          </Link>
+
+          <Link to="/guide" className="flex flex-1 flex-col items-center gap-1 text-primary">
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+              explore
+            </span>
+            <span className="text-[10px] font-bold">Guide</span>
+          </Link>
+
+          <Link to="/profile" className="flex flex-1 flex-col items-center gap-1 text-slate-400">
+            <span className="material-symbols-outlined">person</span>
+            <span className="text-[10px] font-medium">Profile</span>
+          </Link>
+
+        </div>
+
+      </nav>
+
+    </div>
+  );
 };

@@ -1,3 +1,7 @@
+/* ---------------- GOOGLE FONT ---------------- */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
 /* ---------------- TAILWIND BASE ---------------- */
 
 @tailwind base;
@@ -19,9 +23,21 @@ body,
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  min-height: max(884px, 100dvh);
+
+  /* Match Route Planner design system */
   background-color: #101722;
   color: #f1f5f9;
+
+  min-height: max(884px, 100dvh);
+}
+
+/* ---------------- DESIGN SYSTEM COLORS ---------------- */
+
+/* These match the colors used in the route planner UI */
+:root {
+  --color-primary: #0d6cf2;
+  --color-background-light: #f5f7f8;
+  --color-background-dark: #101722;
 }
 
 /* ---------------- MEDIO UI EFFECTS ---------------- */
@@ -41,7 +57,7 @@ body {
     0 0 40px rgba(13,108,242,0.3);
 }
 
-/* Soft ambient light effect used behind splash screens */
+/* Soft ambient light effect */
 .ambient-light {
   position: absolute;
   border-radius: 9999px;
@@ -57,7 +73,7 @@ body {
   z-index: 0 !important;
 }
 
-/* Force all Leaflet internal layers to stay within container */
+/* Force Leaflet layers to remain within container */
 .leaflet-pane {
   z-index: 1 !important;
 }
@@ -87,3 +103,4 @@ body {
 .leaflet-control {
   z-index: 6 !important;
 }
+

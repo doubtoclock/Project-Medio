@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { RealMap } from "./Map";
-import { Header } from "./Header";
-import { BottomNav } from "./BottomNav";
 import { Plus, MapPin, X } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface LocationResult {
   name: string;
@@ -258,27 +257,26 @@ export const TravelView = () => {
   }));
 
   return (
-    <div className="h-screen bg-zinc-950 text-white relative overflow-hidden">
-      {/* Map layer */}
-      <div
-        className="absolute inset-0"
-        style={{
-          zIndex: 1,
-          pointerEvents: (!isSearchCollapsed) ? 'none' : 'auto',
-        }}
-      >
-        <RealMap
-          markers={[
-            ...(coordsA ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA }] : []),
-            ...(coordsB ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB }] : []),
-          ]}
-          routeData={routeData}
-          selectedIndex={selectedIndex}
-        />
-      </div>
+   <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 relative">
+      {/* HEADER — PLACE IT HERE */}
+      <header className="sticky top-0 z-40 bg-background-light dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 p-4">
+        <div className="max-w-xl mx-auto space-y-4">
 
-      {/* Header */}
-      <Header />
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsSearchCollapsed(false)}
+              className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors"
+            >
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              Route Planner
+            </h1>
+          </div>
+
+        </div>
+      </header>
 
       {/* Edit Route button when search collapsed */}
       {isSearchCollapsed && (
@@ -287,7 +285,7 @@ export const TravelView = () => {
             setIsSearchCollapsed(false);
             setIsExpanded(false);
           }}
-          className="fixed top-20 right-4 bg-emerald-600 px-4 py-2 rounded-full shadow-lg"
+          className="fixed top-20 right-4 bg-primary px-4 py-2 rounded-full shadow-lg"
           style={{ zIndex: 9999 }}
         >
           Edit Route
@@ -296,10 +294,10 @@ export const TravelView = () => {
 
       {/* Search panel */}
       {!isSearchCollapsed && (
-        <div
-          className="fixed left-0 right-0 px-4 overflow-y-auto no-scrollbar"
-          style={{ top: 88, bottom: 80, zIndex: 9998 }}
-        >
+          <div
+              className="px-4 mt-4"
+              style={{ zIndex: 30 }}
+            >
 
           {/* Saved Places row */}
           <div className="mb-3 flex gap-2 overflow-x-auto no-scrollbar mt-2">
@@ -307,7 +305,7 @@ export const TravelView = () => {
               <button
                 key={p._id}
                 onClick={() => handleSavedPlaceClick(p)}
-                className="relative flex items-center gap-2 bg-zinc-900/90 backdrop-blur border border-zinc-800 rounded-xl pl-4 pr-8 py-2 shrink-0 hover:bg-zinc-800 hover:border-zinc-700 transition-all"
+                className="relative flex items-center gap-2 bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl pl-4 pr-8 py-2 shrink-0 hover:bg-slate-800 hover:border-zinc-700 transition-all"
               >
                 <MapPin size={14} className="text-emerald-400 shrink-0" />
                 <span className="text-xs font-medium text-zinc-200 whitespace-nowrap">
@@ -323,10 +321,10 @@ export const TravelView = () => {
             ))}
             <button
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 bg-zinc-900/90 backdrop-blur border border-dashed border-zinc-700 rounded-xl px-4 py-2 shrink-0 hover:bg-zinc-800 hover:border-emerald-500/50 transition-all"
+              className="flex items-center gap-2 bg-slate-900/90 backdrop-blur border border-dashed border-zinc-700 rounded-xl px-4 py-2 shrink-0 hover:bg-slate-800 hover:border-emerald-500/50 transition-all"
             >
               <Plus size={16} className="text-emerald-400" />
-              <span className="text-xs text-zinc-400 whitespace-nowrap">Add</span>
+              <span className="text-xs text-slate-400 whitespace-nowrap">Add</span>
             </button>
           </div>
 
@@ -339,10 +337,10 @@ export const TravelView = () => {
                 setActiveField("A");
               }}
               placeholder="From..."
-              className="w-full bg-zinc-900/90 backdrop-blur border border-zinc-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+              className="w-full bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
             />
             {activeField === "A" && suggestionsA.length > 0 && (
-              <div className="absolute top-full left-0 right-0 bg-zinc-800 rounded-xl mt-2 shadow-lg z-20">
+              <div className="absolute top-full left-0 right-0 bg-slate-800 rounded-xl mt-2 shadow-lg z-20">
                 {suggestionsA.map((s) => (
                   <button
                     key={`${s.name}-${s.lat}`}
@@ -365,10 +363,10 @@ export const TravelView = () => {
                 setActiveField("B");
               }}
               placeholder="To..."
-              className="w-full bg-zinc-900/90 backdrop-blur border border-zinc-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+              className="w-full bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
             />
             {activeField === "B" && suggestionsB.length > 0 && (
-              <div className="absolute top-full left-0 right-0 bg-zinc-800 rounded-xl mt-2 shadow-lg z-20">
+              <div className="absolute top-full left-0 right-0 bg-slate-800 rounded-xl mt-2 shadow-lg z-20">
                 {suggestionsB.map((s) => (
                   <button
                     key={`${s.name}-${s.lat}`}
@@ -386,7 +384,7 @@ export const TravelView = () => {
           {coordsA && coordsB && (
             <button
               onClick={handleRoute}
-              className="w-full bg-emerald-600 py-3 rounded-xl font-medium disabled:opacity-50"
+              className="w-full bg-primary py-3 rounded-xl font-medium disabled:opacity-50"
               disabled={loading}
             >
               {loading ? "Finding Route..." : "Find Route"}
@@ -394,11 +392,26 @@ export const TravelView = () => {
           )}
         </div>
       )}
+      {/* Map layer */}
+        <section className="px-4 pb-24">
+          <div className="w-full h-[40vh] sm:h-[45vh] lg:h-[55vh] overflow-hidden rounded-xl border border-slate-800 shadow-lg">
+
+            <RealMap
+              markers={[
+                ...(coordsA ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA }] : []),
+                ...(coordsB ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB }] : []),
+              ]}
+              routeData={routeData}
+              selectedIndex={selectedIndex}
+            />
+
+          </div>
+        </section>
 
       {/* Add Place Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center px-4" style={{ zIndex: 10000 }}>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 w-full max-w-sm relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 w-full max-w-sm relative">
             <button
               onClick={() => {
                 setShowAddModal(false);
@@ -416,7 +429,7 @@ export const TravelView = () => {
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               placeholder="Label (e.g. Home, Gym, Office)"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none mb-3"
+              className="w-full bg-slate-800 border border-zinc-700 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none mb-3"
             />
             <div className="relative mb-3">
               <input
@@ -426,10 +439,10 @@ export const TravelView = () => {
                   setNewCoords(null);
                 }}
                 placeholder="Search address..."
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+                className="w-full bg-slate-800 border border-zinc-700 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
               />
               {newAddrSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-zinc-800 rounded-xl mt-2 shadow-lg z-20 max-h-40 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 bg-slate-800 rounded-xl mt-2 shadow-lg z-20 max-h-40 overflow-y-auto">
                   {newAddrSuggestions.map((s) => (
                     <button
                       key={`${s.name}-${s.lat}`}
@@ -449,7 +462,7 @@ export const TravelView = () => {
             <button
               onClick={handleAddPlace}
               disabled={!newLabel || !newAddress}
-              className="w-full bg-emerald-600 py-3 rounded-xl font-medium disabled:opacity-50 mt-1"
+              className="w-full bg-primary py-3 rounded-xl font-medium disabled:opacity-50 mt-1"
             >
               Save Place
             </button>
@@ -466,7 +479,7 @@ export const TravelView = () => {
                 key={index}
                 onClick={() => setSelectedIndex(index)}
                 className={`px-4 py-2 rounded-xl text-sm whitespace-nowrap ${
-                  selectedIndex === index ? "bg-emerald-600" : "bg-zinc-800"
+                  selectedIndex === index ? "bg-primary" : "bg-slate-800"
                 }`}
               >
                 Option {index + 1} · {Math.round(it.duration / 60)} mins
@@ -479,8 +492,8 @@ export const TravelView = () => {
       {/* Bottom Sheet */}
       {itinerary && (
         <div
-          className={`fixed bottom-0 left-0 right-0 bg-zinc-950 rounded-t-3xl shadow-2xl border-t border-zinc-800 transition-all duration-300 ${
-            isExpanded ? "h-[75vh]" : "h-[90px]"
+          className={`fixed bottom-0 left-0 right-0 bg-background-dark rounded-t-3xl shadow-2xl border-t border-slate-800 transition-all duration-300 ${
+            isExpanded ? "h-[55vh]" : "h-[90px]"
           }`}
           style={{ zIndex: 9998 }}
         >
@@ -501,7 +514,7 @@ export const TravelView = () => {
               {steps?.map((step: any, index: number) => (
                 <div
                   key={index}
-                  className="bg-zinc-900 p-4 rounded-xl text-sm border border-zinc-800 mb-3"
+                  className="bg-slate-900 p-4 rounded-xl text-sm border border-slate-800 mb-3"
                 >
                   <div className="font-medium">
                     {step.mode === "WALK" && "🚶 Walk"}
@@ -513,7 +526,7 @@ export const TravelView = () => {
                       Line: {step.routeName}
                     </div>
                   )}
-                  <div className="mt-1 text-zinc-400">
+                  <div className="mt-1 text-slate-400">
                     From{" "}
                     <span className="text-white font-medium">{step.from}</span>{" "}
                     to{" "}
@@ -527,8 +540,29 @@ export const TravelView = () => {
         </div>
       )}
 
-      {/* Bottom Nav */}
-      <BottomNav />
+        <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center bg-slate-900/80 backdrop-blur-xl border-t border-slate-800 px-6 py-3">
+
+          <Link to="/meet" className="flex flex-1 flex-col items-center text-slate-400">
+            <span className="material-symbols-outlined">map</span>
+            <span className="text-[10px]">Meet</span>
+          </Link>
+
+          <Link to="/travel" className="flex flex-1 flex-col items-center text-primary">
+            <span className="material-symbols-outlined">commute</span>
+            <span className="text-[10px] font-bold">Travel</span>
+          </Link>
+
+          <Link to="/guide" className="flex flex-1 flex-col items-center text-slate-400">
+            <span className="material-symbols-outlined">explore</span>
+            <span className="text-[10px]">Guide</span>
+          </Link>
+
+          <Link to="/profile" className="flex flex-1 flex-col items-center text-slate-400">
+            <span className="material-symbols-outlined">person</span>
+            <span className="text-[10px]">Profile</span>
+          </Link>
+
+        </nav>
     </div>
   );
 };
