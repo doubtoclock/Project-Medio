@@ -11,27 +11,25 @@ router.get("/", async (req, res) => {
 
   try {
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-    query
-  )}&limit=5&viewbox=72.77,19.27,72.99,18.89&bounded=1`,
-      {
-        headers: {
-          "User-Agent": "medio-app",
-        },
-      }
+      `https://photon.komoot.io/api?q=${encodeURIComponent(query)}&limit=5&lat=19.076&lon=72.8777`
     );
 
-    const data = (await response.json()) as Array<any>;
+    const data = (await response.json()) as {
+      features: {
+        properties: { name?: string; street?: string; city?: string };
+        geometry: { coordinates: [number, number] };
+      }[];
+    };
 
-    const results = data.map((item: any) => ({
-      name: item.display_name,
-      lat: parseFloat(item.lat),
-      lng: parseFloat(item.lon),
+    const results = data.features.map((item: any) => ({
+      name: item.properties.name || item.properties.street || item.properties.city,
+      lat: item.geometry.coordinates[1],
+      lng: item.geometry.coordinates[0],
     }));
 
     res.json(results);
   } catch (error) {
-    console.error("OSM search error:", error);
+    console.error("Photon search error:", error);
     res.status(500).json([]);
   }
 });
