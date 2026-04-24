@@ -4,6 +4,9 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
+  avatarUrl?: string;
+  notificationsEnabled: boolean;
+  privacyMode: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +25,17 @@ const userSchema = new Schema<IUser>(
     password: {
       type: String,
       required: true
+    },
+    avatarUrl: {
+      type: String
+    },
+    notificationsEnabled: {
+      type: Boolean,
+      default: true
+    },
+    privacyMode: {
+      type: Boolean,
+      default: false
     }
   },
   {

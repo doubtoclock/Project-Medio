@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { RealMap } from "./Map";
 import { Plus, MapPin, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getBackendUrl } from "../../lib/backend";
 
 interface LocationResult {
   name: string;
@@ -20,7 +21,7 @@ interface SavedPlace {
 const fetchLocationSuggestions = async (query: string) => {
   try {
     const res = await fetch(
-      `http://localhost:5001/api/search?q=${encodeURIComponent(query)}`
+      `${getBackendUrl()}/api/search?q=${encodeURIComponent(query)}`
     );
     if (!res.ok) return [];
     return await res.json();
@@ -31,7 +32,7 @@ const fetchLocationSuggestions = async (query: string) => {
 
 const fetchSavedPlaces = async (): Promise<SavedPlace[]> => {
   try {
-    const res = await fetch("http://localhost:5001/api/places", {
+    const res = await fetch(`${getBackendUrl()}/api/places`, {
       credentials: "include",
     });
     if (!res.ok) {
@@ -53,7 +54,7 @@ const savePlaceToBackend = async (place: {
   lng?: number;
 }) => {
   try {
-    const res = await fetch("http://localhost:5001/api/places", {
+    const res = await fetch(`${getBackendUrl()}/api/places`, {
       method: "POST",
       credentials: "include",
       headers: {
@@ -76,7 +77,7 @@ const savePlaceToBackend = async (place: {
 
 const deletePlaceFromBackend = async (id: string) => {
   try {
-    const res = await fetch(`http://localhost:5001/api/places/${id}`, {
+    const res = await fetch(`${getBackendUrl()}/api/places/${id}`, {
       method: "DELETE",
       credentials: "include",
     });
@@ -171,12 +172,15 @@ export const TravelView = () => {
     if (!coordsA || !coordsB) return;
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5001/api/otp/route", {
+      const res = await fetch(`${getBackendUrl()}/api/otp/route`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           from: { lat: coordsA.lat, lng: coordsA.lng },
           to: { lat: coordsB.lat, lng: coordsB.lng },
+          fromName: locA,
+          toName: locB,
         }),
       });
       const data = await res.json();
@@ -295,9 +299,19 @@ export const TravelView = () => {
       {/* Search panel */}
       {!isSearchCollapsed && (
           <div
-              className="px-4 mt-4"
-              style={{ zIndex: 30 }}
+              className="relative z-30 mt-4 px-4 overflow-visible"
             >
+          {routeData && (
+            <div className="mb-3 flex justify-end">
+              <button
+                onClick={() => setIsSearchCollapsed(true)}
+                className="inline-flex size-8 items-center justify-center rounded-full border border-slate-700 bg-slate-900/90 text-slate-300 transition-colors hover:border-slate-500 hover:text-white"
+                aria-label="Collapse route editor"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
 
           {/* Saved Places row */}
           <div className="mb-3 flex gap-2 overflow-x-auto no-scrollbar mt-2">
@@ -329,7 +343,7 @@ export const TravelView = () => {
           </div>
 
           {/* From */}
-          <div className="relative mb-4">
+          <div className="relative z-30 mb-4">
             <input
               value={locA}
               onChange={(e) => {
@@ -340,7 +354,7 @@ export const TravelView = () => {
               className="w-full bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
             />
             {activeField === "A" && suggestionsA.length > 0 && (
-              <div className="absolute top-full left-0 right-0 bg-slate-800 rounded-xl mt-2 shadow-lg z-20">
+              <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl bg-slate-800 shadow-2xl">
                 {suggestionsA.map((s) => (
                   <button
                     key={`${s.name}-${s.lat}`}
@@ -355,7 +369,7 @@ export const TravelView = () => {
           </div>
 
           {/* To */}
-          <div className="relative mb-6">
+          <div className="relative z-30 mb-6">
             <input
               value={locB}
               onChange={(e) => {
@@ -366,7 +380,7 @@ export const TravelView = () => {
               className="w-full bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
             />
             {activeField === "B" && suggestionsB.length > 0 && (
-              <div className="absolute top-full left-0 right-0 bg-slate-800 rounded-xl mt-2 shadow-lg z-20">
+              <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl bg-slate-800 shadow-2xl">
                 {suggestionsB.map((s) => (
                   <button
                     key={`${s.name}-${s.lat}`}
@@ -393,8 +407,8 @@ export const TravelView = () => {
         </div>
       )}
       {/* Map layer */}
-        <section className="px-4 pb-24">
-          <div className="w-full h-[40vh] sm:h-[45vh] lg:h-[55vh] overflow-hidden rounded-xl border border-slate-800 shadow-lg">
+        <section className="relative z-0 px-4 pb-24">
+          <div className="relative z-0 w-full h-[40vh] overflow-hidden rounded-xl border border-slate-800 shadow-lg sm:h-[45vh] lg:h-[55vh]">
 
             <RealMap
               markers={[
@@ -472,7 +486,7 @@ export const TravelView = () => {
 
       {/* Itinerary Selector */}
       {isSearchCollapsed && itineraries.length > 1 && (
-        <div className="fixed top-24 left-0 right-0 px-4" style={{ zIndex: 9998 }}>
+        <div className="fixed left-0 right-0 top-24 px-4" style={{ zIndex: 25 }}>
           <div className="flex gap-2 overflow-x-auto">
             {itineraries.map((it: any, index: number) => (
               <button
@@ -492,10 +506,9 @@ export const TravelView = () => {
       {/* Bottom Sheet */}
       {itinerary && (
         <div
-          className={`fixed bottom-0 left-0 right-0 bg-background-dark rounded-t-3xl shadow-2xl border-t border-slate-800 transition-all duration-300 ${
-            isExpanded ? "h-[55vh]" : "h-[90px]"
+          className={`fixed bottom-[72px] left-0 right-0 z-20 rounded-t-3xl border-t border-slate-800 bg-background-dark shadow-2xl transition-all duration-300 ${
+            isExpanded ? "h-[50vh]" : "h-[88px]"
           }`}
-          style={{ zIndex: 9998 }}
         >
           <div
             onClick={() => setIsExpanded(!isExpanded)}
@@ -510,7 +523,7 @@ export const TravelView = () => {
           </div>
 
           {isExpanded && (
-            <div className="px-4 pb-24 overflow-y-auto h-[calc(75vh-100px)]">
+            <div className="h-[calc(100%-88px)] overflow-y-auto px-4 pb-6">
               {steps?.map((step: any, index: number) => (
                 <div
                   key={index}

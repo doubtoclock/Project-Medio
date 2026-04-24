@@ -5,7 +5,9 @@ import {
   googleRedirectLogin,
   googleRedirectCallback,
   checkAuth,
+  getProfile,
   logout,
+  updateProfile,
 } from "../controller/auth.controller";
 
 import { authMiddleware } from "../middlewares/auth.middleware";
@@ -55,6 +57,8 @@ router.get("/google/callback", googleRedirectCallback);
 
 // Used by frontend when page loads
 router.get("/me", checkAuth);
+router.get("/profile", authMiddleware, getProfile);
+router.patch("/profile", authMiddleware, updateProfile);
 
 /* =========================
    PROTECTED ROUTES

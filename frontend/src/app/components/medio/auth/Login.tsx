@@ -1,25 +1,22 @@
 import React, { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { getBackendUrl } from "../../../lib/backend";
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const isSuccess = params.get("login") === "success";
 
-  // Detect environment (Codespaces vs localhost)
-  const isCodespace = window.location.hostname.includes("github.dev");
-
-  const backendURL = isCodespace
-    ? `https://${window.location.hostname.replace("-5173", "-5001")}`
-    : "http://localhost:5001";
+  const backendURL = getBackendUrl();
 
   // If user already authenticated → go to /meet
   useEffect(() => {
     fetch(`${backendURL}/api/auth/me`, {
       credentials: "include",
     })
+      .then((res) => res.json())
       .then((res) => {
-        if (res.ok) {
+        if (res?.authenticated) {
           navigate("/meet", { replace: true });
         }
       })

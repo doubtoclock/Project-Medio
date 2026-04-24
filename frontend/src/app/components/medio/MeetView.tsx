@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { MapPin, X } from "lucide-react";
 import { RealMap } from "./Map";
 import { Link } from "react-router-dom";
+import { getBackendUrl } from "../../lib/backend";
 
 
 interface LocationResult {
@@ -13,7 +14,7 @@ interface LocationResult {
 const fetchLocationSuggestions = async (query: string) => {
   try {
     const res = await fetch(
-      `http://localhost:5001/api/search?q=${encodeURIComponent(query)}`
+      `${getBackendUrl()}/api/search?q=${encodeURIComponent(query)}`
     );
     if (!res.ok) return [];
     return await res.json();
@@ -86,7 +87,8 @@ export const MeetView: React.FC = () => {
     setLoadingMeet(true);
     setMeetResults([]);
 
-    const res = await fetch("http://localhost:5001/api/meet", {
+    const res = await fetch(`${getBackendUrl()}/api/meet`, {
+      credentials: "include",
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -95,6 +97,8 @@ export const MeetView: React.FC = () => {
         latB: coordsB.lat,
         lonB: coordsB.lng,
         minutes: 40,
+        fromName: locA,
+        toName: locB,
       }),
     });
 
@@ -135,10 +139,10 @@ export const MeetView: React.FC = () => {
       </header>
 
       {/* LOCATION INPUTS */}
-      <section className="flex flex-col gap-3 px-4 py-6 bg-slate-900/40">
+      <section className="relative z-30 flex flex-col gap-3 bg-slate-900/40 px-4 py-6 overflow-visible">
 
         {/* LOCATION A */}
-        <div className="relative">
+        <div className="relative z-30">
           <div className="flex items-center bg-slate-800 rounded-xl px-3 py-3 border border-slate-700">
             <MapPin size={16} className="text-primary mr-2" />
             <input
@@ -154,7 +158,7 @@ export const MeetView: React.FC = () => {
           </div>
 
           {activeField === "A" && suggestionsA.length > 0 && (
-            <div className="absolute top-full mt-2 bg-slate-800 border border-slate-700 rounded-xl w-full z-50">
+            <div className="absolute left-0 right-0 top-full z-50 mt-2 w-full rounded-xl border border-slate-700 bg-slate-800 shadow-2xl">
               {suggestionsA.map((s) => (
                 <button
                   key={s.name}
@@ -169,7 +173,7 @@ export const MeetView: React.FC = () => {
         </div>
 
         {/* LOCATION B */}
-        <div className="relative">
+        <div className="relative z-30">
           <div className="flex items-center bg-slate-800 rounded-xl px-3 py-3 border border-slate-700">
             <MapPin size={16} className="text-indigo-400 mr-2" />
             <input
@@ -185,7 +189,7 @@ export const MeetView: React.FC = () => {
           </div>
 
           {activeField === "B" && suggestionsB.length > 0 && (
-            <div className="absolute top-full mt-2 bg-slate-800 border border-slate-700 rounded-xl w-full z-50">
+            <div className="absolute left-0 right-0 top-full z-50 mt-2 w-full rounded-xl border border-slate-700 bg-slate-800 shadow-2xl">
               {suggestionsB.map((s) => (
                 <button
                   key={s.name}
@@ -216,8 +220,8 @@ export const MeetView: React.FC = () => {
       </section>
 
       {/* MAP */}
-      <section className="px-4 pb-24">
-        <div className="w-full h-[40vh] sm:h-[45vh] lg:h-[55vh] overflow-hidden rounded-xl border border-slate-800 shadow-lg">
+      <section className="relative z-0 px-4 pb-24">
+        <div className="relative z-0 w-full h-[40vh] overflow-hidden rounded-xl border border-slate-800 shadow-lg sm:h-[45vh] lg:h-[55vh]">
           <RealMap
             markers={[
               ...(coordsA

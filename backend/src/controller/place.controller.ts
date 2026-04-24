@@ -1,21 +1,11 @@
 import { Request, Response } from "express";
 import { Place } from "../models/place";          // ✅ lowercase
 import { History } from "../models/history";      // ✅ recent history
-import { User } from "../models/user";
+import { getOrCreateCurrentUser } from "../utils/current-user";
 
 const getUserId = async (req: Request): Promise<string | null> => {
-  const decoded = (req as any).user;
-  if (!decoded?.email) return null;
-
-  let user = await User.findOne({ email: decoded.email });
-
-  if (!user) {
-    user = await User.create({
-      email: decoded.email,
-      name: decoded.name || "",
-      password: "google-oauth",
-    });
-  }
+  const user = await getOrCreateCurrentUser(req);
+  if (!user) return null;
 
   return user._id.toString();
 };

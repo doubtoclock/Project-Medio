@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { getBackendUrl } from "../../../lib/backend";
 
 export const ProtectedRoute = ({
   children,
@@ -11,13 +12,15 @@ export const ProtectedRoute = ({
 
   useEffect(() => {
     let isMounted = true;
+    const backendURL = getBackendUrl();
 
-    fetch("http://localhost:5001/api/auth/me", {
-      credentials: "include", // 🔥 REQUIRED for cookie auth
+    fetch(`${backendURL}/api/auth/me`, {
+      credentials: "include",
     })
-      .then((res) => {
+      .then((res) => res.json())
+      .then((data) => {
         if (!isMounted) return;
-        setAuthenticated(res.ok);
+        setAuthenticated(Boolean(data?.authenticated));
       })
       .catch(() => {
         if (!isMounted) return;
@@ -33,20 +36,17 @@ export const ProtectedRoute = ({
     };
   }, []);
 
-  // ⏳ While auth status is being checked
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center text-zinc-400">
-        Checking authentication…
+      <div className="flex h-screen items-center justify-center text-zinc-400">
+        Checking authentication...
       </div>
     );
   }
 
-  // 🔐 Not authenticated → go to login
   if (!authenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // ✅ Authenticated → render protected content
   return <>{children}</>;
 };

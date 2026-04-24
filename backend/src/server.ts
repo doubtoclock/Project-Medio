@@ -1,7 +1,10 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config();
 
 import app from "./app";
 import { connectDB } from "./lib/db";
+
+console.log("MONGO_URI:", process.env.MONGO_URI);
 
 /* =========================
    ENV CONFIG
@@ -21,18 +24,14 @@ const SERVER_URL = isCodespace
 
 const startServer = async () => {
   try {
-    // Connect MongoDB
     await connectDB();
-    console.log("✅ MongoDB connected");
 
-    // Start Express server
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on ${SERVER_URL}`);
+      console.log(`Server running on ${SERVER_URL}`);
     });
-
   } catch (error) {
-    console.error("❌ Failed to start server");
-    console.error(error);
+    console.error("Failed to start server");
+    console.error(error instanceof Error ? error.message : error);
     process.exit(1);
   }
 };

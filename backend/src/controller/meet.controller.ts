@@ -1,14 +1,14 @@
 import { Request, Response } from "express";
+import { History } from "../models/history";
 import { findMeetPoints } from "../services/meet.services";
+import { getOrCreateCurrentUser } from "../utils/current-user";
 
 export const getMeetPoints = async (
   req: Request,
   res: Response
 ): Promise<void> => {
+  const { latA, lonA, latB, lonB, minutes, fromName, toName } = req.body;
 
-  const { latA, lonA, latB, lonB, minutes } = req.body;
-
-  // Validate inputs
   if (
     latA === undefined ||
     lonA === undefined ||
@@ -40,11 +40,23 @@ export const getMeetPoints = async (
   }
 
   try {
-    const results = await findMeetPoints(
-      A,
-      B,
-      minutes ? Number(minutes) : 20
-    );
+    const results = await findMeetPoints(A, B);
+
+    const user = await getOrCreateCurrentUser(req);
+    if (user) {
+      const leftLabel = typeof fromName === "string" && fromName.trim()
+        ? fromName.trim()
+        : `${A.lat}, ${A.lon}`;
+      const rightLabel = typeof toName === "string" && toName.trim()
+        ? toName.trim()
+        : `${B.lat}, ${B.lon}`;
+
+      await History.create({
+        userId: user._id,
+        action: "MEET_SEARCHED",
+        value: `${leftLabel} <-> ${rightLabel}`,
+      });
+    }
 
     res.json(results);
   } catch (err) {
