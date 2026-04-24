@@ -3,11 +3,6 @@ L1,MMRDA,L1,Mumbai Metro Line 1,1,1F77B4,FFFFFF
 L2A,MMRDA,L2A,Mumbai Metro Line 2A,1,FFCB05,000000
 L3,MMRDA,L3,Mumbai Metro Line 3 (Aqua Line),1,00B3A4,FFFFFF
 L7,MMRDA,L7,Mumbai Metro Line 7 (Red Line),1,E53935,FFFFFF
-CL,CR,Central,Central Line (CST-Kasara/Khopoli),2,FF0000,FFFFFF
-WR_DN,WR,Western Down,Western Line Down (Virar → Churchgate),2,00FF00,FFFFFF
-WR_UP,WR,Western Up,Western Line Up (Churchgate → Virar),2,00FF00,FFFFFF
-WR_DN_AC,WR,Western AC Down,Western AC Line Down,2,00AA00,FFFFFF
-WR_UP_AC,WR,Western AC Up,Western AC Line Up,2,00AA00,FFFFFF
-HL,CR,Harbour,Harbour Line (CST-Panvel),2,0000FF,FFFFFF
-TL,CR,Trans-Harbour,Trans-Harbour Line (Thane-Panvel),2,FF00FF,FFFFFF
-BEST,MMRDA,BUS,BEST Bus Services,3,F9A825,000000
+CL,CR,Central,Mumbai Suburban Railway Central Line,2,C62828,
+HL,CR,Harbour,Mumbai Suburban Railway Harbour Line,2,2E7D32,
+WL,WR,Western,Mumbai Suburban Railway Western Line,2,1565C0,
