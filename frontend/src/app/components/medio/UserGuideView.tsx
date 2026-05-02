@@ -1,13 +1,13 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { BottomNav } from "./BottomNav";
 
 export const UserGuideView: React.FC = () => {
   return (
-    <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+    <div className="medio-page bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
-        <div className="flex items-center p-4 justify-between max-w-2xl mx-auto w-full">
+        <div className="medio-page-shell flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
 
           <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100">
             <span className="material-symbols-outlined">arrow_back</span>
@@ -27,24 +27,24 @@ export const UserGuideView: React.FC = () => {
       </header>
 
       {/* MAIN */}
-      <main className="flex-1 max-w-2xl mx-auto w-full pb-24">
+      <main className="medio-page-shell flex-1 w-full pb-28">
 
         {/* INTRO */}
-        <section className="px-4 pt-8 pb-4">
-          <h1 className="text-3xl font-bold leading-tight tracking-tight">
+        <section className="grid gap-4 px-4 pt-8 pb-4 sm:px-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-end lg:px-8">
+          <h1 className="max-w-xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
             Travel help and tips
           </h1>
 
-          <p className="text-slate-500 dark:text-slate-400 mt-2">
+          <p className="max-w-2xl text-slate-500 dark:text-slate-400 lg:justify-self-end">
             Everything you need to navigate your next adventure like a local.
           </p>
         </section>
 
         {/* GUIDE CARDS */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+        <section className="grid grid-cols-1 gap-4 px-4 pb-8 sm:px-6 md:grid-cols-2 lg:px-8">
 
           {/* CARD 1 */}
-          <div className="relative group overflow-hidden rounded-xl aspect-[4/5] bg-slate-200 dark:bg-slate-800 flex flex-col justify-end p-6 border border-slate-200 dark:border-slate-800">
+          <div className="guide-card relative group overflow-hidden rounded-xl aspect-[16/12] bg-slate-200 dark:bg-slate-800 flex flex-col justify-end p-6 border border-slate-200 dark:border-slate-800 sm:aspect-[16/10] lg:aspect-[16/9]">
 
             <div
               className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
@@ -71,7 +71,7 @@ export const UserGuideView: React.FC = () => {
           </div>
 
           {/* CARD 2 */}
-          <div className="relative group overflow-hidden rounded-xl aspect-[4/5] bg-slate-200 dark:bg-slate-800 flex flex-col justify-end p-6 border border-slate-200 dark:border-slate-800">
+          <div className="guide-card relative group overflow-hidden rounded-xl aspect-[16/12] bg-slate-200 dark:bg-slate-800 flex flex-col justify-end p-6 border border-slate-200 dark:border-slate-800 sm:aspect-[16/10] lg:aspect-[16/9]">
 
             <div
               className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
@@ -101,36 +101,7 @@ export const UserGuideView: React.FC = () => {
 
       </main>
 
-      {/* BOTTOM NAV */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background-light dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 backdrop-blur-xl">
-
-        <div className="flex max-w-2xl mx-auto px-4 py-2">
-
-          <Link to="/meet" className="flex flex-1 flex-col items-center gap-1 text-slate-400">
-            <span className="material-symbols-outlined">map</span>
-            <span className="text-[10px] font-medium">Meet</span>
-          </Link>
-
-          <Link to="/travel" className="flex flex-1 flex-col items-center gap-1 text-slate-400">
-            <span className="material-symbols-outlined">commute</span>
-            <span className="text-[10px] font-medium">Travel</span>
-          </Link>
-
-          <Link to="/guide" className="flex flex-1 flex-col items-center gap-1 text-primary">
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-              explore
-            </span>
-            <span className="text-[10px] font-bold">Guide</span>
-          </Link>
-
-          <Link to="/profile" className="flex flex-1 flex-col items-center gap-1 text-slate-400">
-            <span className="material-symbols-outlined">person</span>
-            <span className="text-[10px] font-medium">Profile</span>
-          </Link>
-
-        </div>
-
-      </nav>
+      <BottomNav active="guide" />
 
     </div>
   );

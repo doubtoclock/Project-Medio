@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { RealMap } from "./Map";
 import { Plus, MapPin, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { BottomNav } from "./BottomNav";
 import { getBackendUrl } from "../../lib/backend";
 
 interface LocationResult {
@@ -553,29 +553,7 @@ export const TravelView = () => {
         </div>
       )}
 
-        <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center bg-slate-900/80 backdrop-blur-xl border-t border-slate-800 px-6 py-3">
-
-          <Link to="/meet" className="flex flex-1 flex-col items-center text-slate-400">
-            <span className="material-symbols-outlined">map</span>
-            <span className="text-[10px]">Meet</span>
-          </Link>
-
-          <Link to="/travel" className="flex flex-1 flex-col items-center text-primary">
-            <span className="material-symbols-outlined">commute</span>
-            <span className="text-[10px] font-bold">Travel</span>
-          </Link>
-
-          <Link to="/guide" className="flex flex-1 flex-col items-center text-slate-400">
-            <span className="material-symbols-outlined">explore</span>
-            <span className="text-[10px]">Guide</span>
-          </Link>
-
-          <Link to="/profile" className="flex flex-1 flex-col items-center text-slate-400">
-            <span className="material-symbols-outlined">person</span>
-            <span className="text-[10px]">Profile</span>
-          </Link>
-
-        </nav>
+        <BottomNav active="travel" />
     </div>
   );
 };

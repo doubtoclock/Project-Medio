@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { BottomNav } from "./BottomNav";
 import { getBackendUrl } from "../../lib/backend";
 
 type SavedPlace = {
@@ -233,8 +234,8 @@ export const ProfileView: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background-light font-display text-slate-900 dark:bg-background-dark dark:text-slate-100">
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col pb-24">
+    <div className="medio-page min-h-screen bg-background-light font-display text-slate-900 dark:bg-background-dark dark:text-slate-100">
+      <div className="medio-page-shell flex min-h-screen w-full flex-col pb-28">
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-background-light/90 px-4 py-4 backdrop-blur-md dark:border-slate-800 dark:bg-background-dark/90">
           <div className="flex items-center justify-between">
             <button
@@ -256,9 +257,9 @@ export const ProfileView: React.FC = () => {
           </div>
         </header>
 
-        <main className="flex-1 space-y-5 px-4 py-5">
-          <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="bg-[linear-gradient(135deg,rgba(13,108,242,0.18),rgba(8,15,30,0.96))] px-6 py-8">
+        <main className="grid flex-1 grid-cols-1 gap-5 px-4 py-5 sm:px-6 lg:grid-cols-2 lg:px-8">
+          <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-2">
+            <div className="profile-hero px-6 py-8">
               <div className="flex flex-col items-center text-center">
                 <div className="mb-4 flex size-28 items-center justify-center overflow-hidden rounded-full border-4 border-white/20 bg-slate-950/50 text-3xl font-bold text-white">
                   {profile.user.avatarUrl ? (
@@ -301,7 +302,7 @@ export const ProfileView: React.FC = () => {
 
           {(error || successMessage) && (
             <div
-              className={`rounded-2xl border px-4 py-3 text-sm ${
+              className={`rounded-2xl border px-4 py-3 text-sm lg:col-span-2 ${
                 error
                   ? "border-red-500/30 bg-red-500/10 text-red-200"
                   : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
@@ -438,7 +439,7 @@ export const ProfileView: React.FC = () => {
             </div>
           </section>
 
-          <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-2">
             <button
               onClick={() => setIsRecentChangesOpen((current) => !current)}
               className="flex w-full items-center justify-between px-5 py-5 text-left transition hover:bg-slate-50 dark:hover:bg-slate-800/40"
@@ -485,33 +486,13 @@ export const ProfileView: React.FC = () => {
 
           <button
             onClick={() => void handleLogout()}
-            className="w-full rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-red-200 transition hover:bg-red-500/20"
+            className="w-full rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-red-200 transition hover:bg-red-500/20 lg:col-span-2"
           >
             Log Out
           </button>
         </main>
 
-        <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center border-t border-slate-200 bg-background-light/90 px-6 py-3 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/85">
-          <Link to="/meet" className="flex flex-1 flex-col items-center text-slate-400">
-            <span className="material-symbols-outlined">map</span>
-            <span className="text-[10px]">Meet</span>
-          </Link>
-
-          <Link to="/travel" className="flex flex-1 flex-col items-center text-slate-400">
-            <span className="material-symbols-outlined">commute</span>
-            <span className="text-[10px]">Travel</span>
-          </Link>
-
-          <Link to="/guide" className="flex flex-1 flex-col items-center text-slate-400">
-            <span className="material-symbols-outlined">explore</span>
-            <span className="text-[10px]">Guide</span>
-          </Link>
-
-          <Link to="/profile" className="flex flex-1 flex-col items-center text-primary">
-            <span className="material-symbols-outlined">person</span>
-            <span className="text-[10px] font-bold">Profile</span>
-          </Link>
-        </nav>
+        <BottomNav active="profile" />
       </div>
     </div>
   );
