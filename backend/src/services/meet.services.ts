@@ -9,6 +9,7 @@ import {
 } from "./poi.services";
 import { generateSurfaceIntersection } from "./surface.services";
 import { getOtpDuration } from "./otp.services";
+import { logger } from "../utils/logger";
 
 type MeetingSource = "osm" | "photon" | "estimated";
 
@@ -374,15 +375,16 @@ const fetchExpandedMeetingPOIs = async (
     );
     results = mergeUniquePois(results, quickPois.filter(hasUsableName));
 
-    console.log(
-      `Named meeting venues in quick ${quickRadiusKm}km search: ${results.length}`
-    );
+    logger.debug("Named meeting venues found in quick search", {
+      radiusKm: quickRadiusKm,
+      resultCount: results.length,
+    });
 
     if (results.length >= MIN_LIVE_RESULTS) {
       return results.slice(0, POI_BATCH_LIMIT);
     }
   } catch (err) {
-    console.log("Quick meeting venue search failed:", err);
+    logger.warn("Quick meeting venue search failed", { error: err });
     if (isLookupUnavailable(err)) return [];
   }
 
@@ -397,13 +399,17 @@ const fetchExpandedMeetingPOIs = async (
       const namedPois = pois.filter(hasUsableName);
       results = mergeUniquePois(results, namedPois);
 
-      console.log(
-        `Named meeting venues within ${radiusKm}km: ${results.length}`
-      );
+      logger.debug("Named meeting venues found in expanded search", {
+        radiusKm,
+        resultCount: results.length,
+      });
 
       if (results.length >= MIN_LIVE_RESULTS) break;
     } catch (err) {
-      console.log("Meeting venue search step failed:", radiusKm, err);
+      logger.warn("Meeting venue search step failed", {
+        radiusKm,
+        error: err,
+      });
       if (isLookupUnavailable(err)) break;
     }
   }
@@ -424,10 +430,12 @@ const fetchPhotonFallbackMeetingPOIs = async (
       3500
     );
 
-    console.log(`Photon fallback meeting venues: ${pois.length}`);
+    logger.debug("Photon fallback meeting venues found", {
+      resultCount: pois.length,
+    });
     return pois.filter(hasUsableName);
   } catch (err) {
-    console.log("Photon meeting venue fallback failed:", err);
+    logger.warn("Photon meeting venue fallback failed", { error: err });
     return [];
   }
 };
@@ -604,7 +612,7 @@ const findSurfaceMeetPois = async (
   );
 
   if (!directDuration || directDuration <= 0) {
-    console.log("Surface fallback skipped because OTP is unavailable");
+    logger.debug("Surface fallback skipped because OTP is unavailable");
     return [];
   }
 
@@ -621,7 +629,7 @@ const findSurfaceMeetPois = async (
       polygon = await generateSurfaceIntersection(A, B, meetingMinutes);
       if (polygon) break;
     } catch (err) {
-      console.log("Surface fallback generation failed:", err);
+      logger.warn("Surface fallback generation failed", { error: err });
     }
 
     meetingMinutes += SURFACE_STEP_MINUTES;
@@ -641,7 +649,7 @@ const findSurfaceMeetPois = async (
         pois = await fetchMeetingPOIs(expandedPolygon as any);
       }
     } catch (err) {
-      console.log("Surface fallback buffer failed:", err);
+      logger.warn("Surface fallback buffer failed", { error: err });
     }
   }
 
@@ -681,8 +689,9 @@ const findMeetPointsLive = async (
   const directDistanceKm = getDistanceKm(A, B);
   const seeds = buildRouteSeeds(A, B);
 
-  console.log("=== FAST MEET SEARCH ===");
-  console.log("Direct distance:", directDistanceKm.toFixed(2), "km");
+  logger.info("Meeting point search started", {
+    directDistanceKm: Number(directDistanceKm.toFixed(2)),
+  });
 
   const poiRadiusKm = getSearchRadiusKm(directDistanceKm);
   const livePois = await fetchExpandedMeetingPOIs(seeds, poiRadiusKm);
@@ -693,9 +702,9 @@ const findMeetPointsLive = async (
   }));
 
   if (osmCandidates.length === 0) {
-    console.log(
-      `No named meeting venues found after expanding to ${MAX_EXPANDED_RADIUS_KM}km`
-    );
+    logger.info("No named meeting venues found after expanded search", {
+      maxRadiusKm: MAX_EXPANDED_RADIUS_KM,
+    });
 
     const photonResults = fetchPhotonFallbackMeetingPOIs(
       seeds,
@@ -717,7 +726,9 @@ const findMeetPointsLive = async (
         .map((poi) => scoreCandidate(poi, A, B));
       const photonRanked = rankScoredResults(photonScored);
 
-      console.log(`Photon fallback returned ${photonRanked.length} results`);
+      logger.info("Photon fallback returned meeting results", {
+        resultCount: photonRanked.length,
+      });
       return photonRanked;
     }
 
@@ -728,14 +739,16 @@ const findMeetPointsLive = async (
     );
 
     if (surfaceResults.length > 0) {
-      console.log(`Surface fallback returned ${surfaceResults.length} results`);
+      logger.info("Surface fallback returned meeting results", {
+        resultCount: surfaceResults.length,
+      });
       return surfaceResults;
     }
 
     const estimatedResults = buildEstimatedMeetResults(seeds, A, B);
-    console.log(
-      `Estimated fallback returned ${estimatedResults.length} results`
-    );
+    logger.info("Estimated fallback returned meeting results", {
+      resultCount: estimatedResults.length,
+    });
     return estimatedResults;
   }
 
@@ -749,9 +762,10 @@ const findMeetPointsLive = async (
 
   const ranked = rankScoredResults(enriched);
 
-  console.log(
-    `Final top ${ranked.length} ready in ${Date.now() - startedAt}ms`
-  );
+  logger.info("Meeting point search completed", {
+    resultCount: ranked.length,
+    durationMs: Date.now() - startedAt,
+  });
 
   return ranked;
 };
@@ -764,13 +778,13 @@ export async function findMeetPoints(
   const cachedResults = getCachedMeetResults(cacheKey);
 
   if (cachedResults) {
-    console.log(`Meet cache hit: ${cacheKey}`);
+    logger.debug("Meet cache hit");
     return cachedResults;
   }
 
   const pendingSearch = pendingMeetSearches.get(cacheKey);
   if (pendingSearch) {
-    console.log(`Meet cache pending hit: ${cacheKey}`);
+    logger.debug("Meet cache pending hit");
     return pendingSearch;
   }
 

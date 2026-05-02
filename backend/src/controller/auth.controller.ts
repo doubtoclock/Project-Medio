@@ -1,32 +1,81 @@
-import { Request, Response } from "express";
+import crypto from "crypto";
+import { CookieOptions, Request, Response } from "express";
 import { OAuth2Client } from "google-auth-library";
-import jwt from "jsonwebtoken";
+import { env } from "../config/env";
 import { History } from "../models/history";
 import { Place } from "../models/place";
 import { User } from "../models/user";
 import { registerUser, loginUser } from "../services/auth.service";
 import { getOrCreateCurrentUser } from "../utils/current-user";
-import { registerSchema } from "../validators/auth.validator";
+import { logger } from "../utils/logger";
+import { signToken, verifyToken } from "../utils/jwt";
+import {
+  loginSchema,
+  registerSchema,
+  updateProfileSchema,
+} from "../validators/auth.validator";
 
-const isCodespace = Boolean(process.env.CODESPACE_NAME);
-
-const FRONTEND_URL = isCodespace
-  ? `https://${process.env.CODESPACE_NAME}-5173.app.github.dev`
-  : "http://localhost:5173";
-
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID as string;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET as string;
-const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL as string;
-const JWT_SECRET = process.env.JWT_SECRET as string;
-
-if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_CALLBACK_URL) {
-  throw new Error("Google OAuth environment variables are missing");
-}
+const AUTH_COOKIE_NAME = "token";
+const OAUTH_STATE_COOKIE_NAME = "oauth_state";
+const AUTH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000;
 
 const googleClient = new OAuth2Client(
-  GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET
+  env.GOOGLE_CLIENT_ID,
+  env.GOOGLE_CLIENT_SECRET
 );
+
+const cookieOptions = (maxAge?: number): CookieOptions => ({
+  httpOnly: true,
+  sameSite: env.IS_PRODUCTION || env.IS_CODESPACE ? "none" : "lax",
+  secure: env.IS_PRODUCTION || env.IS_CODESPACE,
+  path: "/",
+  ...(maxAge ? { maxAge } : {}),
+});
+
+const getFallbackName = (email: string) => email.split("@")[0] || "Medio User";
+
+const getSafeRedirectUrl = (success: boolean) =>
+  `${env.FRONTEND_URL}/login?login=${success ? "success" : "failed"}`;
+
+const upsertGoogleUser = async (payload: {
+  email: string;
+  name?: string;
+  picture?: string;
+}) => {
+  const email = payload.email.toLowerCase();
+  const name = payload.name?.trim() || getFallbackName(email);
+  let user = await User.findOne({ email });
+
+  if (!user) {
+    user = await User.create({
+      email,
+      name,
+      authProvider: "google",
+      avatarUrl: payload.picture,
+      role: "user",
+    });
+    return user;
+  }
+
+  let shouldSave = false;
+
+  if (payload.name?.trim() && user.name !== payload.name.trim()) {
+    user.name = payload.name.trim();
+    shouldSave = true;
+  }
+
+  if (payload.picture && user.avatarUrl !== payload.picture) {
+    user.avatarUrl = payload.picture;
+    shouldSave = true;
+  }
+
+  if (shouldSave) {
+    await user.save();
+  }
+
+  return user;
+};
 
 const buildProfilePayload = async (userId: string) => {
   const [user, savedPlaces, recentActivity, tripsCount, activityCount] =
@@ -89,31 +138,37 @@ export const register = async (req: Request, res: Response) => {
       data: user,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "User already exists") {
+      return res.status(409).json({
+        message: "User already exists",
+      });
+    }
+
+    logger.error("Registration failed", { error });
     return res.status(500).json({
       message: "Registration failed",
-      error: (error as Error).message,
     });
   }
 };
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const parsed = loginSchema.safeParse(req.body);
 
-    if (!email || !password) {
+    if (!parsed.success) {
       return res.status(400).json({
-        message: "Email and password are required",
+        message: "Invalid input",
+        errors: parsed.error.flatten().fieldErrors,
       });
     }
 
-    const token = await loginUser({ email, password });
+    const token = await loginUser(parsed.data);
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      sameSite: isCodespace ? "none" : "lax",
-      secure: Boolean(isCodespace),
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie(
+      AUTH_COOKIE_NAME,
+      token,
+      cookieOptions(AUTH_COOKIE_MAX_AGE_MS)
+    );
 
     return res.status(200).json({
       message: "Login successful",
@@ -127,16 +182,25 @@ export const login = async (req: Request, res: Response) => {
 
 export const googleRedirectLogin = (_req: Request, res: Response) => {
   try {
+    const state = crypto.randomBytes(32).toString("base64url");
+
+    res.cookie(
+      OAUTH_STATE_COOKIE_NAME,
+      state,
+      cookieOptions(OAUTH_STATE_MAX_AGE_MS)
+    );
+
     const url = googleClient.generateAuthUrl({
-      access_type: "offline",
+      access_type: "online",
       scope: ["profile", "email"],
       prompt: "select_account",
-      redirect_uri: GOOGLE_CALLBACK_URL,
+      redirect_uri: env.GOOGLE_CALLBACK_URL,
+      state,
     });
 
     res.redirect(url);
   } catch (error) {
-    console.error("Google redirect error:", error);
+    logger.error("Google redirect failed", { error });
     res.status(500).json({ message: "Failed to start Google login" });
   }
 };
@@ -146,55 +210,69 @@ export const googleRedirectCallback = async (
   res: Response
 ) => {
   try {
-    const { code } = req.query;
+    const code = typeof req.query.code === "string" ? req.query.code : "";
+    const state = typeof req.query.state === "string" ? req.query.state : "";
+    const expectedState =
+      typeof req.cookies?.[OAUTH_STATE_COOKIE_NAME] === "string"
+        ? req.cookies[OAUTH_STATE_COOKIE_NAME]
+        : "";
 
-    if (!code) {
-      return res.redirect(FRONTEND_URL);
+    res.clearCookie(OAUTH_STATE_COOKIE_NAME, cookieOptions());
+
+    if (!code || !state || !expectedState || state !== expectedState) {
+      return res.redirect(getSafeRedirectUrl(false));
     }
 
     const { tokens } = await googleClient.getToken({
-      code: code as string,
-      redirect_uri: GOOGLE_CALLBACK_URL,
+      code,
+      redirect_uri: env.GOOGLE_CALLBACK_URL,
     });
 
+    if (!tokens.id_token) {
+      return res.redirect(getSafeRedirectUrl(false));
+    }
+
     const ticket = await googleClient.verifyIdToken({
-      idToken: tokens.id_token as string,
-      audience: GOOGLE_CLIENT_ID,
+      idToken: tokens.id_token,
+      audience: env.GOOGLE_CLIENT_ID,
     });
 
     const payload = ticket.getPayload();
 
     if (!payload?.email) {
-      return res.redirect(FRONTEND_URL);
+      return res.redirect(getSafeRedirectUrl(false));
     }
 
-    const appToken = jwt.sign(
-      {
-        email: payload.email,
-        name: payload.name,
-        picture: payload.picture,
-      },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    res.cookie("token", appToken, {
-      httpOnly: true,
-      sameSite: isCodespace ? "none" : "lax",
-      secure: Boolean(isCodespace),
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+    const user = await upsertGoogleUser({
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture,
     });
 
-    res.redirect(FRONTEND_URL);
+    const appToken = signToken({
+      userId: user._id.toString(),
+      email: user.email,
+      role: user.role,
+      name: user.name,
+      picture: user.avatarUrl,
+    });
+
+    res.cookie(
+      AUTH_COOKIE_NAME,
+      appToken,
+      cookieOptions(AUTH_COOKIE_MAX_AGE_MS)
+    );
+
+    res.redirect(getSafeRedirectUrl(true));
   } catch (error) {
-    console.error("Google OAuth Error:", error);
-    res.redirect(FRONTEND_URL);
+    logger.error("Google OAuth callback failed", { error });
+    res.redirect(getSafeRedirectUrl(false));
   }
 };
 
 export const checkAuth = async (req: Request, res: Response) => {
   try {
-    const token = req.cookies?.token;
+    const token = req.cookies?.[AUTH_COOKIE_NAME];
 
     if (!token) {
       return res.status(200).json({
@@ -202,18 +280,16 @@ export const checkAuth = async (req: Request, res: Response) => {
       });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as {
-      email: string;
-      name?: string;
-      picture?: string;
-    };
+    const decoded = verifyToken(token);
 
     return res.status(200).json({
       authenticated: true,
       user: {
+        id: decoded.userId,
         email: decoded.email,
         name: decoded.name || "",
         avatarUrl: decoded.picture || null,
+        role: decoded.role,
       },
     });
   } catch {
@@ -237,7 +313,7 @@ export const getProfile = async (req: Request, res: Response) => {
 
     return res.status(200).json(payload);
   } catch (error) {
-    console.error("Failed to load profile:", error);
+    logger.error("Failed to load profile", { error });
     return res.status(500).json({
       message: "Failed to load profile",
     });
@@ -254,17 +330,16 @@ export const updateProfile = async (req: Request, res: Response) => {
       });
     }
 
-    const {
-      name,
-      avatarUrl,
-      notificationsEnabled,
-      privacyMode,
-    }: {
-      name?: string;
-      avatarUrl?: string | null;
-      notificationsEnabled?: boolean;
-      privacyMode?: boolean;
-    } = req.body;
+    const parsed = updateProfileSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Invalid input",
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const { name, avatarUrl, notificationsEnabled, privacyMode } = parsed.data;
 
     const changes: string[] = [];
 
@@ -315,7 +390,7 @@ export const updateProfile = async (req: Request, res: Response) => {
       ...payload,
     });
   } catch (error) {
-    console.error("Failed to update profile:", error);
+    logger.error("Failed to update profile", { error });
     return res.status(500).json({
       message: "Failed to update profile",
     });
@@ -323,11 +398,8 @@ export const updateProfile = async (req: Request, res: Response) => {
 };
 
 export const logout = (_req: Request, res: Response) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    sameSite: isCodespace ? "none" : "lax",
-    secure: Boolean(isCodespace),
-  });
+  res.clearCookie(AUTH_COOKIE_NAME, cookieOptions());
+  res.clearCookie(OAUTH_STATE_COOKIE_NAME, cookieOptions());
 
   return res.status(200).json({
     message: "Logged out successfully",

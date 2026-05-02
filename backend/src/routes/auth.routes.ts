@@ -1,80 +1,52 @@
-import { Router, Request, Response } from "express";
+import { Request, Response, Router } from "express";
 import {
-  register,
-  login,
-  googleRedirectLogin,
-  googleRedirectCallback,
   checkAuth,
   getProfile,
+  googleRedirectCallback,
+  googleRedirectLogin,
+  login,
   logout,
+  register,
   updateProfile,
 } from "../controller/auth.controller";
-
 import { authMiddleware } from "../middlewares/auth.middleware";
+import { authRateLimiter } from "../middlewares/security.middleware";
+import { validateBody } from "../middlewares/validation.middleware";
+import {
+  loginSchema,
+  registerSchema,
+  updateProfileSchema,
+} from "../validators/auth.validator";
 
 const router = Router();
 
-console.log("✅ auth.routes.ts loaded");
+router.post("/register", authRateLimiter, validateBody(registerSchema), register);
+router.post("/login", authRateLimiter, validateBody(loginSchema), login);
 
-/**
- * =========================
- * Auth Routes
- * Base path: /api/auth
- * =========================
- */
+router.get("/google", authRateLimiter, googleRedirectLogin);
+router.get("/google/callback", authRateLimiter, googleRedirectCallback);
 
-/* =========================
-   TEST ROUTE
-========================= */
-router.get("/test", (_req: Request, res: Response) => {
-  res.send("AUTH ROUTES WORKING");
-});
-
-/* =========================
-   EMAIL / PASSWORD AUTH
-========================= */
-
-// Register
-router.post("/register", register);
-
-// Login
-router.post("/login", login);
-
-/* =========================
-   GOOGLE AUTH (OAUTH)
-========================= */
-
-// STEP 1: Redirect user to Google
-// Frontend hits: GET /api/auth/google
-router.get("/google", googleRedirectLogin);
-
-// STEP 2: Google redirects back here
-router.get("/google/callback", googleRedirectCallback);
-
-/* =========================
-   AUTH STATUS
-========================= */
-
-// Used by frontend when page loads
 router.get("/me", checkAuth);
 router.get("/profile", authMiddleware, getProfile);
-router.patch("/profile", authMiddleware, updateProfile);
+router.patch(
+  "/profile",
+  authMiddleware,
+  validateBody(updateProfileSchema),
+  updateProfile
+);
 
-/* =========================
-   PROTECTED ROUTES
-========================= */
-
-// Example protected route
 router.get("/protected", authMiddleware, (req: Request, res: Response) => {
+  const user = (req as any).user;
+
   res.status(200).json({
     message: "You are authenticated",
-    user: (req as any).user,
+    user: {
+      id: user.userId,
+      email: user.email,
+      role: user.role,
+    },
   });
 });
-
-/* =========================
-   LOGOUT
-========================= */
 
 router.post("/logout", logout);
 

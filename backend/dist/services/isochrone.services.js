@@ -34,59 +34,47 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateIsochrone = generateIsochrone;
-const otp_util_1 = require("../utils/otp.util");
 const turf = __importStar(require("@turf/turf"));
-/* =====================================
-   CONFIGURATION
-===================================== */
-const MAX_SEARCH_DISTANCE = 300000; // 300 km (needed for large city distances)
-const BINARY_ITERATIONS = 12; // better precision
-const DIRECTIONS = 48; // every ~7.5 degrees
-/* =====================================
-   GENERATE ISOCHRONE
-===================================== */
+const logger_1 = require("../utils/logger");
+const otp_util_1 = require("../utils/otp.util");
+const MAX_SEARCH_DISTANCE = 300000;
+const BINARY_ITERATIONS = 12;
+const DIRECTIONS = 48;
 async function generateIsochrone(center, maxMinutes) {
     const maxDuration = maxMinutes * 60;
     const boundaryPoints = [];
-    for (let i = 0; i < DIRECTIONS; i++) {
-        const angle = (360 / DIRECTIONS) * i;
+    for (let index = 0; index < DIRECTIONS; index += 1) {
+        const angle = (360 / DIRECTIONS) * index;
         try {
             const point = await binarySearchDirection(center, angle, maxDuration);
             if (point) {
                 boundaryPoints.push(point);
             }
         }
-        catch (err) {
-            console.log("⚠️ Direction failed:", angle);
+        catch {
+            logger_1.logger.debug("Isochrone direction failed", { angle });
         }
     }
-    /* =====================================
-       POLYGON VALIDATION
-    ===================================== */
     if (boundaryPoints.length < 4) {
-        console.log("⚠️ Isochrone skipped — insufficient boundary points:", boundaryPoints.length);
+        logger_1.logger.debug("Isochrone skipped; insufficient boundary points", {
+            boundaryPointCount: boundaryPoints.length,
+        });
         return null;
     }
-    /* =====================================
-       CLOSE POLYGON
-    ===================================== */
     boundaryPoints.push(boundaryPoints[0]);
     try {
         return turf.polygon([boundaryPoints]);
     }
-    catch (err) {
-        console.log("❌ Turf polygon generation failed.");
+    catch {
+        logger_1.logger.warn("Turf polygon generation failed");
         return null;
     }
 }
-/* =====================================
-   BINARY SEARCH DIRECTION
-===================================== */
 async function binarySearchDirection(center, angle, maxDuration) {
     let low = 0;
     let high = MAX_SEARCH_DISTANCE;
     let bestPoint = null;
-    for (let i = 0; i < BINARY_ITERATIONS; i++) {
+    for (let index = 0; index < BINARY_ITERATIONS; index += 1) {
         const mid = (low + high) / 2;
         const destination = turf.destination(turf.point([center.lon, center.lat]), mid / 1000, angle, { units: "kilometers" });
         const [lon, lat] = destination.geometry.coordinates;
@@ -97,11 +85,7 @@ async function binarySearchDirection(center, angle, maxDuration) {
         catch {
             duration = null;
         }
-        /* =====================================
-           HANDLE OTP FAILURES
-        ===================================== */
         if (!duration || duration <= 0) {
-            // shrink search space instead of killing direction
             high = mid;
             continue;
         }

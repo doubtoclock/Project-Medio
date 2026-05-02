@@ -10,6 +10,10 @@ type OverpassResponse = {
 };
 
 export const getNearbyPlaces = async (midpoint: { lat: number; lng: number }) => {
+  if (!Number.isFinite(midpoint.lat) || !Number.isFinite(midpoint.lng)) {
+    return [];
+  }
+
   const query = `
   [out:json];
   (
@@ -24,8 +28,10 @@ export const getNearbyPlaces = async (midpoint: { lat: number; lng: number }) =>
     method: "POST",
     body: query,
     headers: {
-      "Content-Type": "text/plain"
-    }
+      "Content-Type": "text/plain",
+      "User-Agent": "Medio/1.0 (nearby-place-search)"
+    },
+    signal: AbortSignal.timeout(5000)
   });
 
   const data = (await response.json()) as OverpassResponse;

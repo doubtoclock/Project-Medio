@@ -5,8 +5,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getRouteFromOTP = void 0;
 const axios_1 = __importDefault(require("axios"));
+const env_1 = require("../config/env");
 const history_1 = require("../models/history");
 const current_user_1 = require("../utils/current-user");
+const logger_1 = require("../utils/logger");
 const MUMBAI_TIME_ZONE = "Asia/Kolkata";
 const METRO_SERVICE_START_HOUR = 6;
 const METRO_SERVICE_END_HOUR = 23;
@@ -131,11 +133,6 @@ const filterItinerariesByModes = (otpData, transportModes) => {
 const getRouteFromOTP = async (req, res) => {
     try {
         const { from, to, fromName, toName, travelMode, localTransport } = req.body;
-        if (!from?.lat || !from?.lng || !to?.lat || !to?.lng) {
-            return res.status(400).json({
-                message: "Missing coordinates",
-            });
-        }
         const transportModes = getRequestedTransportModes(travelMode, localTransport);
         if (transportModes.length === 0) {
             return res.status(400).json({
@@ -202,16 +199,19 @@ const getRouteFromOTP = async (req, res) => {
                 time: routingDateTime.time,
             },
         };
-        const otpResponse = await axios_1.default.post("http://localhost:8080/otp/routers/default/index/graphql", graphqlQuery, {
+        const otpResponse = await axios_1.default.post(env_1.env.OTP_GRAPHQL_URL, graphqlQuery, {
             headers: {
                 "Content-Type": "application/json",
             },
+            maxRedirects: 0,
+            timeout: 8000,
         });
         const routeData = filterItinerariesByModes(otpResponse.data, transportModes);
-        const firstLeg = routeData?.data?.plan?.itineraries?.[0]?.legs?.[0];
-        console.log("OTP MODES:", transportModes.join(", "));
-        console.log("OTP ROUTING TIME:", routingDateTime.date, routingDateTime.time);
-        console.log("RAW OTP LEG:", JSON.stringify(firstLeg, null, 2));
+        logger_1.logger.info("OTP route calculated", {
+            requestedModes: transportModes,
+            itineraryCount: routeData?.data?.plan?.itineraries?.length ?? 0,
+            adjustedToNextMetroService: routingDateTime.adjustedToNextMetroService,
+        });
         const user = await (0, current_user_1.getOrCreateCurrentUser)(req);
         if (user) {
             const fromLabel = typeof fromName === "string" && fromName.trim()
@@ -237,7 +237,9 @@ const getRouteFromOTP = async (req, res) => {
         });
     }
     catch (error) {
-        console.error("OTP GRAPHQL ERROR:", error.response?.data || error.message);
+        logger_1.logger.error("OTP route request failed", {
+            error: error.response?.data || error,
+        });
         return res.status(500).json({
             message: "Failed to fetch route from OTP",
         });

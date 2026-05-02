@@ -56,6 +56,8 @@ const historySchema = new mongoose_1.Schema({
     value: {
         type: String,
         required: true,
+        trim: true,
+        maxlength: 500,
     },
 }, { timestamps: true });
 historySchema.index({ userId: 1, createdAt: -1 });

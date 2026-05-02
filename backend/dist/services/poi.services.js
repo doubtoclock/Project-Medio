@@ -42,6 +42,7 @@ exports.fetchPhotonMeetingPOIsNearPoints = fetchPhotonMeetingPOIsNearPoints;
 exports.fetchMeetingPOIs = fetchMeetingPOIs;
 const axios_1 = __importDefault(require("axios"));
 const turf = __importStar(require("@turf/turf"));
+const logger_1 = require("../utils/logger");
 class POILookupUnavailableError extends Error {
     constructor(failures) {
         super(`Live POI lookup unavailable: ${failures.join("; ")}`);
@@ -178,6 +179,7 @@ const fetchPhotonQuery = async (query, point, timeoutMs) => {
         headers: {
             "User-Agent": "Medio/1.0 (meeting-place-search)"
         },
+        maxRedirects: 0,
         timeout: timeoutMs
     });
     const features = response.data?.features;
@@ -196,6 +198,7 @@ const postOverpassQuery = async (endpoint, query, timeoutMs) => {
             "Content-Type": "application/x-www-form-urlencoded",
             "User-Agent": "Medio/1.0 (meeting-place-search)"
         },
+        maxRedirects: 0,
         timeout: timeoutMs
     });
     if (!response.data || !response.data.elements) {
@@ -251,9 +254,11 @@ async function fetchMeetingPOIsNearPoints(points, radiusKm, limit = 80, timeoutM
     const pois = dedupePOIs(responsePois)
         .filter((poi) => Number.isFinite(poi.lat) && Number.isFinite(poi.lon))
         .slice(0, limit);
-    console.log("Fast Overpass POIs:", pois.length);
+    logger_1.logger.debug("Fast Overpass POIs returned", { resultCount: pois.length });
     if (pois.length === 0 && failures.length > 0) {
-        console.log("Live POI lookup unavailable at this radius.");
+        logger_1.logger.warn("Live POI lookup unavailable at current radius", {
+            failureCount: failures.length,
+        });
     }
     if (pois.length === 0 && failures.length === OVERPASS_ENDPOINTS.length) {
         throw new POILookupUnavailableError(failures);
@@ -308,7 +313,7 @@ async function fetchMeetingPOIs(polygon) {
     try {
         const { pois: responsePois, failures } = await fetchFirstOverpassResponse(query, 12000);
         if (responsePois.length === 0 && failures.length > 0) {
-            console.error("Overpass lookups failed:", failures.join("; "));
+            logger_1.logger.warn("Overpass lookups failed", { failures });
         }
         const pois = dedupePOIs(responsePois);
         /* ==============================
@@ -320,12 +325,14 @@ async function fetchMeetingPOIs(polygon) {
             const point = turf.point([p.lon, p.lat]);
             return turf.booleanPointInPolygon(point, polygon);
         });
-        console.log("Overpass returned:", pois.length);
-        console.log("Inside polygon:", filtered.length);
+        logger_1.logger.debug("Overpass polygon filtering completed", {
+            returnedCount: pois.length,
+            insidePolygonCount: filtered.length,
+        });
         return filtered;
     }
     catch (err) {
-        console.error("Overpass request failed:", err.message);
+        logger_1.logger.warn("Overpass request failed", { error: err });
         return [];
     }
 }

@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as turf from "@turf/turf";
 import { Feature, Geometry } from "geojson";
+import { logger } from "../utils/logger";
 
 export type OverpassPOI = {
   type?: "node" | "way" | "relation";
@@ -207,6 +208,7 @@ const fetchPhotonQuery = async (
     headers: {
       "User-Agent": "Medio/1.0 (meeting-place-search)"
     },
+    maxRedirects: 0,
     timeout: timeoutMs
   });
 
@@ -233,6 +235,7 @@ const postOverpassQuery = async (
       "Content-Type": "application/x-www-form-urlencoded",
       "User-Agent": "Medio/1.0 (meeting-place-search)"
     },
+    maxRedirects: 0,
     timeout: timeoutMs
   });
 
@@ -313,9 +316,11 @@ export async function fetchMeetingPOIsNearPoints(
     .filter((poi) => Number.isFinite(poi.lat) && Number.isFinite(poi.lon))
     .slice(0, limit);
 
-  console.log("Fast Overpass POIs:", pois.length);
+  logger.debug("Fast Overpass POIs returned", { resultCount: pois.length });
   if (pois.length === 0 && failures.length > 0) {
-    console.log("Live POI lookup unavailable at this radius.");
+    logger.warn("Live POI lookup unavailable at current radius", {
+      failureCount: failures.length,
+    });
   }
 
   if (pois.length === 0 && failures.length === OVERPASS_ENDPOINTS.length) {
@@ -409,7 +414,7 @@ export async function fetchMeetingPOIs(
     );
 
     if (responsePois.length === 0 && failures.length > 0) {
-      console.error("Overpass lookups failed:", failures.join("; "));
+      logger.warn("Overpass lookups failed", { failures });
     }
 
     const pois = dedupePOIs(responsePois);
@@ -427,14 +432,15 @@ export async function fetchMeetingPOIs(
       return turf.booleanPointInPolygon(point, polygon as any);
     });
 
-    console.log("Overpass returned:", pois.length);
-    console.log("Inside polygon:", filtered.length);
+    logger.debug("Overpass polygon filtering completed", {
+      returnedCount: pois.length,
+      insidePolygonCount: filtered.length,
+    });
 
     return filtered;
 
   } catch (err: any) {
-
-    console.error("Overpass request failed:", err.message);
+    logger.warn("Overpass request failed", { error: err });
 
     return [];
   }

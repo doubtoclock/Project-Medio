@@ -1,7 +1,10 @@
 import { Request, Response } from "express";
 import axios from "axios";
+import { env } from "../config/env";
 import { History } from "../models/history";
 import { getOrCreateCurrentUser } from "../utils/current-user";
+import { logger } from "../utils/logger";
+import { RouteRequestInput } from "../validators/api.validator";
 
 type TravelMode = "car" | "bike" | "local" | "walk";
 type OtpTransportMode = "WALK" | "CAR" | "BICYCLE" | "BUS" | "RAIL" | "SUBWAY";
@@ -177,13 +180,8 @@ const filterItinerariesByModes = (
 
 export const getRouteFromOTP = async (req: Request, res: Response) => {
   try {
-    const { from, to, fromName, toName, travelMode, localTransport } = req.body;
-
-    if (!from?.lat || !from?.lng || !to?.lat || !to?.lng) {
-      return res.status(400).json({
-        message: "Missing coordinates",
-      });
-    }
+    const { from, to, fromName, toName, travelMode, localTransport } =
+      req.body as RouteRequestInput;
 
     const transportModes = getRequestedTransportModes(travelMode, localTransport);
 
@@ -256,20 +254,23 @@ export const getRouteFromOTP = async (req: Request, res: Response) => {
     };
 
     const otpResponse = await axios.post(
-      "http://localhost:8080/otp/routers/default/index/graphql",
+      env.OTP_GRAPHQL_URL,
       graphqlQuery,
       {
         headers: {
           "Content-Type": "application/json",
         },
+        maxRedirects: 0,
+        timeout: 8000,
       }
     );
 
     const routeData = filterItinerariesByModes(otpResponse.data, transportModes);
-    const firstLeg = routeData?.data?.plan?.itineraries?.[0]?.legs?.[0];
-    console.log("OTP MODES:", transportModes.join(", "));
-    console.log("OTP ROUTING TIME:", routingDateTime.date, routingDateTime.time);
-    console.log("RAW OTP LEG:", JSON.stringify(firstLeg, null, 2));
+    logger.info("OTP route calculated", {
+      requestedModes: transportModes,
+      itineraryCount: routeData?.data?.plan?.itineraries?.length ?? 0,
+      adjustedToNextMetroService: routingDateTime.adjustedToNextMetroService,
+    });
 
     const user = await getOrCreateCurrentUser(req);
     if (user) {
@@ -297,10 +298,9 @@ export const getRouteFromOTP = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error(
-      "OTP GRAPHQL ERROR:",
-      error.response?.data || error.message
-    );
+    logger.error("OTP route request failed", {
+      error: error.response?.data || error,
+    });
 
     return res.status(500).json({
       message: "Failed to fetch route from OTP",

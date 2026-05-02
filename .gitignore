@@ -1,3 +1,6 @@
 ._*
 otp.jar
 node_modules
+.env
+.env.*
+!.env.example

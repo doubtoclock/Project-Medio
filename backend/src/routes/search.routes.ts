@@ -1,4 +1,8 @@
 import { Router } from "express";
+import { searchRateLimiter } from "../middlewares/security.middleware";
+import { validateQuery } from "../middlewares/validation.middleware";
+import { logger } from "../utils/logger";
+import { searchQuerySchema } from "../validators/api.validator";
 
 const router = Router();
 
@@ -210,15 +214,10 @@ const fetchPhotonSuggestions = async (
   }
 };
 
-router.get("/", async (req, res) => {
-  const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+router.get("/", searchRateLimiter, validateQuery(searchQuerySchema), async (req, res) => {
+  const query = req.query.q as string;
 
   const cacheKey = getSearchCacheKey(query);
-
-  if (!query || cacheKey.length < 2) {
-    res.status(400).json([]);
-    return;
-  }
 
   const cached = getCachedSearch(cacheKey);
   if (cached) {
@@ -242,7 +241,7 @@ router.get("/", async (req, res) => {
 
     res.json(results);
   } catch (error) {
-    console.error("Photon search error:", error);
+    logger.error("Photon search failed", { error });
     res.status(500).json([]);
   } finally {
     pendingSearches.delete(cacheKey);

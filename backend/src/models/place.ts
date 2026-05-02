@@ -14,20 +14,35 @@ const placeSchema = new Schema<IPlace>(
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true,
+      index: true
     },
     label: {
       type: String,
-      required: true
+      required: true,
+      trim: true,
+      maxlength: 80
     },
     address: {
       type: String,
-      required: true
+      required: true,
+      trim: true,
+      maxlength: 300
     },
-    lat: Number,
-    lng: Number
+    lat: {
+      type: Number,
+      min: -90,
+      max: 90
+    },
+    lng: {
+      type: Number,
+      min: -180,
+      max: 180
+    }
   },
   { timestamps: true }
 );
+
+placeSchema.index({ userId: 1, createdAt: -1 });
 
 export const Place = mongoose.model<IPlace>("Place", placeSchema);

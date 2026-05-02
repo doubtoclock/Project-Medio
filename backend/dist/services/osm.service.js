@@ -2,6 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getNearbyPlaces = void 0;
 const getNearbyPlaces = async (midpoint) => {
+    if (!Number.isFinite(midpoint.lat) || !Number.isFinite(midpoint.lng)) {
+        return [];
+    }
     const query = `
   [out:json];
   (
@@ -15,8 +18,10 @@ const getNearbyPlaces = async (midpoint) => {
         method: "POST",
         body: query,
         headers: {
-            "Content-Type": "text/plain"
-        }
+            "Content-Type": "text/plain",
+            "User-Agent": "Medio/1.0 (nearby-place-search)"
+        },
+        signal: AbortSignal.timeout(5000)
     });
     const data = (await response.json());
     return data.elements.map((p) => ({

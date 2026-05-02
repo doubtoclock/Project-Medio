@@ -1,6 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const security_middleware_1 = require("../middlewares/security.middleware");
+const validation_middleware_1 = require("../middlewares/validation.middleware");
+const logger_1 = require("../utils/logger");
+const api_validator_1 = require("../validators/api.validator");
 const router = (0, express_1.Router)();
 const PHOTON_TIMEOUT_MS = 1800;
 const SEARCH_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
@@ -152,13 +156,9 @@ const fetchPhotonSuggestions = async (query) => {
         clearTimeout(timeout);
     }
 };
-router.get("/", async (req, res) => {
-    const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+router.get("/", security_middleware_1.searchRateLimiter, (0, validation_middleware_1.validateQuery)(api_validator_1.searchQuerySchema), async (req, res) => {
+    const query = req.query.q;
     const cacheKey = getSearchCacheKey(query);
-    if (!query || cacheKey.length < 2) {
-        res.status(400).json([]);
-        return;
-    }
     const cached = getCachedSearch(cacheKey);
     if (cached) {
         res.setHeader("X-Medio-Cache", "hit");
@@ -177,7 +177,7 @@ router.get("/", async (req, res) => {
         res.json(results);
     }
     catch (error) {
-        console.error("Photon search error:", error);
+        logger_1.logger.error("Photon search failed", { error });
         res.status(500).json([]);
     }
     finally {

@@ -4,77 +4,28 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.connectDB = void 0;
-const mongodb_1 = require("mongodb");
 const mongoose_1 = __importDefault(require("mongoose"));
-const REQUIRED_USERNAME = "Achal";
-const REQUIRED_OPTIONS = {
-    retryWrites: "true",
-    w: "majority",
-    authSource: "admin",
-};
-const getMongoUri = () => {
-    const rawUri = process.env.MONGO_URI?.trim();
-    if (!rawUri) {
-        throw new Error("MONGO_URI is missing from the environment");
-    }
-    const sanitizedUri = rawUri.replace(/^['"]|['"]$/g, "");
-    let mongoUrl;
-    try {
-        mongoUrl = new URL(sanitizedUri);
-    }
-    catch {
-        throw new Error("MONGO_URI must use the format mongodb+srv://USERNAME:PASSWORD@cluster-url.mongodb.net/DB_NAME?retryWrites=true&w=majority&authSource=admin");
-    }
-    if (mongoUrl.protocol !== "mongodb+srv:") {
-        throw new Error("MONGO_URI must start with mongodb+srv://");
-    }
-    if (mongoUrl.username !== REQUIRED_USERNAME) {
-        throw new Error(`MONGO_URI username must be exactly "${REQUIRED_USERNAME}"`);
-    }
-    if (!mongoUrl.password) {
-        throw new Error("MONGO_URI password is missing");
-    }
-    if (/\s/.test(mongoUrl.password)) {
-        throw new Error("MONGO_URI password must not contain spaces");
-    }
-    Object.entries(REQUIRED_OPTIONS).forEach(([key, value]) => {
-        mongoUrl.searchParams.set(key, value);
-    });
-    const normalizedUri = mongoUrl.toString();
-    process.env.MONGO_URI = normalizedUri;
-    return normalizedUri;
-};
-const testNativeDriverConnection = async (mongoUri) => {
-    const client = new mongodb_1.MongoClient(mongoUri);
-    try {
-        await client.connect();
-        await client.db().command({ ping: 1 });
-        console.log("MongoDB native driver test connected");
-    }
-    catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error("MongoDB native driver test failed:", message);
-    }
-    finally {
-        await client.close().catch(() => undefined);
-    }
-};
+const env_1 = require("../config/env");
+const logger_1 = require("../utils/logger");
 const connectDB = async () => {
     mongoose_1.default.set("bufferCommands", false);
-    const mongoUri = getMongoUri();
-    return mongoose_1.default
-        .connect(mongoUri)
-        .then((connection) => {
-        console.log("MongoDB Connected");
-        console.log(`MongoDB host: ${connection.connection.host}`);
+    mongoose_1.default.set("sanitizeFilter", true);
+    mongoose_1.default.set("strictQuery", true);
+    try {
+        const connection = await mongoose_1.default.connect(env_1.env.MONGO_URI, {
+            autoIndex: !env_1.env.IS_PRODUCTION,
+            serverSelectionTimeoutMS: 10000,
+        });
+        logger_1.logger.info("MongoDB connected", {
+            host: connection.connection.host,
+            database: connection.connection.name,
+        });
         return connection;
-    })
-        .catch(async (error) => {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error("MongoDB Connection Error:", message);
-        await testNativeDriverConnection(mongoUri);
+    }
+    catch (error) {
+        logger_1.logger.error("MongoDB connection failed", { error });
         throw error;
-    });
+    }
 };
 exports.connectDB = connectDB;
 //# sourceMappingURL=db.js.map

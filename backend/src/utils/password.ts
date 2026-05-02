@@ -1,7 +1,8 @@
 import bcrypt from "bcrypt";
+import { env } from "../config/env";
 
 export const hashPassword = (password: string) =>
-  bcrypt.hash(password, 10);
+  bcrypt.hash(password, env.BCRYPT_ROUNDS);
 
 export const comparePassword = (password: string, hash: string) =>
   bcrypt.compare(password, hash);

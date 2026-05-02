@@ -4,26 +4,59 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.logout = exports.updateProfile = exports.getProfile = exports.checkAuth = exports.googleRedirectCallback = exports.googleRedirectLogin = exports.login = exports.register = void 0;
+const crypto_1 = __importDefault(require("crypto"));
 const google_auth_library_1 = require("google-auth-library");
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const env_1 = require("../config/env");
 const history_1 = require("../models/history");
 const place_1 = require("../models/place");
 const user_1 = require("../models/user");
 const auth_service_1 = require("../services/auth.service");
 const current_user_1 = require("../utils/current-user");
+const logger_1 = require("../utils/logger");
+const jwt_1 = require("../utils/jwt");
 const auth_validator_1 = require("../validators/auth.validator");
-const isCodespace = Boolean(process.env.CODESPACE_NAME);
-const FRONTEND_URL = isCodespace
-    ? `https://${process.env.CODESPACE_NAME}-5173.app.github.dev`
-    : "http://localhost:5173";
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL;
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_CALLBACK_URL) {
-    throw new Error("Google OAuth environment variables are missing");
-}
-const googleClient = new google_auth_library_1.OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
+const AUTH_COOKIE_NAME = "token";
+const OAUTH_STATE_COOKIE_NAME = "oauth_state";
+const AUTH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000;
+const googleClient = new google_auth_library_1.OAuth2Client(env_1.env.GOOGLE_CLIENT_ID, env_1.env.GOOGLE_CLIENT_SECRET);
+const cookieOptions = (maxAge) => ({
+    httpOnly: true,
+    sameSite: env_1.env.IS_PRODUCTION || env_1.env.IS_CODESPACE ? "none" : "lax",
+    secure: env_1.env.IS_PRODUCTION || env_1.env.IS_CODESPACE,
+    path: "/",
+    ...(maxAge ? { maxAge } : {}),
+});
+const getFallbackName = (email) => email.split("@")[0] || "Medio User";
+const getSafeRedirectUrl = (success) => `${env_1.env.FRONTEND_URL}/login?login=${success ? "success" : "failed"}`;
+const upsertGoogleUser = async (payload) => {
+    const email = payload.email.toLowerCase();
+    const name = payload.name?.trim() || getFallbackName(email);
+    let user = await user_1.User.findOne({ email });
+    if (!user) {
+        user = await user_1.User.create({
+            email,
+            name,
+            authProvider: "google",
+            avatarUrl: payload.picture,
+            role: "user",
+        });
+        return user;
+    }
+    let shouldSave = false;
+    if (payload.name?.trim() && user.name !== payload.name.trim()) {
+        user.name = payload.name.trim();
+        shouldSave = true;
+    }
+    if (payload.picture && user.avatarUrl !== payload.picture) {
+        user.avatarUrl = payload.picture;
+        shouldSave = true;
+    }
+    if (shouldSave) {
+        await user.save();
+    }
+    return user;
+};
 const buildProfilePayload = async (userId) => {
     const [user, savedPlaces, recentActivity, tripsCount, activityCount] = await Promise.all([
         user_1.User.findById(userId),
@@ -76,28 +109,29 @@ const register = async (req, res) => {
         });
     }
     catch (error) {
+        if (error instanceof Error && error.message === "User already exists") {
+            return res.status(409).json({
+                message: "User already exists",
+            });
+        }
+        logger_1.logger.error("Registration failed", { error });
         return res.status(500).json({
             message: "Registration failed",
-            error: error.message,
         });
     }
 };
 exports.register = register;
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
-        if (!email || !password) {
+        const parsed = auth_validator_1.loginSchema.safeParse(req.body);
+        if (!parsed.success) {
             return res.status(400).json({
-                message: "Email and password are required",
+                message: "Invalid input",
+                errors: parsed.error.flatten().fieldErrors,
             });
         }
-        const token = await (0, auth_service_1.loginUser)({ email, password });
-        res.cookie("token", token, {
-            httpOnly: true,
-            sameSite: isCodespace ? "none" : "lax",
-            secure: Boolean(isCodespace),
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
+        const token = await (0, auth_service_1.loginUser)(parsed.data);
+        res.cookie(AUTH_COOKIE_NAME, token, cookieOptions(AUTH_COOKIE_MAX_AGE_MS));
         return res.status(200).json({
             message: "Login successful",
         });
@@ -111,72 +145,87 @@ const login = async (req, res) => {
 exports.login = login;
 const googleRedirectLogin = (_req, res) => {
     try {
+        const state = crypto_1.default.randomBytes(32).toString("base64url");
+        res.cookie(OAUTH_STATE_COOKIE_NAME, state, cookieOptions(OAUTH_STATE_MAX_AGE_MS));
         const url = googleClient.generateAuthUrl({
-            access_type: "offline",
+            access_type: "online",
             scope: ["profile", "email"],
             prompt: "select_account",
-            redirect_uri: GOOGLE_CALLBACK_URL,
+            redirect_uri: env_1.env.GOOGLE_CALLBACK_URL,
+            state,
         });
         res.redirect(url);
     }
     catch (error) {
-        console.error("Google redirect error:", error);
+        logger_1.logger.error("Google redirect failed", { error });
         res.status(500).json({ message: "Failed to start Google login" });
     }
 };
 exports.googleRedirectLogin = googleRedirectLogin;
 const googleRedirectCallback = async (req, res) => {
     try {
-        const { code } = req.query;
-        if (!code) {
-            return res.redirect(FRONTEND_URL);
+        const code = typeof req.query.code === "string" ? req.query.code : "";
+        const state = typeof req.query.state === "string" ? req.query.state : "";
+        const expectedState = typeof req.cookies?.[OAUTH_STATE_COOKIE_NAME] === "string"
+            ? req.cookies[OAUTH_STATE_COOKIE_NAME]
+            : "";
+        res.clearCookie(OAUTH_STATE_COOKIE_NAME, cookieOptions());
+        if (!code || !state || !expectedState || state !== expectedState) {
+            return res.redirect(getSafeRedirectUrl(false));
         }
         const { tokens } = await googleClient.getToken({
-            code: code,
-            redirect_uri: GOOGLE_CALLBACK_URL,
+            code,
+            redirect_uri: env_1.env.GOOGLE_CALLBACK_URL,
         });
+        if (!tokens.id_token) {
+            return res.redirect(getSafeRedirectUrl(false));
+        }
         const ticket = await googleClient.verifyIdToken({
             idToken: tokens.id_token,
-            audience: GOOGLE_CLIENT_ID,
+            audience: env_1.env.GOOGLE_CLIENT_ID,
         });
         const payload = ticket.getPayload();
         if (!payload?.email) {
-            return res.redirect(FRONTEND_URL);
+            return res.redirect(getSafeRedirectUrl(false));
         }
-        const appToken = jsonwebtoken_1.default.sign({
+        const user = await upsertGoogleUser({
             email: payload.email,
             name: payload.name,
             picture: payload.picture,
-        }, JWT_SECRET, { expiresIn: "7d" });
-        res.cookie("token", appToken, {
-            httpOnly: true,
-            sameSite: isCodespace ? "none" : "lax",
-            secure: Boolean(isCodespace),
-            maxAge: 7 * 24 * 60 * 60 * 1000,
         });
-        res.redirect(FRONTEND_URL);
+        const appToken = (0, jwt_1.signToken)({
+            userId: user._id.toString(),
+            email: user.email,
+            role: user.role,
+            name: user.name,
+            picture: user.avatarUrl,
+        });
+        res.cookie(AUTH_COOKIE_NAME, appToken, cookieOptions(AUTH_COOKIE_MAX_AGE_MS));
+        res.redirect(getSafeRedirectUrl(true));
     }
     catch (error) {
-        console.error("Google OAuth Error:", error);
-        res.redirect(FRONTEND_URL);
+        logger_1.logger.error("Google OAuth callback failed", { error });
+        res.redirect(getSafeRedirectUrl(false));
     }
 };
 exports.googleRedirectCallback = googleRedirectCallback;
 const checkAuth = async (req, res) => {
     try {
-        const token = req.cookies?.token;
+        const token = req.cookies?.[AUTH_COOKIE_NAME];
         if (!token) {
             return res.status(200).json({
                 authenticated: false,
             });
         }
-        const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+        const decoded = (0, jwt_1.verifyToken)(token);
         return res.status(200).json({
             authenticated: true,
             user: {
+                id: decoded.userId,
                 email: decoded.email,
                 name: decoded.name || "",
                 avatarUrl: decoded.picture || null,
+                role: decoded.role,
             },
         });
     }
@@ -199,7 +248,7 @@ const getProfile = async (req, res) => {
         return res.status(200).json(payload);
     }
     catch (error) {
-        console.error("Failed to load profile:", error);
+        logger_1.logger.error("Failed to load profile", { error });
         return res.status(500).json({
             message: "Failed to load profile",
         });
@@ -214,7 +263,14 @@ const updateProfile = async (req, res) => {
                 message: "Not authenticated",
             });
         }
-        const { name, avatarUrl, notificationsEnabled, privacyMode, } = req.body;
+        const parsed = auth_validator_1.updateProfileSchema.safeParse(req.body);
+        if (!parsed.success) {
+            return res.status(400).json({
+                message: "Invalid input",
+                errors: parsed.error.flatten().fieldErrors,
+            });
+        }
+        const { name, avatarUrl, notificationsEnabled, privacyMode } = parsed.data;
         const changes = [];
         if (typeof name === "string" && name.trim()) {
             const normalizedName = name.trim();
@@ -257,7 +313,7 @@ const updateProfile = async (req, res) => {
         });
     }
     catch (error) {
-        console.error("Failed to update profile:", error);
+        logger_1.logger.error("Failed to update profile", { error });
         return res.status(500).json({
             message: "Failed to update profile",
         });
@@ -265,11 +321,8 @@ const updateProfile = async (req, res) => {
 };
 exports.updateProfile = updateProfile;
 const logout = (_req, res) => {
-    res.clearCookie("token", {
-        httpOnly: true,
-        sameSite: isCodespace ? "none" : "lax",
-        secure: Boolean(isCodespace),
-    });
+    res.clearCookie(AUTH_COOKIE_NAME, cookieOptions());
+    res.clearCookie(OAUTH_STATE_COOKIE_NAME, cookieOptions());
     return res.status(200).json({
         message: "Logged out successfully",
     });

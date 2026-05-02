@@ -2,42 +2,25 @@ import { Request, Response } from "express";
 import { History } from "../models/history";
 import { findMeetPoints } from "../services/meet.services";
 import { getOrCreateCurrentUser } from "../utils/current-user";
+import { logger } from "../utils/logger";
+import { MeetRequestInput } from "../validators/api.validator";
 
 export const getMeetPoints = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const { latA, lonA, latB, lonB, minutes, fromName, toName } = req.body;
-
-  if (
-    latA === undefined ||
-    lonA === undefined ||
-    latB === undefined ||
-    lonB === undefined
-  ) {
-    res.status(400).json({ error: "latA, lonA, latB, lonB are required" });
-    return;
-  }
+  const { latA, lonA, latB, lonB, fromName, toName } =
+    req.body as MeetRequestInput;
 
   const A = {
-    lat: Number(latA),
-    lon: Number(lonA),
+    lat: latA,
+    lon: lonA,
   };
 
   const B = {
-    lat: Number(latB),
-    lon: Number(lonB),
+    lat: latB,
+    lon: lonB,
   };
-
-  if (
-    Number.isNaN(A.lat) ||
-    Number.isNaN(A.lon) ||
-    Number.isNaN(B.lat) ||
-    Number.isNaN(B.lon)
-  ) {
-    res.status(400).json({ error: "Invalid coordinate values" });
-    return;
-  }
 
   try {
     const results = await findMeetPoints(A, B);
@@ -60,7 +43,7 @@ export const getMeetPoints = async (
 
     res.json(results);
   } catch (err) {
-    console.error("Meet calculation error:", err);
+    logger.error("Meet calculation failed", { error: err });
     res.status(500).json({ error: "Meet calculation failed" });
   }
 };

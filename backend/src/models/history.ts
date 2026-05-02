@@ -35,6 +35,8 @@ const historySchema = new Schema<IHistory>(
     value: {
       type: String,
       required: true,
+      trim: true,
+      maxlength: 500,
     },
   },
   { timestamps: true }

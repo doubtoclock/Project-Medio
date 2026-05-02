@@ -6,60 +6,45 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
-const meet_routes_1 = __importDefault(require("./routes/meet.routes"));
+const env_1 = require("./config/env");
+const error_middleware_1 = require("./middlewares/error.middleware");
+const security_middleware_1 = require("./middlewares/security.middleware");
+const logger_1 = require("./utils/logger");
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
+const meet_routes_1 = __importDefault(require("./routes/meet.routes"));
 const place_routes_1 = __importDefault(require("./routes/place.routes"));
-const search_routes_1 = __importDefault(require("./routes/search.routes"));
 const route_routes_1 = __importDefault(require("./routes/route.routes"));
+const search_routes_1 = __importDefault(require("./routes/search.routes"));
 const app = (0, express_1.default)();
-/* =========================
-   APP CONFIG
-========================= */
-// Needed for secure cookies behind proxies (Codespaces / cloud)
 app.set("trust proxy", 1);
-/* =========================
-   ENV DETECTION
-========================= */
-const isCodespace = Boolean(process.env.CODESPACE_NAME);
-const FRONTEND_URL = isCodespace
-    ? `https://${process.env.CODESPACE_NAME}-5173.app.github.dev`
-    : "http://localhost:5173";
-/* =========================
-   MIDDLEWARES
-========================= */
-app.use((0, cors_1.default)({
-    origin: FRONTEND_URL,
-    credentials: true,
-}));
-app.use(express_1.default.json());
+app.disable("x-powered-by");
+app.use(security_middleware_1.requireHttps);
+app.use(security_middleware_1.securityHeaders);
+app.use((0, cors_1.default)(security_middleware_1.corsOptions));
+app.use(security_middleware_1.generalRateLimiter);
+app.use(express_1.default.json({ limit: "32kb" }));
 app.use((0, cookie_parser_1.default)());
-/* =========================
-   HEALTH CHECK
-========================= */
+app.use(security_middleware_1.requestSanitizer);
+app.use(security_middleware_1.csrfOriginGuard);
 app.get("/", (_req, res) => {
-    res.status(200).json({ message: "Server is running 🚀" });
+    res.status(200).json({ message: "Server is running" });
 });
-/* =========================
-   ROUTES
-========================= */
-// 🔐 Auth routes
 app.use("/api/auth", auth_routes_1.default);
-// 📍 Meetpoint routes
 app.use("/api/meet", meet_routes_1.default);
-// 📍 Place routes
 app.use("/api/places", place_routes_1.default);
-// 🔍 Search routes
 app.use("/api/search", search_routes_1.default);
-// OTP routes
 app.use("/api/otp", route_routes_1.default);
-/* =========================
-   GLOBAL ERROR HANDLER
-========================= */
-app.use((err, _req, res, _next) => {
-    console.error("❌ Error:", err.message);
-    res.status(500).json({
-        message: "Something went wrong",
+app.use((err, req, res, next) => {
+    logger_1.logger.error("Unhandled request error", {
+        error: err,
+        method: req.method,
+        path: req.originalUrl,
     });
+    (0, error_middleware_1.errorHandler)(err, req, res, next);
+});
+logger_1.logger.info("Express app configured", {
+    environment: env_1.env.NODE_ENV,
+    allowedOrigins: env_1.env.ALLOWED_ORIGINS,
 });
 exports.default = app;
 //# sourceMappingURL=app.js.map

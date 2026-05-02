@@ -1,13 +1,13 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getIsochrone = void 0;
-const node_fetch_1 = __importDefault(require("node-fetch"));
+const env_1 = require("../config/env");
 const getIsochrone = async (point, time) => {
-    const url = `http://localhost:8080/otp/routers/default/isochrone?fromPlace=${point.lat},${point.lng}&mode=TRANSIT,WALK&cutoffSec=${time * 60}`;
-    const response = await (0, node_fetch_1.default)(url);
+    const url = new URL(env_1.env.OTP_ISOCHRONE_URL);
+    url.searchParams.set("fromPlace", `${point.lat},${point.lng}`);
+    url.searchParams.set("mode", "TRANSIT,WALK");
+    url.searchParams.set("cutoffSec", String(time * 60));
+    const response = await fetch(url);
     if (!response.ok) {
         throw new Error("Failed to fetch isochrone");
     }

@@ -124,13 +124,11 @@ const fetchSavedPlaces = async (): Promise<SavedPlace[]> => {
       credentials: "include",
     });
     if (!res.ok) {
-      console.error("Fetch places failed:", res.status, res.statusText);
       return [];
     }
     const data = await res.json();
     return data.places || [];
-  } catch (err) {
-    console.error("Fetch places error:", err);
+  } catch {
     return [];
   }
 };
@@ -151,14 +149,11 @@ const savePlaceToBackend = async (place: {
       body: JSON.stringify(place),
     });
     if (!res.ok) {
-      const errorData = await res.json().catch(() => null);
-      console.error("Save place failed:", res.status, res.statusText, errorData);
       return null;
     }
     const data = await res.json();
     return data.place;
-  } catch (err) {
-    console.error("Save place network error:", err);
+  } catch {
     return null;
   }
 };
@@ -213,7 +208,6 @@ export const TravelView = () => {
 
   useEffect(() => {
     fetchSavedPlaces().then((places) => {
-      console.log("Fetched saved places:", places);
       setSavedPlaces(places);
     });
   }, []);
@@ -315,7 +309,6 @@ export const TravelView = () => {
         }),
       });
       const data = await res.json() as OtpRouteResponse;
-      console.log("FULL RESPONSE:", data);
       setRouteData(data);
       const nextItineraries = data?.data?.plan?.itineraries || [];
       if (!res.ok || nextItineraries.length === 0) {
@@ -324,8 +317,7 @@ export const TravelView = () => {
         return;
       }
       setIsSearchCollapsed(true);
-    } catch (err) {
-      console.error("Route error:", err);
+    } catch {
       setRouteNotice("Could not find a route right now.");
     } finally {
       setLoading(false);
@@ -367,14 +359,12 @@ export const TravelView = () => {
 
   const handleAddPlace = async () => {
     if (!newLabel || !newAddress) return;
-    console.log("Saving place:", newLabel, newAddress);
     const created = await savePlaceToBackend({
       label: newLabel,
       address: newAddress,
       lat: newCoords?.lat,
       lng: newCoords?.lng,
     });
-    console.log("Created:", created);
     if (created) {
       setSavedPlaces((prev) => [...prev, created]);
     }

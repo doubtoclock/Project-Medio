@@ -1,13 +1,9 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import { AuthenticatedUser, UserRole, verifyToken } from "../utils/jwt";
 
-interface JwtPayload {
-  email: string;
-  name?: string;
-  picture?: string;
-}
-
-const JWT_SECRET = process.env.JWT_SECRET as string;
+export type AuthenticatedRequest = Request & {
+  user: AuthenticatedUser;
+};
 
 export const authMiddleware = (
   req: Request,
@@ -20,12 +16,10 @@ export const authMiddleware = (
 
     if (!token) {
       const authHeader = req.headers.authorization;
-      if (authHeader?.startsWith("Bearer ")) {
+      if (authHeader?.startsWith("Bearer ") && authHeader.length > 7) {
         token = authHeader.slice(7);
       }
     }
-
-    console.log("authMiddleware - cookie token:", !!req.cookies?.token, "header token:", !!req.headers.authorization);
 
     if (!token) {
       return res.status(401).json({
@@ -33,15 +27,27 @@ export const authMiddleware = (
       });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const decoded = verifyToken(token);
 
     // Attach user info to request
-    (req as any).user = decoded;
+    (req as AuthenticatedRequest).user = decoded;
 
     next();
-  } catch (error) {
+  } catch {
     return res.status(401).json({
       message: "Invalid or expired token",
     });
   }
 };
+
+export const requireRole =
+  (...roles: UserRole[]) =>
+  (req: Request, res: Response, next: NextFunction) => {
+    const user = (req as Partial<AuthenticatedRequest>).user;
+
+    if (!user || !roles.includes(user.role)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    return next();
+  };

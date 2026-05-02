@@ -1,12 +1,16 @@
 import { Request, Response, NextFunction } from "express";
+import { env } from "../config/env";
 
 export const errorHandler = (
   err: any,
-  req: Request,
+  _req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
-  res.status(500).json({
-    message: err.message || "Internal Server Error"
+  const status = typeof err?.status === "number" ? err.status : 500;
+
+  res.status(status).json({
+    message: status >= 500 ? "Internal Server Error" : err.message,
+    ...(env.IS_PRODUCTION ? {} : { requestId: res.locals.requestId }),
   });
 };
