@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { RealMap } from "./Map";
-import { Plus, MapPin, X } from "lucide-react";
+import {
+  Bike,
+  BusFront,
+  Car,
+  Footprints,
+  MapPin,
+  Plus,
+  TrainFront,
+  X,
+} from "lucide-react";
 import { BottomNav } from "./BottomNav";
+import { Switch } from "../ui/switch";
 import { getBackendUrl } from "../../lib/backend";
+import { getTransportColor } from "./transportColors";
+import type { OtpItinerary, OtpLeg, OtpRouteResponse } from "./otpTypes";
 
 interface LocationResult {
   name: string;
@@ -17,6 +29,76 @@ interface SavedPlace {
   lat?: number;
   lng?: number;
 }
+
+type TravelMode = "car" | "bike" | "local" | "walk";
+type LocalTransportMode = "bus" | "rail" | "subway";
+
+interface RouteStep {
+  mode: string;
+  from?: string;
+  to?: string;
+  routeName?: string;
+  color: string;
+  duration: number;
+}
+
+const travelModeChoices: Array<{
+  id: TravelMode;
+  label: string;
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
+}> = [
+  { id: "car", label: "Car", Icon: Car },
+  { id: "bike", label: "Bike", Icon: Bike },
+  { id: "local", label: "Local transport", Icon: TrainFront },
+  { id: "walk", label: "Walk", Icon: Footprints },
+];
+
+const localTransportChoices: Array<{
+  id: LocalTransportMode;
+  label: string;
+  detail: string;
+  color: string;
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
+}> = [
+  { id: "bus", label: "Buses", detail: "BEST routes", color: "#f97316", Icon: BusFront },
+  { id: "rail", label: "Locals", detail: "Suburban rail", color: "#64748b", Icon: TrainFront },
+  { id: "subway", label: "Metro", detail: "Lines 1, 2A, 3, 7", color: "#2563eb", Icon: TrainFront },
+];
+
+const metroLineBadges = [
+  ["1", "#2563eb", "#ffffff"],
+  ["2A", "#facc15", "#0f172a"],
+  ["3", "#06b6d4", "#ffffff"],
+  ["7", "#ef4444", "#ffffff"],
+] as const;
+
+const defaultLocalTransport = {
+  bus: true,
+  rail: true,
+  subway: true,
+};
+
+const modeLabels: Record<string, string> = {
+  WALK: "Walk",
+  SUBWAY: "Metro",
+  BUS: "Bus",
+  RAIL: "Local",
+  CAR: "Car",
+  BICYCLE: "Bike",
+};
+
+const modeIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  WALK: Footprints,
+  SUBWAY: TrainFront,
+  BUS: BusFront,
+  RAIL: TrainFront,
+  CAR: Car,
+  BICYCLE: Bike,
+};
+
+const getForegroundForRouteColor = (color: string) =>
+  color.toLowerCase() === "#facc15" ? "#0f172a" : "#ffffff";
+
 
 const fetchLocationSuggestions = async (query: string) => {
   try {
@@ -102,8 +184,14 @@ export const TravelView = () => {
 
   const [activeField, setActiveField] = useState<"A" | "B" | null>(null);
 
-  const [routeData, setRouteData] = useState<any>(null);
+  const [routeData, setRouteData] = useState<OtpRouteResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [routeNotice, setRouteNotice] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [travelMode, setTravelMode] = useState<TravelMode>("local");
+  const [localTransport, setLocalTransport] = useState<Record<LocalTransportMode, boolean>>(
+    defaultLocalTransport
+  );
 
   const [isExpanded, setIsExpanded] = useState(true);
   const [isSearchCollapsed, setIsSearchCollapsed] = useState(false);
@@ -168,9 +256,40 @@ export const TravelView = () => {
     }
   }, [debouncedB]);
 
+  const hasLocalTransportMode = Object.values(localTransport).some(Boolean);
+  const canRequestRoute = Boolean(
+    coordsA &&
+    coordsB &&
+    (travelMode !== "local" || hasLocalTransportMode)
+  );
+
+  const updateTravelMode = (mode: TravelMode) => {
+    setTravelMode(mode);
+    setRouteNotice("");
+    setRouteData(null);
+    setSelectedIndex(0);
+    setIsSearchCollapsed(false);
+  };
+
+  const updateLocalTransport = (
+    mode: LocalTransportMode,
+    checked: boolean
+  ) => {
+    setLocalTransport((current) => ({
+      ...current,
+      [mode]: checked,
+    }));
+    setRouteNotice("");
+    setRouteData(null);
+    setSelectedIndex(0);
+    setIsSearchCollapsed(false);
+  };
+
   const handleRoute = async () => {
-    if (!coordsA || !coordsB) return;
+    if (!coordsA || !coordsB || !canRequestRoute) return;
     setLoading(true);
+    setRouteNotice("");
+    setSelectedIndex(0);
     try {
       const res = await fetch(`${getBackendUrl()}/api/otp/route`, {
         method: "POST",
@@ -181,14 +300,27 @@ export const TravelView = () => {
           to: { lat: coordsB.lat, lng: coordsB.lng },
           fromName: locA,
           toName: locB,
+          travelMode,
+          localTransport: {
+            bus: localTransport.bus,
+            rail: localTransport.rail,
+            subway: localTransport.subway,
+          },
         }),
       });
-      const data = await res.json();
+      const data = await res.json() as OtpRouteResponse;
       console.log("FULL RESPONSE:", data);
       setRouteData(data);
+      const nextItineraries = data?.data?.plan?.itineraries || [];
+      if (!res.ok || nextItineraries.length === 0) {
+        setRouteNotice("No route found for the selected travel modes.");
+        setIsSearchCollapsed(false);
+        return;
+      }
       setIsSearchCollapsed(true);
     } catch (err) {
       console.error("Route error:", err);
+      setRouteNotice("Could not find a route right now.");
     } finally {
       setLoading(false);
     }
@@ -205,6 +337,10 @@ export const TravelView = () => {
       setSuggestionsB([]);
     }
     setActiveField(null);
+    setRouteData(null);
+    setRouteNotice("");
+    setSelectedIndex(0);
+    setIsSearchCollapsed(false);
   };
 
   const handleSavedPlaceClick = (place: SavedPlace) => {
@@ -217,6 +353,9 @@ export const TravelView = () => {
       setActiveField("B");
     }
     setSuggestionsB([]);
+    setRouteData(null);
+    setRouteNotice("");
+    setSelectedIndex(0);
     setIsSearchCollapsed(false);
   };
 
@@ -248,21 +387,139 @@ export const TravelView = () => {
     }
   };
 
-  const itineraries = routeData?.data?.plan?.itineraries || [];
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const itineraries: OtpItinerary[] = routeData?.data?.plan?.itineraries || [];
   const itinerary = itineraries[selectedIndex];
+  const routingNote = routeData?.routing?.adjustedToNextMetroService
+    ? `Showing next metro service at ${routeData.routing.time}`
+    : "";
 
-  const steps = itinerary?.legs?.map((leg: any) => ({
+  const steps: RouteStep[] | undefined = itinerary?.legs?.map((leg: OtpLeg) => ({
     mode: leg.mode,
     from: leg.from?.name,
     to: leg.to?.name,
     routeName: leg.route?.shortName || leg.route?.longName,
+    color: getTransportColor(
+      leg.mode,
+      leg.route?.shortName || leg.route?.longName || ""
+    ),
     duration: Math.round((leg.endTime - leg.startTime) / 60000),
   }));
 
+  const routeControls = (
+    <section className="relative z-20 px-4 pb-24">
+      <div className="mx-auto max-w-xl space-y-3">
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-2 shadow-lg">
+          <div className="grid grid-cols-4 gap-1">
+            {travelModeChoices.map(({ id, label, Icon }) => {
+              const isActive = travelMode === id;
+
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => updateTravelMode(id)}
+                  aria-pressed={isActive}
+                  aria-label={id === "local" ? "Local transport" : label}
+                  className={`flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-xl px-2 text-[11px] font-medium leading-tight transition-all ${
+                    isActive
+                      ? "bg-white text-primary shadow-sm dark:bg-slate-100"
+                      : "text-slate-400 hover:bg-slate-900 hover:text-slate-100"
+                  }`}
+                >
+                  <Icon size={20} />
+                  <span className="whitespace-normal text-center">{label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {travelMode === "local" && (
+            <div className="mt-2 rounded-xl border border-slate-800 bg-slate-900/90 p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold text-slate-100">
+                    Local transport
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    Buses, locals, metro
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  {metroLineBadges.map(([line, color, textColor]) => (
+                    <span
+                      key={line}
+                      className="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold"
+                      style={{ backgroundColor: color, color: textColor }}
+                    >
+                      {line}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                {localTransportChoices.map(({ id, label, detail, color, Icon }) => (
+                  <div
+                    key={id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-2"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span
+                        className="flex size-8 shrink-0 items-center justify-center rounded-full text-white"
+                        style={{ backgroundColor: color }}
+                      >
+                        <Icon size={16} />
+                      </span>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-slate-100">
+                          {label}
+                        </div>
+                        <div className="truncate text-xs text-slate-500">
+                          {detail}
+                        </div>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={localTransport[id]}
+                      onCheckedChange={(checked) => updateLocalTransport(id, checked)}
+                      aria-label={`Use ${label}`}
+                      className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-700 dark:data-[state=unchecked]:bg-slate-700"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {!hasLocalTransportMode && (
+                <div className="mt-2 text-xs text-amber-300">
+                  Select at least one local transport mode.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {routeNotice && (
+          <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
+            {routeNotice}
+          </div>
+        )}
+
+        {coordsA && coordsB && (
+          <button
+            onClick={handleRoute}
+            className="w-full bg-primary py-3 rounded-xl font-medium text-white disabled:opacity-50"
+            disabled={loading || !canRequestRoute}
+          >
+            {loading ? "Finding Route..." : "Find Route"}
+          </button>
+        )}
+      </div>
+    </section>
+  );
+
   return (
    <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 relative">
-      {/* HEADER — PLACE IT HERE */}
+      {/* Header */}
       <header className="sticky top-0 z-40 bg-background-light dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 p-4">
         <div className="max-w-xl mx-auto space-y-4">
 
@@ -394,20 +651,10 @@ export const TravelView = () => {
             )}
           </div>
 
-          {/* Find Route */}
-          {coordsA && coordsB && (
-            <button
-              onClick={handleRoute}
-              className="w-full bg-primary py-3 rounded-xl font-medium disabled:opacity-50"
-              disabled={loading}
-            >
-              {loading ? "Finding Route..." : "Find Route"}
-            </button>
-          )}
         </div>
       )}
       {/* Map layer */}
-        <section className="relative z-0 px-4 pb-24">
+        <section className="relative z-0 px-4 pb-4">
           <div className="relative z-0 w-full h-[40vh] overflow-hidden rounded-xl border border-slate-800 shadow-lg sm:h-[45vh] lg:h-[55vh]">
 
             <RealMap
@@ -421,6 +668,8 @@ export const TravelView = () => {
 
           </div>
         </section>
+
+      {!isSearchCollapsed && routeControls}
 
       {/* Add Place Modal */}
       {showAddModal && (
@@ -488,7 +737,7 @@ export const TravelView = () => {
       {isSearchCollapsed && itineraries.length > 1 && (
         <div className="fixed left-0 right-0 top-24 px-4" style={{ zIndex: 25 }}>
           <div className="flex gap-2 overflow-x-auto">
-            {itineraries.map((it: any, index: number) => (
+            {itineraries.map((it: OtpItinerary, index: number) => (
               <button
                 key={index}
                 onClick={() => setSelectedIndex(index)}
@@ -496,7 +745,7 @@ export const TravelView = () => {
                   selectedIndex === index ? "bg-primary" : "bg-slate-800"
                 }`}
               >
-                Option {index + 1} · {Math.round(it.duration / 60)} mins
+                Option {index + 1} - {Math.round(it.duration / 60)} mins
               </button>
             ))}
           </div>
@@ -518,36 +767,67 @@ export const TravelView = () => {
             <div className="text-sm font-medium text-zinc-300">
               {isExpanded
                 ? "Swipe down to collapse"
-                : `Route · ${Math.round(itinerary.duration / 60)} mins (Tap to expand)`}
+                : `Route - ${Math.round(itinerary.duration / 60)} mins (Tap to expand)`}
             </div>
+            {routingNote && (
+              <div className="mt-1 text-xs font-medium text-amber-300">
+                {routingNote}
+              </div>
+            )}
           </div>
 
           {isExpanded && (
             <div className="h-[calc(100%-88px)] overflow-y-auto px-4 pb-6">
-              {steps?.map((step: any, index: number) => (
-                <div
-                  key={index}
-                  className="bg-slate-900 p-4 rounded-xl text-sm border border-slate-800 mb-3"
-                >
-                  <div className="font-medium">
-                    {step.mode === "WALK" && "🚶 Walk"}
-                    {step.mode === "SUBWAY" && "🚇 Metro"}
-                    {step.mode === "BUS" && "🚌 Bus"}
-                  </div>
-                  {step.routeName && step.mode !== "WALK" && (
-                    <div className="text-emerald-400 text-sm mt-1">
-                      Line: {step.routeName}
+              {steps?.map((step: RouteStep, index: number) => {
+                const StepIcon = modeIcons[step.mode] || MapPin;
+                const modeLabel = modeLabels[step.mode] || step.mode;
+                const stepForeground = getForegroundForRouteColor(step.color);
+
+                return (
+                  <div
+                    key={index}
+                    className="mb-3 rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm"
+                    style={{ borderLeftColor: step.color, borderLeftWidth: 4 }}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2 font-medium text-slate-100">
+                        <span
+                          className="flex size-8 shrink-0 items-center justify-center rounded-full"
+                          style={{
+                            backgroundColor: step.color,
+                            color: stepForeground,
+                          }}
+                        >
+                          <StepIcon size={16} />
+                        </span>
+                        <span>{modeLabel}</span>
+                      </div>
+                      <div className="shrink-0 text-xs font-medium text-slate-400">
+                        {step.duration} mins
+                      </div>
                     </div>
-                  )}
-                  <div className="mt-1 text-slate-400">
-                    From{" "}
-                    <span className="text-white font-medium">{step.from}</span>{" "}
-                    to{" "}
-                    <span className="text-white font-medium">{step.to}</span>
+
+                    {step.routeName && step.mode !== "WALK" && (
+                      <div className="mt-2 inline-flex items-center rounded-full bg-slate-950 px-3 py-1 text-xs font-medium">
+                        <span
+                          className="mr-2 h-2 w-6 rounded-full"
+                          style={{ backgroundColor: step.color }}
+                        />
+                        <span style={{ color: step.color }}>
+                          Line {step.routeName}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="mt-2 text-slate-400">
+                      From{" "}
+                      <span className="font-medium text-white">{step.from}</span>{" "}
+                      to{" "}
+                      <span className="font-medium text-white">{step.to}</span>
+                    </div>
                   </div>
-                  <div className="mt-1 text-emerald-400">~ {step.duration} mins</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

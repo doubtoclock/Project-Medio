@@ -9,9 +9,12 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import polyline from "@mapbox/polyline";
+import { getTransportColor } from "./transportColors";
+import type { OtpLeg, OtpRouteResponse } from "./otpTypes";
 
 // Fix default marker icon issue
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+type DefaultIconPrototype = L.Icon.Default & { _getIconUrl?: unknown };
+delete (L.Icon.Default.prototype as DefaultIconPrototype)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -21,20 +24,12 @@ L.Icon.Default.mergeOptions({
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-/* Metro Line → Color Mapping */
-const metroLineColors: Record<string, string> = {
-  L1: "#2563eb",
-  L2A: "#facc15",
-  L3: "#06b6d4",
-  L7: "#ef4444",
-};
-
 type RealMapProps = {
   lat?: number;
   lng?: number;
   zoom?: number;
   markers?: Array<{ lat: number; lng: number; name: string; color?: string }>;
-  routeData?: any;
+  routeData?: OtpRouteResponse | null;
   selectedIndex?: number;
 };
 
@@ -59,7 +54,7 @@ export const RealMap: React.FC<RealMapProps> = ({
     const itinerary = plan.itineraries?.[selectedIndex];
     if (!itinerary) return lines;
 
-    itinerary.legs.forEach((leg: any) => {
+    itinerary.legs?.forEach((leg: OtpLeg) => {
       if (leg?.legGeometry?.points) {
         const decoded = polyline.decode(leg.legGeometry.points);
 
@@ -101,10 +96,7 @@ export const RealMap: React.FC<RealMapProps> = ({
             key={index}
             positions={line.positions}
             pathOptions={{
-              color:
-                line.mode === "WALK"
-                  ? "#a855f7"
-                  : metroLineColors[line.routeName] || "#10b981",
+              color: getTransportColor(line.mode, line.routeName),
               weight: 6,
             }}
           />

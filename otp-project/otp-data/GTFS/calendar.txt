@@ -1,2 +1,5 @@
 service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
 DAILY,1,1,1,1,1,1,1,20240101,20271231
+BUS_MO_TU_WE_TH_FR_SA,1,1,1,1,1,1,0,20260101,20271231
+BUS_MO_TU_WE_TH_FR_SA_SU,1,1,1,1,1,1,1,20260101,20271231
+BUS_SU,0,0,0,0,0,0,1,20260101,20271231

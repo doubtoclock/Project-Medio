@@ -1,8 +1,568 @@
-route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_text_color
-L1,MMRDA,L1,Mumbai Metro Line 1,1,1F77B4,FFFFFF
-L2A,MMRDA,L2A,Mumbai Metro Line 2A,1,FFCB05,000000
-L3,MMRDA,L3,Mumbai Metro Line 3 (Aqua Line),1,00B3A4,FFFFFF
-L7,MMRDA,L7,Mumbai Metro Line 7 (Red Line),1,E53935,FFFFFF
-CL,CR,Central,Mumbai Suburban Railway Central Line,2,C62828,
-HL,CR,Harbour,Mumbai Suburban Railway Harbour Line,2,2E7D32,
-WL,WR,Western,Mumbai Suburban Railway Western Line,2,1565C0,
+route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_text_color,route_url
+L1,MMRDA,L1,Mumbai Metro Line 1,1,1F77B4,FFFFFF,
+L2A,MMRDA,L2A,Mumbai Metro Line 2A,1,FFCB05,000000,
+L3,MMRDA,L3,Mumbai Metro Line 3 (Aqua Line),1,00B3A4,FFFFFF,
+L7,MMRDA,L7,Mumbai Metro Line 7 (Red Line),1,E53935,FFFFFF,
+CL,CR,Central,Mumbai Suburban Railway Central Line,2,C62828,,
+HL,CR,Harbour,Mumbai Suburban Railway Harbour Line,2,2E7D32,,
+WL,WR,Western,Mumbai Suburban Railway Western Line,2,1565C0,,
+BEST_97878,BEST,1,Colaba Depot (Electric House) - Bandra Reclamation Bus Station,3,,,https://transitrun.com/en/public-transit-line_1_97878
+BEST_97880,BEST,2Ltd,Colaba Depot (Electric House) - Bandra Colony Bus Station,3,,,https://transitrun.com/en/public-transit-line_2LTD_97880
+BEST_97881,BEST,3,Navy Nagar (Colaba) - Jijamata Udyan (Byculla),3,,,https://transitrun.com/en/public-transit-line_3_97881
+BEST_97882,BEST,3-Extra,Navy Nagar (Colaba) - Jijamata Udyan (Byculla),3,,,https://transitrun.com/en/public-transit-line_3-EXTRA_97882
+BEST_97883,BEST,4Ltd,J.J.Hospital (Dr.M.Iqbal Chowk) - Goregaon Oshiwara Depot,3,,,https://transitrun.com/en/public-transit-line_4LTD_97883
+BEST_97884,BEST,6Ltd,Mahul Village - Colaba Depot (Electric House),3,,,https://transitrun.com/en/public-transit-line_6LTD_97884
+BEST_97885,BEST,6Ltd,Tata Power Centre (Mahul) - Colaba Depot (Electric House),3,,,https://transitrun.com/en/public-transit-line_6LTD_97885
+BEST_97886,BEST,7Ltd,Vikhroli Depot - Backbay Depot,3,,,https://transitrun.com/en/public-transit-line_7LTD_97886
+BEST_97887,BEST,7Ltd,Vikhroli Depot - Vijay Vallabh Chowk (Pydhonie),3,,,https://transitrun.com/en/public-transit-line_7LTD_97887
+BEST_97888,BEST,8Ltd,Shivajinagar Terminus - Chhatrapati Shivaji Maharaj Terminus (C.S.M.T.),3,,,https://transitrun.com/en/public-transit-line_8LTD_97888
+BEST_97889,BEST,8Ltd,Shivajinagar Terminus - Hutatma Chowk (Mumbai University),3,,,https://transitrun.com/en/public-transit-line_8LTD_97889
+BEST_97890,BEST,8Ltd,Shivajinagar Terminus - Mantralaya,3,,,https://transitrun.com/en/public-transit-line_8LTD_97890
+BEST_97891,BEST,9,Colaba Bus Station - Antop Hill Bus Station,3,,,https://transitrun.com/en/public-transit-line_9_97891
+BEST_97892,BEST,11Ltd,Navy Nagar (Colaba) - Bandra Colony Bus Station,3,,,https://transitrun.com/en/public-transit-line_11LTD_97892
+BEST_97893,BEST,14,Pratiksha Nagar Depot - Dr.Shyamaprasad Mukherjee Chowk (Museum),3,,,https://transitrun.com/en/public-transit-line_14_97893
+BEST_97894,BEST,15,Pratiksha Nagar Depot - Mantralaya,3,,,https://transitrun.com/en/public-transit-line_15_97894
+BEST_97895,BEST,22Ltd,Vijay Vallabh Chowk (Pydhonie) - Marol Maroshi Bus Station,3,,,https://transitrun.com/en/public-transit-line_22LTD_97895
+BEST_97896,BEST,25Ltd,Kurla Depot - Backbay Depot,3,,,https://transitrun.com/en/public-transit-line_25LTD_97896
+BEST_97897,BEST,25Ltd,Vihar Lake - Prabodhankar Thackeray Udyan Bus Station (Sewree),3,,,https://transitrun.com/en/public-transit-line_25LTD_97897
+BEST_97898,BEST,27,Vaishali Nagar (Mulund-W) - Rani Laxmibai Chowk,3,,,https://transitrun.com/en/public-transit-line_27_97898
+BEST_97899,BEST,28,Swami Dyanand Saraswati Chowk (Fort) - J.V.P.D.Bus Station,3,,,https://transitrun.com/en/public-transit-line_28_97899
+BEST_97900,BEST,35,Seepz - Comrade P.K.Kurne Chowk,3,,,https://transitrun.com/en/public-transit-line_35_97900
+BEST_97901,BEST,37,Kurla Station (W) - J.Mehta Marg,3,,,https://transitrun.com/en/public-transit-line_37_97901
+BEST_97902,BEST,39,Veer Hutatma Bhai Kotwal Udyan (Plaza) - Marol Depot,3,,,https://transitrun.com/en/public-transit-line_39_97902
+BEST_97903,BEST,44,Worli Depot - Dr.Shamaprasad Mukherji Chowk,3,,,https://transitrun.com/en/public-transit-line_44_97903
+BEST_97904,BEST,44,Worli Depot - Shrawan Yashwante Chowk (Kala Chowky),3,,,https://transitrun.com/en/public-transit-line_44_97904
+BEST_97905,BEST,45,M.M.R.D.A.Colony (Extension) Mahul - Backbay Depot,3,,,https://transitrun.com/en/public-transit-line_45_97905
+BEST_97906,BEST,45,M.M.R.D.A.Colony (Extension) Mahul - Chhatrapati Shivaji Maharaj Terminus (C.S.M.T.),3,,,https://transitrun.com/en/public-transit-line_45_97906
+BEST_97907,BEST,45,Mantralaya - M.M.R.D.A.Colony (Extension) Mahul,3,,,https://transitrun.com/en/public-transit-line_45_97907
+BEST_97908,BEST,46,Mallet Bunder Check Post - Dharavi Depot,3,,,https://transitrun.com/en/public-transit-line_46_97908
+BEST_97909,BEST,49,Maharana Pratap Chowk (Mazgaon) - M.M.R.D.A.Colony (Extension) Mahul,3,,,https://transitrun.com/en/public-transit-line_49_97909
+BEST_97910,BEST,50,Worli Depot - Mallet Bunder Check Post,3,,,https://transitrun.com/en/public-transit-line_50_97910
+BEST_97911,BEST,52,Shrawan Yashwante Chowk (Kala Chowky) - Dharavi Depot,3,,,https://transitrun.com/en/public-transit-line_52_97911
+BEST_97912,BEST,56,Worli Depot - Veer Hutatma Bhai Kotwal Udyan (Plaza),3,,,https://transitrun.com/en/public-transit-line_56_97912
+BEST_97913,BEST,56,Worli Depot - Vesave Yari Road Bus Station,3,,,https://transitrun.com/en/public-transit-line_56_97913
+BEST_97914,BEST,57,Prabodhankar Thackeray Udyan Bus Station (Sewree) - Kamala Nehru Park (Malabar Hill),3,,,https://transitrun.com/en/public-transit-line_57_97914
+BEST_97915,BEST,58,Wadala Truck Terminal - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_58_97915
+BEST_97916,BEST,60,Maharana Pratap Chowk (Mazgaon) - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_60_97916
+BEST_97917,BEST,62,Vidyavihar Bus Station - Pandit Paluskar Chowk (Opera House),3,,,https://transitrun.com/en/public-transit-line_62_97917
+BEST_97918,BEST,63,Vasantrao Naik Chowk (Tardeo) - Chunabhatti,3,,,https://transitrun.com/en/public-transit-line_63_97918
+BEST_97919,BEST,66,Rani Laxmibai Chowk Sion - Ballard Pier,3,,,https://transitrun.com/en/public-transit-line_66_97919
+BEST_97920,BEST,66,Rani Laxmibai Chowk Sion - Pandit Paluskar Chowk (Opera House),3,,,https://transitrun.com/en/public-transit-line_66_97920
+BEST_97921,BEST,66,Swami Dyanand Saraswati Chowk (Fort) - Rani Laxmibai Chowk Sion,3,,,https://transitrun.com/en/public-transit-line_66_97921
+BEST_97922,BEST,66Ltd,Dharavi Depot - Colaba Depot (Electric House),3,,,https://transitrun.com/en/public-transit-line_66LTD_97922
+BEST_97923,BEST,67,Walkeshwar - Antop Hill,3,,,https://transitrun.com/en/public-transit-line_67_97923
+BEST_97924,BEST,69,Prabodhankar Thackeray Udyan Bus Station (Sewree) - Dr.Shyamaprasad Mukherjee Chowk (Museum),3,,,https://transitrun.com/en/public-transit-line_69_97924
+BEST_97925,BEST,75,Chunabhatti - Bhakti Park Complex,3,,,https://transitrun.com/en/public-transit-line_75_97925
+BEST_97926,BEST,75,Rani Laxmibai Chowk Sion - Bhakti Park Complex,3,,,https://transitrun.com/en/public-transit-line_75_97926
+BEST_97927,BEST,79,Santacruz Depot - Gorai Depot,3,,,https://transitrun.com/en/public-transit-line_79_97927
+BEST_97928,BEST,80Ltd,Walkeshwar - Bandra Bus Station (W),3,,,https://transitrun.com/en/public-transit-line_80LTD_97928
+BEST_97929,BEST,82,Worli Depot - Mantralaya,3,,,https://transitrun.com/en/public-transit-line_82_97929
+BEST_97930,BEST,83,Santacruz Depot - Colaba Bus Station,3,,,https://transitrun.com/en/public-transit-line_83_97930
+BEST_97931,BEST,83,Santacruz Depot - Pandit Paluskar Chowk (Opera House),3,,,https://transitrun.com/en/public-transit-line_83_97931
+BEST_97932,BEST,84Ltd,Hutatma Chowk / Mumbai University - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_84LTD_97932
+BEST_97933,BEST,84Ltd,Pandit Paluskar Chowk (Opera House) - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_84LTD_97933
+BEST_97934,BEST,84Ltd,Hutatma Chowk / Mumbai University - Goregaon Oshiwara Depot,3,,,https://transitrun.com/en/public-transit-line_84LTD_97934
+BEST_97935,BEST,84Ltd,Pandit Paluskar Chowk (Opera House) - Goregaon Oshiwara Depot,3,,,https://transitrun.com/en/public-transit-line_84LTD_97935
+BEST_97936,BEST,84Ltd,Worli Depot - Goregaon Oshiwara Depot,3,,,https://transitrun.com/en/public-transit-line_84LTD_97936
+BEST_97937,BEST,85,Hutatma Chowk / Mumbai University - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_85_97937
+BEST_97938,BEST,85,Pandit Paluskar Chowk (Opera House) - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_85_97938
+BEST_97939,BEST,85,Kurla Bus Station (E) - Ahilyabai Holkar Chk. Eross Cinema,3,,,https://transitrun.com/en/public-transit-line_85_97939
+BEST_97940,BEST,87Ltd,Mantralaya - Bandra Colony Bus Station,3,,,https://transitrun.com/en/public-transit-line_87LTD_97940
+BEST_97941,BEST,87Ltd,Vasantrao Naik Chowk (Tardeo) - Bandra Colony Bus Station,3,,,https://transitrun.com/en/public-transit-line_87LTD_97941
+BEST_97942,BEST,88,Pratiksha Nagar Depot - Hutatma Chowk (Mumbai University),3,,,https://transitrun.com/en/public-transit-line_88_97942
+BEST_97943,BEST,88,Pratiksha Nagar Depot - Mantralaya,3,,,https://transitrun.com/en/public-transit-line_88_97943
+BEST_97944,BEST,89,Worli Depot - Backbay Depot,3,,,https://transitrun.com/en/public-transit-line_89_97944
+BEST_97945,BEST,100,Free Press Journal House - Ahilyabai Holkar Chowk (Churchgate),3,,,https://transitrun.com/en/public-transit-line_100_97945
+BEST_97946,BEST,103,R.C.Church - Kamala Nehru Park (Malabar Hill),3,,,https://transitrun.com/en/public-transit-line_103_97946
+BEST_97947,BEST,105,Vijay Vallabh Chowk (Pydhonie) - Kamala Nehru Park (Malabar Hill),3,,,https://transitrun.com/en/public-transit-line_105_97947
+BEST_97948,BEST,110,Sangam Nagar (Wadala-E) - Comrade P.K.Kurne Chowk,3,,,https://transitrun.com/en/public-transit-line_110_97948
+BEST_97949,BEST,115,N.C.P.A. - Chhatrapati Shivaji Maharaj Terminus (C.S.M.T.),3,,,https://transitrun.com/en/public-transit-line_115_97949
+BEST_97950,BEST,122,J.Mehta Marg - Ballard Pier,3,,,https://transitrun.com/en/public-transit-line_122_97950
+BEST_97951,BEST,123,Vasantrao Naik Chowk (Tardeo) - R.C.Church,3,,,https://transitrun.com/en/public-transit-line_123_97951
+BEST_97952,BEST,125,Worli Village - Navy Nagar (Colaba),3,,,https://transitrun.com/en/public-transit-line_125_97952
+BEST_97953,BEST,126,Chhatrapati Shivaji Maharaj Terminus (C.S.M.T.) - Jijamata Udyan (Byculla),3,,,https://transitrun.com/en/public-transit-line_126_97953
+BEST_97954,BEST,126,Swami Dyanand Saraswati Chowk (Fort) - Jijamata Udyan (Byculla),3,,,https://transitrun.com/en/public-transit-line_126_97954
+BEST_97955,BEST,134,Prabodhankar Thackeray Udyan Bus Station (Sewree) - Backbay Depot,3,,,https://transitrun.com/en/public-transit-line_134_97955
+BEST_97956,BEST,135,Mallet Bunder Check Post - Maharana Pratap Chowk (Mazgaon),3,,,https://transitrun.com/en/public-transit-line_135_97956
+BEST_97957,BEST,154,Nehru Planetarium (Worli) / N.S.C.I. - Byculla Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_154_97957
+BEST_97958,BEST,164,Maharana Pratap Chowk (Mazgaon) - Dharavi Depot,3,,,https://transitrun.com/en/public-transit-line_164_97958
+BEST_97959,BEST,165,Maheshwari Udyan (Kings Circle) - Kasturba Gandhi Chowk (C.P.Tank),3,,,https://transitrun.com/en/public-transit-line_165_97959
+BEST_97960,BEST,168,Wadala Depot - Lal Bahadur Shastri College,3,,,https://transitrun.com/en/public-transit-line_168_97960
+BEST_97962,BEST,169,Rani Laxmibai Chowk Sion - Pratiksha Nagar Depot,3,,,https://transitrun.com/en/public-transit-line_169_97962
+BEST_97963,BEST,169,Worli Depot - Pratiksha Nagar Depot,3,,,https://transitrun.com/en/public-transit-line_169_97963
+BEST_97964,BEST,169,Worli Depot - Veer Hutatma Bhai Kotwal Udyan (Plaza),3,,,https://transitrun.com/en/public-transit-line_169_97964
+BEST_97965,BEST,172,Pratiksha Nagar Depot - Comrade P.K.Kurne Chowk,3,,,https://transitrun.com/en/public-transit-line_172_97965
+BEST_97966,BEST,172,Sant Gadge Maharaj Chowk (Saat Rasta),3,,,https://transitrun.com/en/public-transit-line_172_97966
+BEST_97967,BEST,176,Rani Laxmibai Chowk,3,,,https://transitrun.com/en/public-transit-line_176_97967
+BEST_97968,BEST,181,Seepz - Antop Hill Extension,3,,,https://transitrun.com/en/public-transit-line_181_97968
+BEST_97969,BEST,182,Diamond Market - Bandra Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_182_97969
+BEST_97970,BEST,182,Malad Depot - Chunabhatti,3,,,https://transitrun.com/en/public-transit-line_182_97970
+BEST_97971,BEST,187,C.A.Institute (B.K.C.) - Bandra Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_187_97971
+BEST_97972,BEST,188Ltd,Kanheri Caves - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_188LTD_97972
+BEST_97973,BEST,188Ltd,National Park Gate - Kanheri Caves,3,,,https://transitrun.com/en/public-transit-line_188LTD_97973
+BEST_97974,BEST,200,Wadala Depot - Vesave Yari Road Bus Station,3,,,https://transitrun.com/en/public-transit-line_200_97974
+BEST_97975,BEST,201,Prabodhankar Thackeray Udyan Bus Station (Sewree) - Goregaon (W) Bus Station,3,,,https://transitrun.com/en/public-transit-line_201_97975
+BEST_97976,BEST,201,Santacruz Depot - Prabodhankar Thackeray Udyan Bus Station (Sewree),3,,,https://transitrun.com/en/public-transit-line_201_97976
+BEST_97977,BEST,202,Mahim Bus Station - Gorai Depot,3,,,https://transitrun.com/en/public-transit-line_202_97977
+BEST_97978,BEST,203,Juhu Beach - Dahisar Bridge,3,,,https://transitrun.com/en/public-transit-line_203_97978
+BEST_97979,BEST,204,Goregaon (W) Bus Station - Dahisar Bridge,3,,,https://transitrun.com/en/public-transit-line_204_97979
+BEST_97980,BEST,205,Jogeshwari Bus Station (W) - Gomant Nagar,3,,,https://transitrun.com/en/public-transit-line_205_97980
+BEST_97981,BEST,207,Malvani Depot (Gaikwad Nagar) - Dahisar Bus Station,3,,,https://transitrun.com/en/public-transit-line_207_97981
+BEST_97982,BEST,209,Samata Nagar Bus Station (Kandivali-E) - Ashish Complex,3,,,https://transitrun.com/en/public-transit-line_209_97982
+BEST_97983,BEST,210Ltd,Vesave Yari Road Bus Station - Dahisar Bridge,3,,,https://transitrun.com/en/public-transit-line_210LTD_97983
+BEST_97984,BEST,211,Father Agnel Ashram - Bandra Bus Station (W),3,,,https://transitrun.com/en/public-transit-line_211_97984
+BEST_97985,BEST,212,Prabodhankar Thackeray Udyan Bus Station (Sewree) - Bandra Reclamation Bus Station,3,,,https://transitrun.com/en/public-transit-line_212_97985
+BEST_97986,BEST,213,Santacruz Station (E) - Prabodhankar Thackeray Udyan Bus Station (Sewree),3,,,https://transitrun.com/en/public-transit-line_213_97986
+BEST_97987,BEST,214,Mount Mary Steps - Bandra Bus Station (W),3,,,https://transitrun.com/en/public-transit-line_214_97987
+BEST_97988,BEST,215,Tata Colony (Bandra-E) - Bandra Reclamation Bus Station,3,,,https://transitrun.com/en/public-transit-line_215_97988
+BEST_97989,BEST,221,Vesave Yari Road Bus Station - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_221_97989
+BEST_97990,BEST,222,Chuim Village - Bandra Bus Station (W),3,,,https://transitrun.com/en/public-transit-line_222_97990
+BEST_97991,BEST,223Ltd,Seven Bungalows Bus Station - Samata Nagar Bus Station (Kandivali-E),3,,,https://transitrun.com/en/public-transit-line_223LTD_97991
+BEST_97992,BEST,224,Santacruz Depot - Borivali Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_224_97992
+BEST_97993,BEST,225,Dahisar Bus Station - Bandra Bus Station (W),3,,,https://transitrun.com/en/public-transit-line_225_97993
+BEST_97994,BEST,226Ltd,Prabodhankar Thackeray Nagar Bus Station (Charkop Bus Station) - Barve Nagar,3,,,https://transitrun.com/en/public-transit-line_226LTD_97994
+BEST_97995,BEST,231,Santacruz Railway Station (W) - Juhu Bus Station,3,,,https://transitrun.com/en/public-transit-line_231_97995
+BEST_97996,BEST,239,Kandivali Railway Station (W) - Charkop Sector 9,3,,,https://transitrun.com/en/public-transit-line_239_97996
+BEST_97997,BEST,241,Malvani Depot (Gaikwad Nagar) - Mahim Bus Station,3,,,https://transitrun.com/en/public-transit-line_241_97997
+BEST_97998,BEST,242,Millat Nagar - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_242_97998
+BEST_97999,BEST,243,Malad Railway Station (W) - Jankalyan Nagar,3,,,https://transitrun.com/en/public-transit-line_243_97999
+BEST_98000,BEST,244,Kandivali Railway Station (W) - Borivali Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_244_98000
+BEST_98001,BEST,246,Kandivali Railway Station (W) - Borivali Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_246_98001
+BEST_98003,BEST,251,Vesava Village - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_251_98003
+BEST_98004,BEST,254,Veera Desai Road (Extension) - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_254_98004
+BEST_98005,BEST,255Ltd,Pratiksha Nagar Depot - J.V.P.D.Bus Station,3,,,https://transitrun.com/en/public-transit-line_255LTD_98005
+BEST_98007,BEST,255Ltd,Pratiksha Nagar Depot - Vesave Yari Road Bus Station,3,,,https://transitrun.com/en/public-transit-line_255LTD_98007
+BEST_98008,BEST,259,Gorai Depot - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_259_98008
+BEST_98009,BEST,262,Malad Depot - Goregaon (W) Bus Station,3,,,https://transitrun.com/en/public-transit-line_262_98009
+BEST_98010,BEST,266,Shree Swami Samarth Nagar (Extension) - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_266_98010
+BEST_98011,BEST,270,Malad Railway Station (W) - Mahapalika Pumping Centre (Malvani),3,,,https://transitrun.com/en/public-transit-line_270_98011
+BEST_98012,BEST,271,Malad Railway Station (W) - Madh Jetty,3,,,https://transitrun.com/en/public-transit-line_271_98012
+BEST_98013,BEST,272,Marve Beach-Essel World - Malad Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_272_98013
+BEST_98014,BEST,274,Kandivali Railway Station (W) - Bandar Pakhadi,3,,,https://transitrun.com/en/public-transit-line_274_98014
+BEST_98015,BEST,276,Kandivali Railway Station (W) - Charkop Sector No.8,3,,,https://transitrun.com/en/public-transit-line_276_98015
+BEST_98016,BEST,277,Kandivali Railway Station (W) - Borivali Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_277_98016
+BEST_98017,BEST,280,Mahavir Nagar Extension - Kandivali Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_280_98017
+BEST_98018,BEST,281,Pushpa Park (Malad-E) - Kandivali Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_281_98018
+BEST_98019,BEST,284,Kandivali Railway Station (W) - Borivali Railway Station (W) Platform No.1,3,,,https://transitrun.com/en/public-transit-line_284_98019
+BEST_98020,BEST,286,Kandivali Railway Station (W) - Charkop Village,3,,,https://transitrun.com/en/public-transit-line_286_98020
+BEST_98021,BEST,290Ltd,Poisar Bus Depot - Marol Maroshi Bus Station,3,,,https://transitrun.com/en/public-transit-line_290LTD_98021
+BEST_98022,BEST,298,Rawal Pada - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_298_98022
+BEST_98023,BEST,303,Mulund Railway Station (E) - Bandra (E) Bus Station,3,,,https://transitrun.com/en/public-transit-line_303_98023
+BEST_98024,BEST,307,Vaishali Nagar (Mulund-W) - Marol Depot,3,,,https://transitrun.com/en/public-transit-line_307_98024
+BEST_98025,BEST,308,Vidyavihar Bus Station - Majas Depot,3,,,https://transitrun.com/en/public-transit-line_308_98025
+BEST_98026,BEST,310,Kurla Station (W) - Bandra (E) Bus Station,3,,,https://transitrun.com/en/public-transit-line_310_98026
+BEST_98027,BEST,311,Santacruz Station (E) - Kurla Station (W),3,,,https://transitrun.com/en/public-transit-line_311_98027
+BEST_98028,BEST,312,Pratiksha Nagar Depot - Marol Depot,3,,,https://transitrun.com/en/public-transit-line_312_98028
+BEST_98029,BEST,313,Santacruz Station (E) - Kurla Station (W),3,,,https://transitrun.com/en/public-transit-line_313_98029
+BEST_98030,BEST,316,Bandra Railway Station (E) - Bandra Colony Bus Station,3,,,https://transitrun.com/en/public-transit-line_316_98030
+BEST_98031,BEST,317,Tata Colony (Bandra-E) - Bandra Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_317_98031
+BEST_98032,BEST,319,Majas Depot - Kurla Station (W),3,,,https://transitrun.com/en/public-transit-line_319_98032
+BEST_98033,BEST,320,Kurla Station (W) - Filter Pada,3,,,https://transitrun.com/en/public-transit-line_320_98033
+BEST_98034,BEST,321Ltd,Kala Nagar (Bandra-E) - Barve Nagar,3,,,https://transitrun.com/en/public-transit-line_321LTD_98034
+BEST_98035,BEST,321Ltd,Mahim Bus Station - Barve Nagar,3,,,https://transitrun.com/en/public-transit-line_321LTD_98035
+BEST_98036,BEST,322,Vidyavihar Bus Station - Santacruz Station (E),3,,,https://transitrun.com/en/public-transit-line_322_98036
+BEST_98037,BEST,323,Vidyavihar Bus Station - Sangharsh Nagar (Chandivli),3,,,https://transitrun.com/en/public-transit-line_323_98037
+BEST_98038,BEST,326,Shivshahi Prakalp (Mantri Park) - Kurla Station (W),3,,,https://transitrun.com/en/public-transit-line_326_98038
+BEST_98039,BEST,327,Shivshahi Prakalp (Mantri Park) - Goregaon Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_327_98039
+BEST_98040,BEST,330Ltd,Kurla Station (W) - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_330LTD_98040
+BEST_98041,BEST,331,Sahar Cargo Complex - Ghatkopar Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_331_98041
+BEST_98042,BEST,332,Kurla Station (W) - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_332_98042
+BEST_98043,BEST,333,New Quarters (Maharshi Valmiki Chowk) - Kondivita Caves (Mahakali Caves),3,,,https://transitrun.com/en/public-transit-line_333_98043
+BEST_98044,BEST,335,Sangharsh Nagar (Chandivli) - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_335_98044
+BEST_98045,BEST,339,Majas Depot - Juhu Bus Station,3,,,https://transitrun.com/en/public-transit-line_339_98045
+BEST_98046,BEST,339,Santacruz Depot - Juhu Bus Station,3,,,https://transitrun.com/en/public-transit-line_339_98046
+BEST_98047,BEST,340,Ghatkopar Railway Station (W) - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_340_98047
+BEST_98049,BEST,342,Kokan Vikas (Aarey Colony) - Goregaon Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_342_98049
+BEST_98050,BEST,343,Goregaon Railway Station (E) - Dadasaheb Phalke Chitranagari,3,,,https://transitrun.com/en/public-transit-line_343_98050
+BEST_98051,BEST,343,Santosh Nagar (Extension) - Goregaon Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_343_98051
+BEST_98052,BEST,344,Sankalp Society (Nagari Niwara) - Goregaon Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_344_98052
+BEST_98053,BEST,346,Nagari Niwara Zone 1 & 2 - Goregaon Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_346_98053
+BEST_98054,BEST,346,Shivshahi Prakalp (Mantri Park) - Goregaon Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_346_98054
+BEST_98055,BEST,348Ltd,Borivali Railway Station (East) - Anik Depot,3,,,https://transitrun.com/en/public-transit-line_348LTD_98055
+BEST_98056,BEST,348Ltd,Dahisar Bus Station - Anik Depot,3,,,https://transitrun.com/en/public-transit-line_348LTD_98056
+BEST_98057,BEST,348Ltd,Rani Laxmibai Chowk-Sion - Anik Depot,3,,,https://transitrun.com/en/public-transit-line_348LTD_98057
+BEST_98058,BEST,348Ltd,Pratiksha Nagar Depot - Dindoshi Bus Station,3,,,https://transitrun.com/en/public-transit-line_348LTD_98058
+BEST_98060,BEST,349,Santosh Nagar (Extension) - Marol Depot,3,,,https://transitrun.com/en/public-transit-line_349_98060
+BEST_98061,BEST,351,Tata Power Centre (Mahul) - Mumbai Central Depot,3,,,https://transitrun.com/en/public-transit-line_351_98061
+BEST_98062,BEST,352,Trombay - Dharavi Depot,3,,,https://transitrun.com/en/public-transit-line_352_98062
+BEST_98063,BEST,354,Worli Depot - Kannamwar Nagar No.2,3,,,https://transitrun.com/en/public-transit-line_354_98063
+BEST_98064,BEST,355Ltd,Trombay - Santacruz Depot,3,,,https://transitrun.com/en/public-transit-line_355LTD_98064
+BEST_98065,BEST,356Ltd,Santacruz Depot - Gawangaon Refineries,3,,,https://transitrun.com/en/public-transit-line_356LTD_98065
+BEST_98066,BEST,356Ltd,Tata Power Centre (Mahul) - Santacruz Depot,3,,,https://transitrun.com/en/public-transit-line_356LTD_98066
+BEST_98067,BEST,360,Trombay - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_360_98067
+BEST_98068,BEST,361,Mahul Village - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_361_98068
+BEST_98069,BEST,361,Mahul Village - Wadala Road (Mahul),3,,,https://transitrun.com/en/public-transit-line_361_98069
+BEST_98070,BEST,361,Umarshi Bappa Chowk - Mahul Village,3,,,https://transitrun.com/en/public-transit-line_361_98070
+BEST_98071,BEST,361,Umarshi Bappa Chowk - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_361_98071
+BEST_98072,BEST,363,Mahul Village - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_363_98072
+BEST_98073,BEST,365,Sahar Cargo Complex - Kurla Station (W),3,,,https://transitrun.com/en/public-transit-line_365_98073
+BEST_98074,BEST,384,Laxmi Nagar (Ghatkopar-E) - Hiranandani Powai Bus Station,3,,,https://transitrun.com/en/public-transit-line_384_98074
+BEST_98075,BEST,384,Vikhroli Depot - Laxmi Nagar (Ghatkopar-E),3,,,https://transitrun.com/en/public-transit-line_384_98075
+BEST_98076,BEST,386,Nagbaba Mandir (Kailas Complex) - Ghatkopar Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_386_98076
+BEST_98077,BEST,387,Vikhroli Park Site - Ghatkopar Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_387_98077
+BEST_98078,BEST,388Ltd,Kannamwar Nagar No.2 - Ghatkopar Bus Station,3,,,https://transitrun.com/en/public-transit-line_388LTD_98078
+BEST_98079,BEST,388Ltd,Guru Nanak Nagar (Ghatkopar-W) - Kannamwar Nagar No.2,3,,,https://transitrun.com/en/public-transit-line_388LTD_98079
+BEST_98080,BEST,388Ltd,Santacruz Station (E) - Kannamwar Nagar No.2,3,,,https://transitrun.com/en/public-transit-line_388LTD_98080
+BEST_98081,BEST,392,Majas Depot - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_392_98081
+BEST_98082,BEST,392,Vikhroli Depot - Majas Depot,3,,,https://transitrun.com/en/public-transit-line_392_98082
+BEST_98083,BEST,396Ltd,Maharana Pratap Chowk (Mulund Check Naka-W) - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_396LTD_98083
+BEST_98084,BEST,398Ltd,Maharana Pratap Chowk (Mulund Check Naka-W) - Dindoshi Bus Station,3,,,https://transitrun.com/en/public-transit-line_398LTD_98084
+BEST_98085,BEST,399Ltd,Marathon Chowk (Teen Hath Naka) - Anushakti Nagar,3,,,https://transitrun.com/en/public-transit-line_399LTD_98085
+BEST_98086,BEST,399Ltd,Marathon Chowk (Teen Hath Naka) - Deonar Depot,3,,,https://transitrun.com/en/public-transit-line_399LTD_98086
+BEST_98087,BEST,399Ltd,Trombay - Marathon Chowk (Teen Hath Naka),3,,,https://transitrun.com/en/public-transit-line_399LTD_98087
+BEST_98088,BEST,410,Vikhroli Depot - Kondivita Caves (Mahakali Caves),3,,,https://transitrun.com/en/public-transit-line_410_98088
+BEST_98089,BEST,411,Wadala Depot - Sangharsh Nagar (Chandivli),3,,,https://transitrun.com/en/public-transit-line_411_98089
+BEST_98090,BEST,415,Majas Depot - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_415_98090
+BEST_98091,BEST,415,Seepz - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_415_98091
+BEST_98092,BEST,418,Vikhroli Railway Station (W) - Hiranandani Powai Bus Station,3,,,https://transitrun.com/en/public-transit-line_418_98092
+BEST_98093,BEST,418,Vikhroli Railway Station (W) - Nagbaba Mandir (Kailas Complex),3,,,https://transitrun.com/en/public-transit-line_418_98093
+BEST_98094,BEST,422,Vikhroli Depot - Bandra Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_422_98094
+BEST_98095,BEST,424,Mulund Railway Station (W) - Goregaon Oshiwara Depot,3,,,https://transitrun.com/en/public-transit-line_424_98095
+BEST_98096,BEST,425,Vesave Yari Road Bus Station - Shivaji Talao (Bhandup-W),3,,,https://transitrun.com/en/public-transit-line_425_98096
+BEST_98097,BEST,426,Vidyavihar Bus Station - Filter Pada,3,,,https://transitrun.com/en/public-transit-line_426_98097
+BEST_98098,BEST,426,Vidyavihar Bus Station - Morarji Nagar (Powai),3,,,https://transitrun.com/en/public-transit-line_426_98098
+BEST_98099,BEST,428,Shivaji Talao (Bhandup-W) - Sadbhakti Mandir,3,,,https://transitrun.com/en/public-transit-line_428_98099
+BEST_98100,BEST,429,Milindnagar (Ghatkopar) - Ghatkopar Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_429_98100
+BEST_98101,BEST,432,Lal Dongar,3,,,https://transitrun.com/en/public-transit-line_432_98101
+BEST_98102,BEST,446,Kurla Station (W) - Bamandaya Pada,3,,,https://transitrun.com/en/public-transit-line_446_98102
+BEST_98103,BEST,452,Mayur Nagar (Aarey Colony) - Goregaon Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_452_98103
+BEST_98104,BEST,454,Shivshahi Prakalp (Mantri Park) - Seven Bungalows Bus Station,3,,,https://transitrun.com/en/public-transit-line_454_98104
+BEST_98105,BEST,459Ltd,Mulund Railway Station (W) - Malvani Depot (Gaikwad Nagar),3,,,https://transitrun.com/en/public-transit-line_459LTD_98105
+BEST_98106,BEST,460Ltd,Mulund Railway Station (W) - Gorai Depot,3,,,https://transitrun.com/en/public-transit-line_460LTD_98106
+BEST_98108,BEST,461Ltd,Prabodhankar Thackeray Nagar Bus Station (Charkop Bus Station) - Marol Depot,3,,,https://transitrun.com/en/public-transit-line_461LTD_98108
+BEST_98109,BEST,461Ltd,Marol Depot - Gorai Depot,3,,,https://transitrun.com/en/public-transit-line_461LTD_98109
+BEST_98110,BEST,461Ltd,Prabodhankar Thackeray Nagar Bus Station (Charkop Bus Station) - Maharana Pratap Chowk (Mulund Check Naka-W),3,,,https://transitrun.com/en/public-transit-line_461LTD_98110
+BEST_98111,BEST,463,Veer Hutatma Bhai Kotwal Udyan (Plaza) - Rani Laxmibai Chowk Sion,3,,,https://transitrun.com/en/public-transit-line_463_98111
+BEST_98112,BEST,464Ltd,Goregaon Oshiwara Depot - Ghatkopar Bus Station,3,,,https://transitrun.com/en/public-transit-line_464LTD_98112
+BEST_98113,BEST,469Ltd,Maharana Pratap Chowk (Mulund Check Naka-W) - Goregaon Oshiwara Depot,3,,,https://transitrun.com/en/public-transit-line_469LTD_98113
+BEST_98114,BEST,470Ltd,Ghatkopar Bus Station - Borivali Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_470LTD_98114
+BEST_98115,BEST,473,Mahul Village - Bandra Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_473_98115
+BEST_98116,BEST,478Ltd,Vikhroli Depot - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_478LTD_98116
+BEST_98117,BEST,489Ltd,Shivajinagar Depot - Dindoshi Bus Station,3,,,https://transitrun.com/en/public-transit-line_489LTD_98117
+BEST_98118,BEST,492Ltd,Majas Depot - Bhoomi Acres,3,,,https://transitrun.com/en/public-transit-line_492LTD_98118
+BEST_98119,BEST,496Ltd,Marathon Chowk (Teen Hath Naka) - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_496LTD_98119
+BEST_98120,BEST,498Ltd,Sangharsh Nagar (Chandivli) - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_498LTD_98120
+BEST_98121,BEST,498Ltd,Magathane Depot - Sangharsh Nagar (Chandivli),3,,,https://transitrun.com/en/public-transit-line_498LTD_98121
+BEST_98122,BEST,498Ltd,Sangharsh Nagar (Chandivli) - Majas Depot,3,,,https://transitrun.com/en/public-transit-line_498LTD_98122
+BEST_98124,BEST,501Ltd,Kurla Bus Station (E) - Airoli Bus Station,3,,,https://transitrun.com/en/public-transit-line_501LTD_98124
+BEST_98126,BEST,502Ltd,Nerul Sector 46 & 48 - Deonar Depot,3,,,https://transitrun.com/en/public-transit-line_502LTD_98126
+BEST_98127,BEST,502Ltd,Tata Power Centre (Mahul) - Nerul Sector 46 & 48,3,,,https://transitrun.com/en/public-transit-line_502LTD_98127
+BEST_98128,BEST,504Ltd,Kharghar Jalvayu Vihar - Deonar Depot,3,,,https://transitrun.com/en/public-transit-line_504LTD_98128
+BEST_98129,BEST,506Ltd,Nerul Bus Station - Deonar Depot,3,,,https://transitrun.com/en/public-transit-line_506LTD_98129
+BEST_98130,BEST,507Ltd,Santacruz Station (E) - Kurla Depot,3,,,https://transitrun.com/en/public-transit-line_507LTD_98130
+BEST_98131,BEST,507Ltd,Vashi Sector No.19 - Kurla Depot,3,,,https://transitrun.com/en/public-transit-line_507LTD_98131
+BEST_98132,BEST,507Ltd,Vashi Sector No.19 - Santacruz Station (E),3,,,https://transitrun.com/en/public-transit-line_507LTD_98132
+BEST_98133,BEST,511Ltd,Nerul Bus Station - Ghatkopar Bus Station,3,,,https://transitrun.com/en/public-transit-line_511LTD_98133
+BEST_98134,BEST,512Ltd,Nerul Bus Station - Maharana Pratap Chowk (Mulund Check Naka-W),3,,,https://transitrun.com/en/public-transit-line_512LTD_98134
+BEST_98135,BEST,514Ltd,Mulund Depot - Airoli Bus Station,3,,,https://transitrun.com/en/public-transit-line_514LTD_98135
+BEST_98136,BEST,517Ltd,Vashi Sector No.19 - Santacruz Station (E),3,,,https://transitrun.com/en/public-transit-line_517LTD_98136
+BEST_98137,BEST,522Ltd,Marol Depot - M.B.P.Mahape (Millennium Business Park),3,,,https://transitrun.com/en/public-transit-line_522LTD_98137
+BEST_98138,BEST,523Ltd,Dindoshi Bus Station - Airoli Bus Station,3,,,https://transitrun.com/en/public-transit-line_523LTD_98138
+BEST_98139,BEST,523Ltd,Rabale Police Station - Dindoshi Bus Station,3,,,https://transitrun.com/en/public-transit-line_523LTD_98139
+BEST_98140,BEST,524Ltd,Laxmi Nagar (Ghatkopar-E) - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_524LTD_98140
+BEST_98141,BEST,524Ltd,Magathane Depot - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_524LTD_98141
+BEST_98142,BEST,524Ltd,Shreyas Cinema - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_524LTD_98142
+BEST_98143,BEST,525Ltd,Vashi Railway Station - Majas Depot,3,,,https://transitrun.com/en/public-transit-line_525LTD_98143
+BEST_98149,BEST,526Ltd,Khodadad Circle (Dadar T.T.) - Kharghar Jalvayu Vihar,3,,,https://transitrun.com/en/public-transit-line_526LTD_98149
+BEST_98150,BEST,526Ltd,Nerul Bus Station - Khodadad Circle (Dadar T.T.),3,,,https://transitrun.com/en/public-transit-line_526LTD_98150
+BEST_98151,BEST,533Ltd,Vashi Sector No.19 - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_533LTD_98151
+BEST_98152,BEST,545Ltd,Airoli Bus Station - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_545LTD_98152
+BEST_98153,BEST,601,Malad Railway Station (E) - Anand Nagar,3,,,https://transitrun.com/en/public-transit-line_601_98153
+BEST_98154,BEST,602,Kanjurmarg Railway Station (W) - Hiranandani Powai Bus Station,3,,,https://transitrun.com/en/public-transit-line_602_98154
+BEST_98155,BEST,603,Bhandup Village (E) - Amrut Nagar (Vikhroli),3,,,https://transitrun.com/en/public-transit-line_603_98155
+BEST_98156,BEST,604,Kanjurmarg Railway Station (W) - Bhandup Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_604_98156
+BEST_98157,BEST,605,Tembhi Pada - Bhandup Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_605_98157
+BEST_98158,BEST,606,Nardas Nagar - Bhandup Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_606_98158
+BEST_98159,BEST,607,Tulshetpada - Bhandup Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_607_98159
+BEST_98160,BEST,608,Kanjurmarg Railway Station (W) - Hanuman Nagar (Bhandup-W),3,,,https://transitrun.com/en/public-transit-line_608_98160
+BEST_98161,BEST,612,Hanuman Nagar (Bhandup-W) - Bhandup Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_612_98161
+BEST_98162,BEST,618,Santacruz Station (E) - Datta Mandir Vakola,3,,,https://transitrun.com/en/public-transit-line_618_98162
+BEST_98163,BEST,627,Mora Village - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_627_98163
+BEST_98164,BEST,663,Deonar Depot - Mahul Village,3,,,https://transitrun.com/en/public-transit-line_663_98164
+BEST_98165,BEST,663,Trombay - Mahul Village,3,,,https://transitrun.com/en/public-transit-line_663_98165
+BEST_98166,BEST,701Ltd,Samata Nagar Bus Station (Kandivali-E) - Mira Road Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_701LTD_98166
+BEST_98167,BEST,702Ltd,Magathane Depot - Ghodbunder Village,3,,,https://transitrun.com/en/public-transit-line_702LTD_98167
+BEST_98168,BEST,703Ltd,Mira Road Railway Station (E) - Magathane Depot,3,,,https://transitrun.com/en/public-transit-line_703LTD_98168
+BEST_98169,BEST,703Ltd,Samata Nagar Bus Station (Kandivali-E) - Mira Road Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_703LTD_98169
+BEST_98170,BEST,705Ltd,Western Park (Kashi Village) - Dindoshi Bus Station,3,,,https://transitrun.com/en/public-transit-line_705LTD_98170
+BEST_98171,BEST,706Ltd,Marol Depot - Bhayander Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_706LTD_98171
+BEST_98172,BEST,707Ltd,Goregaon Oshiwara Depot - Bhayander Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_707LTD_98172
+BEST_98173,BEST,709Ltd,Magathane Depot - Bhayander Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_709LTD_98173
+BEST_98174,BEST,710Ltd,Magathane Depot - Bhayander Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_710LTD_98174
+BEST_98175,BEST,720Ltd,Malvani Depot (Gaikwad Nagar) - Bhayander Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_720LTD_98175
+BEST_98176,BEST,Bkc-2,Swavalamban Bhavan (B.K.C.) - Kurla Station (W),3,,,https://transitrun.com/en/public-transit-line_BKC-2_98176
+BEST_98177,BEST,C-1,Santacruz Depot - Colaba Bus Station,3,,,https://transitrun.com/en/public-transit-line_C-1_98177
+BEST_98178,BEST,C-1,Santacruz Depot - Colaba Depot (Electric House),3,,,https://transitrun.com/en/public-transit-line_C-1_98178
+BEST_98179,BEST,C-10,Dharavi Depot - Colaba Depot (Electric House),3,,,https://transitrun.com/en/public-transit-line_C-10_98179
+BEST_98180,BEST,C-11,Dharavi Depot - Colaba Depot (Electric House),3,,,https://transitrun.com/en/public-transit-line_C-11_98180
+BEST_98181,BEST,C-12,Santacruz Depot - Dahisar Bus Station,3,,,https://transitrun.com/en/public-transit-line_C-12_98181
+BEST_98182,BEST,C-15,Worli Depot - Dindoshi Bus Station,3,,,https://transitrun.com/en/public-transit-line_C-15_98182
+BEST_98183,BEST,C-33,Nehru Planetarium (Worli) / N.S.C.I. - Goregaon (W) Bus Station,3,,,https://transitrun.com/en/public-transit-line_C-33_98183
+BEST_98184,BEST,C-40,Prabodhankar Thackeray Udyan Bus Station (Sewree) - Dindoshi Bus Station,3,,,https://transitrun.com/en/public-transit-line_C-40_98184
+BEST_98185,BEST,C-53,Kalamboli Bus Station - Ghatkopar Bus Station,3,,,https://transitrun.com/en/public-transit-line_C-53_98185
+BEST_98186,BEST,C-54,Worli Depot - Airoli Bus Station,3,,,https://transitrun.com/en/public-transit-line_C-54_98186
+BEST_98187,BEST,C-55,Bkc Telephone Exchange - C.B.D.Belapur Bus Station,3,,,https://transitrun.com/en/public-transit-line_C-55_98187
+BEST_98188,BEST,C-55,C.B.D.Belapur Bus Station - Bandra Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_C-55_98188
+BEST_98189,BEST,C-61,Mulund Depot - Mira Road Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_C-61_98189
+BEST_98190,BEST,C-71,Mira Road Railway Station (E) - Kala Nagar (Bandra-E),3,,,https://transitrun.com/en/public-transit-line_C-71_98190
+BEST_98191,BEST,C-71,Mira Road Railway Station (E) - Mahim Bus Station,3,,,https://transitrun.com/en/public-transit-line_C-71_98191
+BEST_98192,BEST,C-71,Mahim Bus Station - Dattani Park,3,,,https://transitrun.com/en/public-transit-line_C-71_98192
+BEST_98193,BEST,C-71,National Park (Omkareshwar Mandir) - Mahim Bus Station,3,,,https://transitrun.com/en/public-transit-line_C-71_98193
+BEST_98194,BEST,C-72,Rani Laxmibai Chowk - Bhayander Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_C-72_98194
+BEST_98195,BEST,C-86,Bandra Bus Station (W) - Backbay Depot,3,,,https://transitrun.com/en/public-transit-line_C-86_98195
+BEST_98196,BEST,C-302,Rani Laxmibai Chowk Sion - Maharana Pratap Chowk (Mulund Check Naka-W),3,,,https://transitrun.com/en/public-transit-line_C-302_98196
+BEST_98197,BEST,C-305,Dharavi Depot - Backbay Depot,3,,,https://transitrun.com/en/public-transit-line_C-305_98197
+BEST_98198,BEST,C-440,Wadala Depot - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_C-440_98198
+BEST_98199,BEST,C-505,C.B.D.Belapur Bus Station - Bandra Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_C-505_98199
+BEST_98200,BEST,C-513,Vashi Railway Station - Mulund Depot,3,,,https://transitrun.com/en/public-transit-line_C-513_98200
+BEST_98201,BEST,C-521,Deonar Depot - Ghansoli Gharonda,3,,,https://transitrun.com/en/public-transit-line_C-521_98201
+BEST_98202,BEST,C-521,Wadala Depot - Ghansoli Gharonda,3,,,https://transitrun.com/en/public-transit-line_C-521_98202
+BEST_98203,BEST,C-700,Borivali Railway Station (East) - Gaondevi Mandir Thane (East),3,,,https://transitrun.com/en/public-transit-line_C-700_98203
+BEST_98204,BEST,C-700,Magathane Depot - Gaondevi Mandir Thane (East),3,,,https://transitrun.com/en/public-transit-line_C-700_98204
+BEST_98206,BEST,C-718,Dindoshi Bus Station - Bhayander Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_C-718_98206
+BEST_AC_98207,BEST_AC,A-5,Mantralaya - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_A-5_98207
+BEST_AC_98208,BEST_AC,A-14,Wadala Railway Station (W) - Mahatma Gandhi Hospital (Parel),3,,,https://transitrun.com/en/public-transit-line_A-14_98208
+BEST_AC_98209,BEST_AC,A-19,Chembur Station (Dr.Ambedkar Garden) - Mantralaya,3,,,https://transitrun.com/en/public-transit-line_A-19_98209
+BEST_AC_98210,BEST_AC,A-19,Mantralaya - Khodadad Circle (Dadar T.T.),3,,,https://transitrun.com/en/public-transit-line_A-19_98210
+BEST_AC_98211,BEST_AC,A-19,Shivajinagar Depot - Hutatma Chowk (Mumbai University),3,,,https://transitrun.com/en/public-transit-line_A-19_98211
+BEST_AC_98212,BEST_AC,A-19,Shivajinagar Depot - Mantralaya,3,,,https://transitrun.com/en/public-transit-line_A-19_98212
+BEST_AC_98213,BEST_AC,A-21,Dr.Shamaprasad Mukherji Chowk - Deonar Depot,3,,,https://transitrun.com/en/public-transit-line_A-21_98213
+BEST_AC_98214,BEST_AC,A-21,Dr.Shamaprasad Mukherji Chowk - Anushakti Nagar,3,,,https://transitrun.com/en/public-transit-line_A-21_98214
+BEST_AC_98215,BEST_AC,A-21,Trombay - Dr.Shyamaprasad Mukherjee Chowk (Museum),3,,,https://transitrun.com/en/public-transit-line_A-21_98215
+BEST_AC_98216,BEST_AC,A-25,Kurla Depot - Backbay Depot,3,,,https://transitrun.com/en/public-transit-line_A-25_98216
+BEST_AC_98217,BEST_AC,A-32,Vesave Yari Road Bus Station - Goregaon (W) Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-32_98217
+BEST_AC_98218,BEST_AC,A-41,Ferry Wharf Ropax Terminal - Colaba Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-41_98218
+BEST_AC_98219,BEST_AC,A-42,Chinch Bunder - Walkeshwar,3,,,https://transitrun.com/en/public-transit-line_A-42_98219
+BEST_AC_98220,BEST_AC,A-42,Kamala Nehru Park (Malabar Hill) - Chinch Bunder,3,,,https://transitrun.com/en/public-transit-line_A-42_98220
+BEST_AC_98221,BEST_AC,A-42,Pandit Paluskar Chowk / Marwadi College - Chinch Bunder,3,,,https://transitrun.com/en/public-transit-line_A-42_98221
+BEST_AC_98222,BEST_AC,A-59,Veer Hutatma Bhai Kotwal Udyan (Plaza) - Anik Depot,3,,,https://transitrun.com/en/public-transit-line_A-59_98222
+BEST_AC_98223,BEST_AC,A-59,Veer Hutatma Bhai Kotwal Udyan (Plaza) - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_A-59_98223
+BEST_AC_98224,BEST_AC,A-63,J.Mehta Marg - Byculla Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-63_98224
+BEST_AC_98225,BEST_AC,A-64,New Hind Mill Mhada Colony - Dadar Station (E),3,,,https://transitrun.com/en/public-transit-line_A-64_98225
+BEST_AC_98226,BEST_AC,A-77,Byculla Railway Station (W) - Breach Candy Hospital,3,,,https://transitrun.com/en/public-transit-line_A-77_98226
+BEST_AC_98227,BEST_AC,A-82,Municipal Colony Worli - Mantralaya,3,,,https://transitrun.com/en/public-transit-line_A-82_98227
+BEST_AC_98230,BEST_AC,A-89,Worli Depot - Mantralaya,3,,,https://transitrun.com/en/public-transit-line_A-89_98230
+BEST_AC_98231,BEST_AC,A-92,Vasantrao Naik Chowk (Tardeo) - Anushakti Nagar,3,,,https://transitrun.com/en/public-transit-line_A-92_98231
+BEST_AC_98232,BEST_AC,A-92,Vasantrao Naik Chowk (Tardeo) - Deonar Depot,3,,,https://transitrun.com/en/public-transit-line_A-92_98232
+BEST_AC_98233,BEST_AC,A-100,Free Press Journal House - Chhatrapati Shivaji Maharaj Terminus (C.S.M.T.),3,,,https://transitrun.com/en/public-transit-line_A-100_98233
+BEST_AC_98234,BEST_AC,A-102,Vijay Vallabh Chowk (Pydhonie) - Grant Road Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-102_98234
+BEST_AC_98235,BEST_AC,A-104,J.Mehta Marg - Grant Road Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-104_98235
+BEST_AC_98236,BEST_AC,A-104,Nana Chowk - J.Mehta Marg,3,,,https://transitrun.com/en/public-transit-line_A-104_98236
+BEST_AC_98237,BEST_AC,A-105,Novelty Cinema (Dr.Bhadamkar Road) - Kamala Nehru Park (Malabar Hill),3,,,https://transitrun.com/en/public-transit-line_A-105_98237
+BEST_AC_98238,BEST_AC,A-106,R.C.Church - Kamala Nehru Park (Malabar Hill),3,,,https://transitrun.com/en/public-transit-line_A-106_98238
+BEST_AC_98239,BEST_AC,A-107,Navy Nagar (Colaba) - Mahatma Phule Market (Crawford Market),3,,,https://transitrun.com/en/public-transit-line_A-107_98239
+BEST_AC_98240,BEST_AC,A-108,Kamala Nehru Park (Malabar Hill) - Chhatrapati Shivaji Maharaj Terminus (C.S.M.T.),3,,,https://transitrun.com/en/public-transit-line_A-108_98240
+BEST_AC_98241,BEST_AC,A-109,R.C.Church - Mahatma Phule Market (Crawford Market),3,,,https://transitrun.com/en/public-transit-line_A-109_98241
+BEST_AC_98242,BEST_AC,A-111,Gateway Of India (Colaba) - Chhatrapati Shivaji Maharaj Terminus (C.S.M.T.),3,,,https://transitrun.com/en/public-transit-line_A-111_98242
+BEST_AC_98243,BEST_AC,A-112,Gateway Of India (Colaba) - Ahilyabai Holkar Chowk (Churchgate),3,,,https://transitrun.com/en/public-transit-line_A-112_98243
+BEST_AC_98244,BEST_AC,A-113,Mahatma Phule Market (Crawford Market) - Ahilyabai Holkar Chowk (Churchgate),3,,,https://transitrun.com/en/public-transit-line_A-113_98244
+BEST_AC_98245,BEST_AC,A-114,Chhatrapati Shivaji Maharaj Terminus (C.S.M.T.) - Ahilyabai Holkar Chk. Eross Cinema,3,,,https://transitrun.com/en/public-transit-line_A-114_98245
+BEST_AC_98246,BEST_AC,A-115,N.C.P.A. - Chhatrapati Shivaji Maharaj Terminus (C.S.M.T.),3,,,https://transitrun.com/en/public-transit-line_A-115_98246
+BEST_AC_98247,BEST_AC,A-116,Gateway Of India (Colaba) - Chhatrapati Shivaji Maharaj Terminus (C.S.M.T.),3,,,https://transitrun.com/en/public-transit-line_A-116_98247
+BEST_AC_98248,BEST_AC,A-119,Pandit Paluskar Chowk (Opera House) - Kasturba Gandhi Chowk (C.P.Tank),3,,,https://transitrun.com/en/public-transit-line_A-119_98248
+BEST_AC_98249,BEST_AC,A-120,Pandit Paluskar Chowk (Opera House) - Mangaldas Market,3,,,https://transitrun.com/en/public-transit-line_A-120_98249
+BEST_AC_98250,BEST_AC,A-121,J.Mehta Marg - Backbay Depot,3,,,https://transitrun.com/en/public-transit-line_A-121_98250
+BEST_AC_98251,BEST_AC,A-124,Worli Depot - Colaba Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-124_98251
+BEST_AC_98252,BEST_AC,A-135,Maharana Pratap Chowk (Mazgaon) - J.Mehta Marg,3,,,https://transitrun.com/en/public-transit-line_A-135_98252
+BEST_AC_98253,BEST_AC,A-136,Backbay Depot - Ahilyabai Holkar Chowk (Churchgate),3,,,https://transitrun.com/en/public-transit-line_A-136_98253
+BEST_AC_98254,BEST_AC,A-137,Navy Nagar (Colaba) - Ahilyabai Holkar Chowk (Churchgate),3,,,https://transitrun.com/en/public-transit-line_A-137_98254
+BEST_AC_98255,BEST_AC,A-138,Chhatrapati Shivaji Maharaj Terminus (C.S.M.T.) - Backbay Depot,3,,,https://transitrun.com/en/public-transit-line_A-138_98255
+BEST_AC_98256,BEST_AC,A-139,Geetanagar (Colaba) - Chhatrapati Shivaji Maharaj Terminus (C.S.M.T.),3,,,https://transitrun.com/en/public-transit-line_A-139_98256
+BEST_AC_98257,BEST_AC,A-139,Geetanagar (Colaba) - Colaba Depot (Electric House),3,,,https://transitrun.com/en/public-transit-line_A-139_98257
+BEST_AC_98258,BEST_AC,A-153,Nair Hospital - Byculla Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-153_98258
+BEST_AC_98259,BEST_AC,A-155,Grant Road Railway Station (W) - Cumbala Hill Post Office,3,,,https://transitrun.com/en/public-transit-line_A-155_98259
+BEST_AC_98260,BEST_AC,A-162,Worli Village - Prabodhankar Thackeray Udyan Bus Station (Sewree),3,,,https://transitrun.com/en/public-transit-line_A-162_98260
+BEST_AC_98261,BEST_AC,A-163,Prabodhankar Thackeray Udyan Bus Station (Sewree) - Parel Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-163_98261
+BEST_AC_98262,BEST_AC,A-167,Prabhadevi Railway Station (W) - Comrade P.K.Kurne Chowk,3,,,https://transitrun.com/en/public-transit-line_A-167_98262
+BEST_AC_98263,BEST_AC,A-170,Prabhadevi Railway Station (W) - Lower Parel Railway Station,3,,,https://transitrun.com/en/public-transit-line_A-170_98263
+BEST_AC_98264,BEST_AC,A-171,Maheshwari Udyan (Kings Circle) - Worli Depot,3,,,https://transitrun.com/en/public-transit-line_A-171_98264
+BEST_AC_98265,BEST_AC,A-171,Worli Depot - Chunabhatti,3,,,https://transitrun.com/en/public-transit-line_A-171_98265
+BEST_AC_98266,BEST_AC,A-174,Veer Hutatma Bhai Kotwal Udyan (Plaza) - Bharani Naka (Antop Hill),3,,,https://transitrun.com/en/public-transit-line_A-174_98266
+BEST_AC_98267,BEST_AC,A-177,Shrawan Yashwante Chowk (Kala Chowky) - Parel Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-177_98267
+BEST_AC_98268,BEST_AC,A-180,Goregaon Oshiwara Depot - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-180_98268
+BEST_AC_98269,BEST_AC,A-180,Malvani Depot (Gaikwad Nagar) - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-180_98269
+BEST_AC_98270,BEST_AC,A-180,Malvani Depot (Gaikwad Nagar) - Chhatrapati Shivaji Maharaj International Airport (Sahar),3,,,https://transitrun.com/en/public-transit-line_A-180_98270
+BEST_AC_98271,BEST_AC,A-185,Kannamwar Nagar No.2 - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_A-185_98271
+BEST_AC_98272,BEST_AC,A-186,Vihar Lake - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_A-186_98272
+BEST_AC_98273,BEST_AC,A-202,Mahim Bus Station - Gorai Depot,3,,,https://transitrun.com/en/public-transit-line_A-202_98273
+BEST_AC_98274,BEST_AC,A-203,Juhu Bus Station - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-203_98274
+BEST_AC_98275,BEST_AC,A-206,Prabodhankar Thackeray Nagar Bus Station (Charkop Bus Station) - I.C.Colony,3,,,https://transitrun.com/en/public-transit-line_A-206_98275
+BEST_AC_98276,BEST_AC,A-208,Saraswati Complex (Dahisar) - Borivali Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-208_98276
+BEST_AC_98277,BEST_AC,A-211,Father Agnel Ashram - Bandra Bus Station (W),3,,,https://transitrun.com/en/public-transit-line_A-211_98277
+BEST_AC_98278,BEST_AC,A-214,Mount Mary Steps - Bandra Bus Station (W),3,,,https://transitrun.com/en/public-transit-line_A-214_98278
+BEST_AC_98279,BEST_AC,A-216,Saraswati Complex (Dahisar) - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_A-216_98279
+BEST_AC_98280,BEST_AC,A-217,Mahatma Gandhi Hospital (Parel) - Dadar Station (E),3,,,https://transitrun.com/en/public-transit-line_A-217_98280
+BEST_AC_98281,BEST_AC,A-217,Mint Colony - Dadar Station (E),3,,,https://transitrun.com/en/public-transit-line_A-217_98281
+BEST_AC_98282,BEST_AC,A-218,T.B.Hospital - Dadar Station (E),3,,,https://transitrun.com/en/public-transit-line_A-218_98282
+BEST_AC_98283,BEST_AC,A-219,Bandra Reclamation Bus Station - Bandra Bus Station (W),3,,,https://transitrun.com/en/public-transit-line_A-219_98283
+BEST_AC_98284,BEST_AC,A-220,Khar Railway Station (W) - Bandra Bus Station (W),3,,,https://transitrun.com/en/public-transit-line_A-220_98284
+BEST_AC_98285,BEST_AC,A-221,Natasha Tower - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-221_98285
+BEST_AC_98286,BEST_AC,A-222,Chuim Village - Bandra Bus Station (W),3,,,https://transitrun.com/en/public-transit-line_A-222_98286
+BEST_AC_98287,BEST_AC,A-234,Vesave Yari Road Bus Station - Jogeshwari Bus Station (W),3,,,https://transitrun.com/en/public-transit-line_A-234_98287
+BEST_AC_98288,BEST_AC,A-235,Millat Nagar - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-235_98288
+BEST_AC_98289,BEST_AC,A-235,Monginis Cake Company (Andheri-W) - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-235_98289
+BEST_AC_98290,BEST_AC,A-240,Shanti Ashram - Kander Pada,3,,,https://transitrun.com/en/public-transit-line_A-240_98290
+BEST_AC_98291,BEST_AC,A-245,Prabodhankar Thackeray Nagar Bus Station (Charkop Bus Station) - Kander Pada,3,,,https://transitrun.com/en/public-transit-line_A-245_98291
+BEST_AC_98292,BEST_AC,A-247,Gorai Khadi - Borivali Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-247_98292
+BEST_AC_98293,BEST_AC,A-248,Ramesh Nagar (Andheri-W) - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-248_98293
+BEST_AC_98294,BEST_AC,A-249,Seven Bungalows Bus Station - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-249_98294
+BEST_AC_98295,BEST_AC,A-249,Vesava Village - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-249_98295
+BEST_AC_98296,BEST_AC,A-251,Vesave Yari Road Bus Station - Seven Bungalows Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-251_98296
+BEST_AC_98297,BEST_AC,A-252,Sardar Patel Nagar (Park Street) - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-252_98297
+BEST_AC_98298,BEST_AC,A-254,Veera Desai Road (Extension) - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-254_98298
+BEST_AC_98299,BEST_AC,A-256,Malvani Depot (Gaikwad Nagar) - Juhu Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-256_98299
+BEST_AC_98300,BEST_AC,A-257,J.V.P.D.Bus Station - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-257_98300
+BEST_AC_98301,BEST_AC,A-258,S.R.A.Colony (Ram Mandir) - Goregaon (W) Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-258_98301
+BEST_AC_98302,BEST_AC,A-261,Jogeshwari Bus Station (W) - Goregaon (W) Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-261_98302
+BEST_AC_98303,BEST_AC,A-263,Goregaon (W) Bus Station - Ayyappa Mandir (Goregaon),3,,,https://transitrun.com/en/public-transit-line_A-263_98303
+BEST_AC_98304,BEST_AC,A-264,Samarth Nagar (Jogeshwari-E) - Sadbhakti Mandir,3,,,https://transitrun.com/en/public-transit-line_A-264_98304
+BEST_AC_98305,BEST_AC,A-266,Shree Swami Samarth Nagar (Extension) - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-266_98305
+BEST_AC_98306,BEST_AC,A-268,Samarth Nagar - Andheri Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-268_98306
+BEST_AC_98307,BEST_AC,A-269,Madh Jetty - Borivali Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-269_98307
+BEST_AC_98308,BEST_AC,A-269,Madh Jetty - Gorai Depot,3,,,https://transitrun.com/en/public-transit-line_A-269_98308
+BEST_AC_98310,BEST_AC,A-273,Mhada Colony (Malvani) - Malad Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-273_98310
+BEST_AC_98311,BEST_AC,A-273,Malvani Depot (Gaikwad Nagar) - Malad Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-273_98311
+BEST_AC_98312,BEST_AC,A-282,Kandivali Railway Station (E) - Damu Nagar Extension,3,,,https://transitrun.com/en/public-transit-line_A-282_98312
+BEST_AC_98313,BEST_AC,A-283,Dindoshi Bus Station - Damu Nagar Extension,3,,,https://transitrun.com/en/public-transit-line_A-283_98313
+BEST_AC_98314,BEST_AC,A-287,Kandivali Railway Station (E) - E.S.I.S.Hospital (Thakur Village),3,,,https://transitrun.com/en/public-transit-line_A-287_98314
+BEST_AC_98315,BEST_AC,A-288,Kranti Nagar - Kandivali Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-288_98315
+BEST_AC_98316,BEST_AC,A-289,Kandivali Railway Station (E) - Anita Nagar,3,,,https://transitrun.com/en/public-transit-line_A-289_98316
+BEST_AC_98317,BEST_AC,A-293,Shri Krishna Nagar Post Office - Jai Maharashtra Nagar (Borivali-E),3,,,https://transitrun.com/en/public-transit-line_A-293_98317
+BEST_AC_98318,BEST_AC,A-294,Gorai Khadi - Borivali Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-294_98318
+BEST_AC_98319,BEST_AC,A-295,Shanti Ashram,3,,,https://transitrun.com/en/public-transit-line_A-295_98319
+BEST_AC_98320,BEST_AC,A-296,Shanti Ashram - New Link Road Junction,3,,,https://transitrun.com/en/public-transit-line_A-296_98320
+BEST_AC_98321,BEST_AC,A-297,Kokani Pada Extension (Borivali-E) - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_A-297_98321
+BEST_AC_98322,BEST_AC,A-299,Jai Maharashtra Nagar (Borivali-E) - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_A-299_98322
+BEST_AC_98323,BEST_AC,A-300,Sanskruti Apartment - Kandivali Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-300_98323
+BEST_AC_98324,BEST_AC,A-301,Hanuman Tekdi (Borivali-E) - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_A-301_98324
+BEST_AC_98325,BEST_AC,A-318,Santacruz Station (E) - Kurla Station (W),3,,,https://transitrun.com/en/public-transit-line_A-318_98325
+BEST_AC_98326,BEST_AC,A-325,Kurla Station (W) - Ghatkopar Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-325_98326
+BEST_AC_98327,BEST_AC,A-332,Kurla Station (W) - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_A-332_98327
+BEST_AC_98328,BEST_AC,A-334,Marol Depot - Ghatkopar Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-334_98328
+BEST_AC_98329,BEST_AC,A-334,Marol Depot - Jambhulpada,3,,,https://transitrun.com/en/public-transit-line_A-334_98329
+BEST_AC_98330,BEST_AC,A-337,Chhatrapati Shivaji Maharaj International Airport (Sahar) - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_A-337_98330
+BEST_AC_98331,BEST_AC,A-338,Sahar Cargo Complex - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_A-338_98331
+BEST_AC_98333,BEST_AC,A-340,Ghatkopar Railway Station (W) - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_A-340_98333
+BEST_AC_98334,BEST_AC,A-340,Ghatkopar Railway Station (W) - Chakala,3,,,https://transitrun.com/en/public-transit-line_A-340_98334
+BEST_AC_98335,BEST_AC,A-341,Rani Laxmibai Chowk - Antop Hill Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-341_98335
+BEST_AC_98336,BEST_AC,A-345,Santosh Nagar (Extension) - Gorai Depot,3,,,https://transitrun.com/en/public-transit-line_A-345_98336
+BEST_AC_98337,BEST_AC,A-347,Goregaon Railway Station (E) - Gokuldham,3,,,https://transitrun.com/en/public-transit-line_A-347_98337
+BEST_AC_98338,BEST_AC,A-350,Shivajinagar Depot - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_A-350_98338
+BEST_AC_98339,BEST_AC,A-357,Shivajinagar Depot - Mumbai Central Depot,3,,,https://transitrun.com/en/public-transit-line_A-357_98339
+BEST_AC_98340,BEST_AC,A-359,Malvani Depot (Gaikwad Nagar) - Hiranandani Powai Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-359_98340
+BEST_AC_98341,BEST_AC,A-359,Mhada Colony (Malvani) - Hiranandani Powai Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-359_98341
+BEST_AC_98342,BEST_AC,A-362,Kurla Bus Station (E) - Chembur Station (Dr.Ambedkar Garden),3,,,https://transitrun.com/en/public-transit-line_A-362_98342
+BEST_AC_98343,BEST_AC,A-364,Mahul Village - Anushakti Nagar,3,,,https://transitrun.com/en/public-transit-line_A-364_98343
+BEST_AC_98344,BEST_AC,A-364,Trombay - Mahul Village,3,,,https://transitrun.com/en/public-transit-line_A-364_98344
+BEST_AC_98345,BEST_AC,A-366,Shivajinagar Terminus - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_A-366_98345
+BEST_AC_98346,BEST_AC,A-367,Kurla Bus Station (E) - Gadkari Quarry,3,,,https://transitrun.com/en/public-transit-line_A-367_98346
+BEST_AC_98347,BEST_AC,A-367,Umarshi Bappa Chowk - Gadkari Quarry,3,,,https://transitrun.com/en/public-transit-line_A-367_98347
+BEST_AC_98348,BEST_AC,A-368,Prabodhankar Thackeray Udyan Bus Station (Sewree) - Mulund Depot,3,,,https://transitrun.com/en/public-transit-line_A-368_98348
+BEST_AC_98349,BEST_AC,A-369,Vashi Naka (Chembur) M.M.R.D.A.Colony - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_A-369_98349
+BEST_AC_98350,BEST_AC,A-370,Mhada Bus Station (Mulund-E) - Kelkar College (Mulund East),3,,,https://transitrun.com/en/public-transit-line_A-370_98350
+BEST_AC_98351,BEST_AC,A-372,Trombay - Ghatkopar Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-372_98351
+BEST_AC_98353,BEST_AC,A-373,Ghatkopar Bus Station - Mahul Village,3,,,https://transitrun.com/en/public-transit-line_A-373_98353
+BEST_AC_98354,BEST_AC,A-373,Vaishali Nagar (Mulund-W) - Mahul Village,3,,,https://transitrun.com/en/public-transit-line_A-373_98354
+BEST_AC_98355,BEST_AC,A-375,Shivajinagar Depot - Bandra Bus Station (W),3,,,https://transitrun.com/en/public-transit-line_A-375_98355
+BEST_AC_98356,BEST_AC,A-376,Shivajinagar Depot - Mahim Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-376_98356
+BEST_AC_98357,BEST_AC,A-377,S.R.A.Compound Mankhurd (Lallubhai Compund) - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_A-377_98357
+BEST_AC_98358,BEST_AC,A-377,S.R.A.Compound Mankhurd (Lallubhai Compund) - S.G.Barve Marg Naka (Kurla-E),3,,,https://transitrun.com/en/public-transit-line_A-377_98358
+BEST_AC_98359,BEST_AC,A-378,Trombay - Mankhurd Railway Station (S),3,,,https://transitrun.com/en/public-transit-line_A-378_98359
+BEST_AC_98360,BEST_AC,A-379,Shivajinagar Terminus - Ghatkopar Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-379_98360
+BEST_AC_98361,BEST_AC,A-380,Ghatkopar Railway Station (E) - Anushakti Nagar,3,,,https://transitrun.com/en/public-transit-line_A-380_98361
+BEST_AC_98362,BEST_AC,A-380,Trombay - Ghatkopar Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-380_98362
+BEST_AC_98363,BEST_AC,A-381,Tata Power Centre (Mahul) - Ghatkopar Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-381_98363
+BEST_AC_98364,BEST_AC,A-381,Tata Power Centre (Mahul) - Ghatkopar Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-381_98364
+BEST_AC_98365,BEST_AC,A-382,Sahar Cargo Complex - Anushakti Nagar,3,,,https://transitrun.com/en/public-transit-line_A-382_98365
+BEST_AC_98366,BEST_AC,A-382,Sahar Cargo Complex - Deonar Depot,3,,,https://transitrun.com/en/public-transit-line_A-382_98366
+BEST_AC_98367,BEST_AC,A-383,Shivajinagar Depot - Gadkari Quarry,3,,,https://transitrun.com/en/public-transit-line_A-383_98367
+BEST_AC_98368,BEST_AC,A-385,Ghatkopar Bus Station - Comrade P.K.Kurne Chowk,3,,,https://transitrun.com/en/public-transit-line_A-385_98368
+BEST_AC_98369,BEST_AC,A-389,Ghatkopar Railway Station (W) - Barve Nagar,3,,,https://transitrun.com/en/public-transit-line_A-389_98369
+BEST_AC_98370,BEST_AC,A-391,Mulund Railway Station (W) - Khindipada (Dargah),3,,,https://transitrun.com/en/public-transit-line_A-391_98370
+BEST_AC_98371,BEST_AC,A-394,Vikhroli Railway Station (E) - Kannamwar Nagar No.2,3,,,https://transitrun.com/en/public-transit-line_A-394_98371
+BEST_AC_98372,BEST_AC,A-397,Vikhroli Railway Station (E) - Kannamwar Nagar Building No.124,3,,,https://transitrun.com/en/public-transit-line_A-397_98372
+BEST_AC_98373,BEST_AC,A-401,Vaishali Nagar (Mulund-W) - Mulund Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-401_98373
+BEST_AC_98374,BEST_AC,A-402,Vaishali Nagar (Mulund-W) - Mulund Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-402_98374
+BEST_AC_98375,BEST_AC,A-403,Mhada Bus Station (Mulund-E) - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_A-403_98375
+BEST_AC_98376,BEST_AC,A-404,Shivajinagar Depot - Ghatkopar Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-404_98376
+BEST_AC_98377,BEST_AC,A-405,Yogi Hill - Mulund Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-405_98377
+BEST_AC_98378,BEST_AC,A-406,Railway Police Colony (Ghatkopar) - Ghatkopar Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-406_98378
+BEST_AC_98379,BEST_AC,A-412,Mulund Railway Station (W) - Ghati Pada,3,,,https://transitrun.com/en/public-transit-line_A-412_98379
+BEST_AC_98380,BEST_AC,A-413,Santacruz Station (E) - Kunchi Kurve Nagar,3,,,https://transitrun.com/en/public-transit-line_A-413_98380
+BEST_AC_98381,BEST_AC,A-414,Nahur Bus Station - Mulund Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-414_98381
+BEST_AC_98382,BEST_AC,A-416,Ghatkopar Railway Station (W) - Amrut Nagar (Vikhroli),3,,,https://transitrun.com/en/public-transit-line_A-416_98382
+BEST_AC_98383,BEST_AC,A-419,Sangharsh Nagar (Chandivli) - Ghatkopar Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-419_98383
+BEST_AC_98384,BEST_AC,A-421,Mhada Colony (Chandivali) - Ghatkopar Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-421_98384
+BEST_AC_98385,BEST_AC,A-423,Sangharsh Nagar (Chandivli) - Maharana Pratap Chowk (Mulund Check Naka-W),3,,,https://transitrun.com/en/public-transit-line_A-423_98385
+BEST_AC_98386,BEST_AC,A-427,Ghatkopar Bus Station - Filter Pada,3,,,https://transitrun.com/en/public-transit-line_A-427_98386
+BEST_AC_98387,BEST_AC,A-427,Ghatkopar Railway Station (W) - Filter Pada,3,,,https://transitrun.com/en/public-transit-line_A-427_98387
+BEST_AC_98388,BEST_AC,A-430,Mahul Village - Ghatkopar Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-430_98388
+BEST_AC_98389,BEST_AC,A-430,Mahul Village - Ghatkopar Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-430_98389
+BEST_AC_98390,BEST_AC,A-431,Tata Power Centre (Mahul) - Kurla Bus Station (E),3,,,https://transitrun.com/en/public-transit-line_A-431_98390
+BEST_AC_98391,BEST_AC,A-434,Bamandaya Pada - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_A-434_98391
+BEST_AC_98392,BEST_AC,A-435,Om Nagar (Andheri-E) - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_A-435_98392
+BEST_AC_98393,BEST_AC,A-441,Majas Depot - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_A-441_98393
+BEST_AC_98394,BEST_AC,A-442,Sadbhakti Mandir - Mhada Colony (Majas),3,,,https://transitrun.com/en/public-transit-line_A-442_98394
+BEST_AC_98395,BEST_AC,A-443,Bamandaya Pada - Agarkar Chowk (Andheri-E),3,,,https://transitrun.com/en/public-transit-line_A-443_98395
+BEST_AC_98396,BEST_AC,A-447,Santosh Nagar (Extension) - Goregaon Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-447_98396
+BEST_AC_98397,BEST_AC,A-449,Late Balasaheb Thackeray Trauma Center / S.R.P. Camp - Dindoshi Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-449_98397
+BEST_AC_98398,BEST_AC,A-451,Goregaon Railway Station (E) - Adarsh Nagar (Aarey Colony),3,,,https://transitrun.com/en/public-transit-line_A-451_98398
+BEST_AC_98399,BEST_AC,A-453,Lokmanya Nagar (Thane) - Ghatkopar Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-453_98399
+BEST_AC_98400,BEST_AC,A-456,Shivshahi Prakalp (Mantri Park) - Malvani Depot (Gaikwad Nagar),3,,,https://transitrun.com/en/public-transit-line_A-456_98400
+BEST_AC_98401,BEST_AC,A-462,Vaishali Nagar (Dahisar-E) - Borivali Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-462_98401
+BEST_AC_98402,BEST_AC,A-477,Rushi Van (Borivali) - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_A-477_98402
+BEST_AC_98403,BEST_AC,A-477,Omkareshwar Mandir - Rushi Van (Borivali),3,,,https://transitrun.com/en/public-transit-line_A-477_98403
+BEST_AC_98404,BEST_AC,A-479,Janta Nagar - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_A-479_98404
+BEST_AC_98405,BEST_AC,A-479,Magathane Depot - Janta Nagar,3,,,https://transitrun.com/en/public-transit-line_A-479_98405
+BEST_AC_98406,BEST_AC,A-481,Vashi Naka (Chembur) M.M.R.D.A.Colony - Ghatkopar Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-481_98406
+BEST_AC_98407,BEST_AC,A-481,Vashi Naka (Chembur) M.M.R.D.A.Colony - Ghatkopar Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-481_98407
+BEST_AC_98408,BEST_AC,A-484,Pawar Nagar Bus Station (Thane) - Mhada Bus Station (Mulund-E),3,,,https://transitrun.com/en/public-transit-line_A-484_98408
+BEST_AC_98409,BEST_AC,A-488,Shivajinagar Depot - Dindoshi Bus Station,3,,,https://transitrun.com/en/public-transit-line_A-488_98409
+BEST_AC_98410,BEST_AC,A-493,Maharana Pratap Chowk (Mulund Check Naka-W) - Anushakti Nagar,3,,,https://transitrun.com/en/public-transit-line_A-493_98410
+BEST_AC_98411,BEST_AC,A-494,Reti Bunder Circle Kharigaon (Kalwa) Best - Laxmi Nagar (Ghatkopar-E),3,,,https://transitrun.com/en/public-transit-line_A-494_98411
+BEST_AC_98412,BEST_AC,A-499,Vrundavan Society (Thane) - Laxmi Nagar (Ghatkopar-E),3,,,https://transitrun.com/en/public-transit-line_A-499_98412
+BEST_AC_98413,BEST_AC,A-613,Vidyavihar Bus Station - Sundar Baug (Kamani),3,,,https://transitrun.com/en/public-transit-line_A-613_98413
+BEST_AC_98414,BEST_AC,A-620,Malad Railway Station (W) - Malad Depot,3,,,https://transitrun.com/en/public-transit-line_A-620_98414
+BEST_AC_98415,BEST_AC,A-621,Ushma Nagar - Malad Railway Station (W),3,,,https://transitrun.com/en/public-transit-line_A-621_98415
+BEST_AC_98416,BEST_AC,A-622,Malad Railway Station (W) - Jankalyan Nagar Police Chowky,3,,,https://transitrun.com/en/public-transit-line_A-622_98416
+BEST_AC_98417,BEST_AC,A-624,Malad Stn-E (Poddar Park) - Anand Nagar,3,,,https://transitrun.com/en/public-transit-line_A-624_98417
+BEST_AC_98418,BEST_AC,A-626,Malad Railway Station (W) - Bhujale Talao,3,,,https://transitrun.com/en/public-transit-line_A-626_98418
+BEST_AC_98419,BEST_AC,A-629,Samata Nagar Bus Station (Kandivali-E) - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_A-629_98419
+BEST_AC_98420,BEST_AC,A-646,Nagari Niwara Zone 1 & 2 - Goregaon Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-646_98420
+BEST_AC_98421,BEST_AC,A-647,Shivshahi Prakalp (Mantri Park) - Goregaon Check Naka,3,,,https://transitrun.com/en/public-transit-line_A-647_98421
+BEST_AC_98422,BEST_AC,A-691,Mulund Railway Station (W) - Amar Nagar (Mulund),3,,,https://transitrun.com/en/public-transit-line_A-691_98422
+BEST_AC_98423,BEST_AC,A-696,Kokani Pada Extension (Borivali-E) - Dahisar Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_A-696_98423
+BEST_AC_98424,BEST_AC,A-698,N.G.Park - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_A-698_98424
+BEST_AC_98425,BEST_AC,A-698,Omkareshwar Mandir - N.G.Park,3,,,https://transitrun.com/en/public-transit-line_A-698_98425
+BEST_AC_98426,BEST_AC,A-808,World Trade Centre - Ahilyabai Holkar Chowk (Churchgate),3,,,https://transitrun.com/en/public-transit-line_A-808_98426
+BEST_AC_98427,BEST_AC,A-809,N.C.P.A. - Ahilyabai Holkar Chowk (Churchgate),3,,,https://transitrun.com/en/public-transit-line_A-809_98427
+BEST_AC_98428,BEST_AC,Ac-26,Colaba Depot (Electric House) - Anushakti Nagar,3,,,https://transitrun.com/en/public-transit-line_AC-26_98428
+BEST_AC_98429,BEST_AC,Ac-26,Deonar Depot - Colaba Depot (Electric House),3,,,https://transitrun.com/en/public-transit-line_AC-26_98429
+BEST_AC_98430,BEST_AC,Ac-42,Rani Laxmibai Chowk - Cadbury Junction,3,,,https://transitrun.com/en/public-transit-line_AC-42_98430
+BEST_AC_98431,BEST_AC,Ac-42,Rani Laxmibai Chowk - Ashok Nagar / Vilo Society,3,,,https://transitrun.com/en/public-transit-line_AC-42_98431
+BEST_AC_98432,BEST_AC,Ac-60,Deonar Depot - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_AC-60_98432
+BEST_AC_98433,BEST_AC,Bkc-21,Diamond Market - Bandra Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_BKC-21_98433
+BEST_AC_98434,BEST_AC,Bkc-22,Kurla Station (W) - Bandra Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_BKC-22_98434
+BEST_AC_98435,BEST_AC,Bkc-23,C.A.Institute (B.K.C.) - Bandra Railway Station (E),3,,,https://transitrun.com/en/public-transit-line_BKC-23_98435
+BEST_CHALO_98442,BEST_CHALO,S-A101,Maker Maxity - Lodha Splendora,3,,,https://transitrun.com/en/public-transit-line_S-A101_98442
+BEST_CHALO_98443,BEST_CHALO,S-A102,O.N.G.C.Office B.K.C. - Bandra Station (E),3,,,https://transitrun.com/en/public-transit-line_S-A102_98443
+BEST_CHALO_98444,BEST_CHALO,S-A102,Diamond Brouse Gate 8 & 9 - Bandra Station (E),3,,,https://transitrun.com/en/public-transit-line_S-A102_98444
+BEST_CHALO_98446,BEST_CHALO,S-A104,Chhatrapati Shivaji Maharaj International Airport - Backbay Depot,3,,,https://transitrun.com/en/public-transit-line_S-A104_98446
+BEST_CHALO_98447,BEST_CHALO,S-A105,Chhatrapati Shivaji Maharaj International Airport - Bank Of India Sector 35 Kharghar,3,,,https://transitrun.com/en/public-transit-line_S-A105_98447
+BEST_CHALO_98448,BEST_CHALO,S-A106,Lodha Splendora - Domestic Airport Terminal 1a,3,,,https://transitrun.com/en/public-transit-line_S-A106_98448
+BEST_CHALO_98450,BEST_CHALO,S-A108,Delfi (Powai) - Huma Cinema Kanjurmarg,3,,,https://transitrun.com/en/public-transit-line_S-A108_98450
+BEST_CHALO_98451,BEST_CHALO,S-A108,Huma Cinema Kanjurmarg - One Boulevard,3,,,https://transitrun.com/en/public-transit-line_S-A108_98451
+BEST_CHALO_98452,BEST_CHALO,S-A109,Saki Naka (Dr.Datta Samant Chowk) - Hiranandani Garden Venutra (Powai),3,,,https://transitrun.com/en/public-transit-line_S-A109_98452
+BEST_CHALO_98453,BEST_CHALO,S-A110,Haiko (Powai) - Delfi (Powai),3,,,https://transitrun.com/en/public-transit-line_S-A110_98453
+BEST_CHALO_98454,BEST_CHALO,S-A111,Lodha Splendora - Hindustan Unilever Ltd,3,,,https://transitrun.com/en/public-transit-line_S-A111_98454
+BEST_CHALO_98455,BEST_CHALO,S-A112,Bahar Cinema - I.C.I.C.I. Bank (B.K.C.),3,,,https://transitrun.com/en/public-transit-line_S-A112_98455
+BEST_CHALO_98456,BEST_CHALO,S-A112,S.E.B.I. (B.K.C.) - Darpan Cinema (Sai Service),3,,,https://transitrun.com/en/public-transit-line_S-A112_98456
+BEST_CHALO_98457,BEST_CHALO,S-A113,Equinox Business Park - Bandra Station (E),3,,,https://transitrun.com/en/public-transit-line_S-A113_98457
+BEST_CHALO_98458,BEST_CHALO,S-A114,Maker Maxity - Bank Of India Sector 35 Kharghar,3,,,https://transitrun.com/en/public-transit-line_S-A114_98458
+BEST_CHALO_98459,BEST_CHALO,S-A115,Maker Maxity - C.I.D.C.O.Bhavan / Konkan Bhavan,3,,,https://transitrun.com/en/public-transit-line_S-A115_98459
+BEST_NIGHT_98436,BEST_NIGHT,1,Mahim Bus Station - Colaba Depot (Electric House),3,,,https://transitrun.com/en/public-transit-line_1_98436
+BEST_NIGHT_98437,BEST_NIGHT,66Ltd,Rani Laxmibai Chowk - Colaba Depot (Electric House),3,,,https://transitrun.com/en/public-transit-line_66LTD_98437
+BEST_NIGHT_98438,BEST_NIGHT,202Ltd,Poisar Bus Depot - Mahim Bus Station,3,,,https://transitrun.com/en/public-transit-line_202LTD_98438
+BEST_NIGHT_98439,BEST_NIGHT,302,Rani Laxmibai Chowk Sion - Maharana Pratap Chowk (Mulund Check Naka-W),3,,,https://transitrun.com/en/public-transit-line_302_98439
+BEST_NIGHT_98440,BEST_NIGHT,440Ltd,Mahim Bus Station - Borivali Railway Station (East),3,,,https://transitrun.com/en/public-transit-line_440LTD_98440
+BEST_NIGHT_98441,BEST_NIGHT,C-305,Rani Laxmibai Chowk - Backbay Depot,3,,,https://transitrun.com/en/public-transit-line_C-305_98441

@@ -1,0 +1,626 @@
+{
+  "generatedAt": "2026-05-02T18:09:15.481Z",
+  "kmlPath": "C:\\Users\\achal\\Downloads\\b34111da-5b73-45e9-82d0-78da9d153b1c.kml",
+  "outputDir": "C:\\Users\\achal\\Medio\\Project-Medio\\otp-project\\otp-data\\GTFS-bus-test",
+  "sourceAgencies": [
+    {
+      "agencyName": "Best AC Buses",
+      "sourceUrl": "https://transitrun.com/en/public-transit-lines_BEST+AC+Buses_4744"
+    },
+    {
+      "agencyName": "Best Bus",
+      "sourceUrl": "https://transitrun.com/en/public-transit-lines_BEST+bus_4743"
+    },
+    {
+      "agencyName": "Best Chalo Premium Bus Service",
+      "sourceUrl": "https://transitrun.com/en/public-transit-lines_BEST+Chalo+Premium+Bus+Service_4746"
+    },
+    {
+      "agencyName": "Best Night Bus",
+      "sourceUrl": "https://transitrun.com/en/public-transit-lines_BEST+Night+Bus_4745"
+    }
+  ],
+  "routePagesDiscovered": 582,
+  "routesWritten": 560,
+  "stopsWritten": 2784,
+  "tripsWritten": 560,
+  "stopTimesWritten": 20204,
+  "frequenciesWritten": 560,
+  "skippedRoutes": 22,
+  "skippedRouteSamples": [
+    {
+      "url": "https://transitrun.com/en/public-transit-line_1_97879",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_169_97961",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_246_98002",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_255LTD_98006",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_342_98048",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_349_98059",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_461LTD_98107",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_498LTD_98123",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_501LTD_98125",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_526LTD_98144",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_526LTD_98145",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_526LTD_98146",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_526LTD_98147",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_526LTD_98148",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_A-269_98309",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_A-340_98332",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_A-373_98352",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_A-89_98228",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_A-89_98229",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_C-700_98205",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_S-A103_98445",
+      "reason": "no operating schedule"
+    },
+    {
+      "url": "https://transitrun.com/en/public-transit-line_S-A107_98449",
+      "reason": "no operating schedule"
+    }
+  ],
+  "fuzzyMatchCount": 1159,
+  "fuzzyMatchSamples": [
+    {
+      "route": "100",
+      "stopName": "Free Press Journal House",
+      "kmlName": "FREE PRESS JOURNAL MARG",
+      "score": 0.857
+    },
+    {
+      "route": "105",
+      "stopName": "Novelty Cinema (Dr.Bhadamkar Road)",
+      "kmlName": "NOVELTY CINEMA, DR.BHADKAMKAR ROAD",
+      "score": 0.75
+    },
+    {
+      "route": "110",
+      "stopName": "Barkat Ali June",
+      "kmlName": "B.P.T. COLONY (BARKAT ALI MARG)",
+      "score": 0.8
+    },
+    {
+      "route": "11Ltd",
+      "stopName": "Kapole Niwas / J.N. Varma Chowk",
+      "kmlName": "JAGATDEV N.VARMA CHOWK, KAPOLE NIWAS",
+      "score": 0.857
+    },
+    {
+      "route": "122",
+      "stopName": "Priyadarshani Park (Napean Sea Road)",
+      "kmlName": "PRIYADARSHINI PARK (NAPEAN SEA ROAD)",
+      "score": 0.75
+    },
+    {
+      "route": "122",
+      "stopName": "Parsi Dharamshala / Om Chambers",
+      "kmlName": "PARSI DHARMASHALA, OM CHAMBERS",
+      "score": 0.75
+    },
+    {
+      "route": "122",
+      "stopName": "Dr. Bhadkamkar Road Naka",
+      "kmlName": "DR.BHADKAMKAR ROAD",
+      "score": 0.8
+    },
+    {
+      "route": "122",
+      "stopName": "Marine Lines Rly.Station",
+      "kmlName": "MARINE LINES RAILWAY STATION",
+      "score": 0.8
+    },
+    {
+      "route": "122",
+      "stopName": "Marine Lines Rly.Stn.(Kala Niketan)",
+      "kmlName": "MARINE LINES RAILWAY STATION (KALA NIKETAN)",
+      "score": 0.889
+    },
+    {
+      "route": "125",
+      "stopName": "Aacharya Atre Chowk / Worli Naka",
+      "kmlName": "ACHARYA ATRE CHOWK (WORLI NAKA)",
+      "score": 0.75
+    },
+    {
+      "route": "125",
+      "stopName": "Swami D Saraswati Chowk Fort",
+      "kmlName": "SWAMI DAYANAND SARASWATI CHOWK (FORT)",
+      "score": 0.857
+    },
+    {
+      "route": "126",
+      "stopName": "Novelty Cinema (Dr.Bhadamkar Road)",
+      "kmlName": "NOVELTY CINEMA, DR.BHADKAMKAR ROAD",
+      "score": 0.75
+    },
+    {
+      "route": "126",
+      "stopName": "Savlya Tandel Chowk / Mustafa Bazar",
+      "kmlName": "MUSTAFA BAZAR, SAVLYA TANDEL CHOWK",
+      "score": 1
+    },
+    {
+      "route": "126",
+      "stopName": "Novelty Cinema (Dr.Bhadamkar Road)",
+      "kmlName": "NOVELTY CINEMA, DR.BHADKAMKAR ROAD",
+      "score": 0.75
+    },
+    {
+      "route": "126",
+      "stopName": "Savlya Tandel Chowk / Mustafa Bazar",
+      "kmlName": "MUSTAFA BAZAR, SAVLYA TANDEL CHOWK",
+      "score": 1
+    },
+    {
+      "route": "134",
+      "stopName": "Wadia Hospital (Maternity)",
+      "kmlName": "WADIA MATERNITY HOSPITAL",
+      "score": 1
+    },
+    {
+      "route": "134",
+      "stopName": "Savlya Tandel Chowk / Mustafa Bazar",
+      "kmlName": "MUSTAFA BAZAR, SAVLYA TANDEL CHOWK",
+      "score": 1
+    },
+    {
+      "route": "134",
+      "stopName": "Marine Lines Rly.Stn.(Kala Niketan)",
+      "kmlName": "MARINE LINES RAILWAY STATION (KALA NIKETAN)",
+      "score": 0.889
+    },
+    {
+      "route": "134",
+      "stopName": "Badhwar Park Machhimar Nagar",
+      "kmlName": "BADHWAR PARK",
+      "score": 0.8
+    },
+    {
+      "route": "135",
+      "stopName": "Mallet Bunder Check Post",
+      "kmlName": "MALLET BUNDER",
+      "score": 0.8
+    },
+    {
+      "route": "14",
+      "stopName": "Wadala Monorail Station Marg",
+      "kmlName": "WADALA MONORAIL STATION ROAD",
+      "score": 1
+    },
+    {
+      "route": "14",
+      "stopName": "Barkat Ali June",
+      "kmlName": "B.P.T. COLONY (BARKAT ALI MARG)",
+      "score": 0.8
+    },
+    {
+      "route": "14",
+      "stopName": "Mahadev Palav Marg / Bharatmata Cinema",
+      "kmlName": "BHARATMATA CINEMA, MAHADEO PALAV MARG",
+      "score": 0.75
+    },
+    {
+      "route": "15",
+      "stopName": "Barkat Ali June",
+      "kmlName": "B.P.T. COLONY (BARKAT ALI MARG)",
+      "score": 0.8
+    },
+    {
+      "route": "154",
+      "stopName": "Aacharya Atre Chowk / Worli Naka",
+      "kmlName": "ACHARYA ATRE CHOWK (WORLI NAKA)",
+      "score": 0.75
+    },
+    {
+      "route": "164",
+      "stopName": "Ravindra Natya Mandir / Prabhadevi",
+      "kmlName": "PRABHADEVI, RAVINDRA NATYA MANDIR",
+      "score": 1
+    },
+    {
+      "route": "164",
+      "stopName": "Kapole Niwas / J.N. Varma Chowk",
+      "kmlName": "JAGATDEV N.VARMA CHOWK, KAPOLE NIWAS",
+      "score": 0.857
+    },
+    {
+      "route": "165",
+      "stopName": "Dadar B.E.S.T.Workshop (Khodadad Circle)",
+      "kmlName": "KHODADAD CIRCLE (DADAR TT)",
+      "score": 0.75
+    },
+    {
+      "route": "165",
+      "stopName": "Ravindra Natya Mandir / Prabhadevi",
+      "kmlName": "PRABHADEVI, RAVINDRA NATYA MANDIR",
+      "score": 1
+    },
+    {
+      "route": "165",
+      "stopName": "Salvation Army Nagpada",
+      "kmlName": "SALVATION ARMY",
+      "score": 0.8
+    },
+    {
+      "route": "168",
+      "stopName": "Sant Rohidas Chowk / Parel S.T.Depot",
+      "kmlName": "PAREL S.T.DEPOT, SANT ROHIDAS CHOWK",
+      "score": 1
+    },
+    {
+      "route": "168",
+      "stopName": "Savlya Tandel Chowk / Mustafa Bazar",
+      "kmlName": "MUSTAFA BAZAR, SAVLYA TANDEL CHOWK",
+      "score": 1
+    },
+    {
+      "route": "168",
+      "stopName": "Tata Oil Mill / Hindustan Lever Ltd.",
+      "kmlName": "TATA OIL MILL, HINDUSTAN LEVER LIMITED",
+      "score": 0.833
+    },
+    {
+      "route": "169",
+      "stopName": "Roopam Cinema (Rani Laxmibai Chowk Sion)",
+      "kmlName": "RANI LAXMIBAI CHOWK, SION STATION",
+      "score": 0.75
+    },
+    {
+      "route": "169",
+      "stopName": "Wadala Monorail Station Marg",
+      "kmlName": "WADALA MONORAIL STATION ROAD",
+      "score": 1
+    },
+    {
+      "route": "169",
+      "stopName": "Dadar B.E.S.T.Workshop (Khodadad Circle)",
+      "kmlName": "KHODADAD CIRCLE (DADAR TT)",
+      "score": 0.75
+    },
+    {
+      "route": "169",
+      "stopName": "Roopam Cinema (Rani Laxmibai Chowk Sion)",
+      "kmlName": "RANI LAXMIBAI CHOWK, SION STATION",
+      "score": 0.75
+    },
+    {
+      "route": "172",
+      "stopName": "Barkat Ali June",
+      "kmlName": "B.P.T. COLONY (BARKAT ALI MARG)",
+      "score": 0.8
+    },
+    {
+      "route": "172",
+      "stopName": "Dadar B.E.S.T.Workshop (Khodadad Circle)",
+      "kmlName": "KHODADAD CIRCLE (DADAR TT)",
+      "score": 0.75
+    },
+    {
+      "route": "172",
+      "stopName": "Ravindra Natya Mandir / Prabhadevi",
+      "kmlName": "PRABHADEVI, RAVINDRA NATYA MANDIR",
+      "score": 1
+    },
+    {
+      "route": "172",
+      "stopName": "Dadar B.E.S.T.Workshop (Khodadad Circle)",
+      "kmlName": "KHODADAD CIRCLE (DADAR TT)",
+      "score": 0.75
+    },
+    {
+      "route": "176",
+      "stopName": "Shalimar Industries",
+      "kmlName": "SHALIMAR INDUSTRIES LIMITED",
+      "score": 0.8
+    },
+    {
+      "route": "176",
+      "stopName": "Shalimar Industries",
+      "kmlName": "SHALIMAR INDUSTRIES LIMITED",
+      "score": 0.8
+    },
+    {
+      "route": "181",
+      "stopName": "Kapil Buddha Vihar (Kalina)",
+      "kmlName": "KAPILVASTU BUDDHA VIHAR (KALINA)",
+      "score": 0.75
+    },
+    {
+      "route": "181",
+      "stopName": "Family Court",
+      "kmlName": "M.M.R.D.A., FAMILY COURT (BKC)",
+      "score": 0.8
+    },
+    {
+      "route": "181",
+      "stopName": "Roopam Cinema (Rani Laxmibai Chowk Sion)",
+      "kmlName": "RANI LAXMIBAI CHOWK, SION STATION",
+      "score": 0.75
+    },
+    {
+      "route": "182",
+      "stopName": "Family Court",
+      "kmlName": "M.M.R.D.A., FAMILY COURT (BKC)",
+      "score": 0.8
+    },
+    {
+      "route": "182",
+      "stopName": "Late Balasaheb Thackeray Trauma Center / S.R.P. Camp",
+      "kmlName": "BALASAHEB THACKERAY TRAUMA CENTRE, S.R.P. CAMP",
+      "score": 0.889
+    },
+    {
+      "route": "187",
+      "stopName": "Family Court",
+      "kmlName": "M.M.R.D.A., FAMILY COURT (BKC)",
+      "score": 0.8
+    },
+    {
+      "route": "200",
+      "stopName": "Dadar B.E.S.T.Workshop (Khodadad Circle)",
+      "kmlName": "KHODADAD CIRCLE (DADAR TT)",
+      "score": 0.75
+    }
+  ],
+  "inferredStopCount": 3062,
+  "inferredStopSamples": [
+    {
+      "route": "1",
+      "stopName": "Dr.Shamaprasad Mukherji Chowk"
+    },
+    {
+      "route": "1",
+      "stopName": "Mandavi Post Office"
+    },
+    {
+      "route": "1",
+      "stopName": "Dadar Post Office"
+    },
+    {
+      "route": "1",
+      "stopName": "Dadar Post Office"
+    },
+    {
+      "route": "103",
+      "stopName": "Regal Cinema"
+    },
+    {
+      "route": "103",
+      "stopName": "Dr.Shamaprasad Mukherji Chowk"
+    },
+    {
+      "route": "103",
+      "stopName": "Vasudev B Phadke Chowk"
+    },
+    {
+      "route": "103",
+      "stopName": "Vasudeo B.Phadke Chowk"
+    },
+    {
+      "route": "103",
+      "stopName": "Chowpaty Band Stand (Girgaon)"
+    },
+    {
+      "route": "103",
+      "stopName": "Sheetal Baug"
+    },
+    {
+      "route": "105",
+      "stopName": "Gavdevi Police Stn."
+    },
+    {
+      "route": "105",
+      "stopName": "Chowpaty Band Stand (Girgaon)"
+    },
+    {
+      "route": "105",
+      "stopName": "Sheetal Baug"
+    },
+    {
+      "route": "11Ltd",
+      "stopName": "Regal Cinema"
+    },
+    {
+      "route": "11Ltd",
+      "stopName": "Swami D.Saraswati Chowk"
+    },
+    {
+      "route": "11Ltd",
+      "stopName": "Mandavi Post Office"
+    },
+    {
+      "route": "11Ltd",
+      "stopName": "Dadar Post Office"
+    },
+    {
+      "route": "11Ltd",
+      "stopName": "Gandhi Market Matunga"
+    },
+    {
+      "route": "11Ltd",
+      "stopName": "R.N.A. Colony"
+    },
+    {
+      "route": "122",
+      "stopName": "Ahilyabai Holkar Chk. Eross Cinema"
+    },
+    {
+      "route": "122",
+      "stopName": "Swami D.Saraswati Chowk"
+    },
+    {
+      "route": "123",
+      "stopName": "Gavdevi Police Stn."
+    },
+    {
+      "route": "123",
+      "stopName": "Regal Cinema"
+    },
+    {
+      "route": "125",
+      "stopName": "Alexandra Cinema"
+    },
+    {
+      "route": "125",
+      "stopName": "Lion's Gates"
+    },
+    {
+      "route": "125",
+      "stopName": "Dr.Shamaprasad Mukherji Chowk / Regal"
+    },
+    {
+      "route": "125",
+      "stopName": "Regal Cinema"
+    },
+    {
+      "route": "126",
+      "stopName": "Vasudev B Phadke Chowk"
+    },
+    {
+      "route": "126",
+      "stopName": "Vasudeo B.Phadke Chowk"
+    },
+    {
+      "route": "126",
+      "stopName": "Central Talkies"
+    },
+    {
+      "route": "126",
+      "stopName": "Railway Hotel"
+    },
+    {
+      "route": "126",
+      "stopName": "Alexandra Cinema"
+    },
+    {
+      "route": "126",
+      "stopName": "Masiana Hospital / Rustum Baug"
+    },
+    {
+      "route": "126",
+      "stopName": "Vasudev B Phadke Chowk"
+    },
+    {
+      "route": "126",
+      "stopName": "Vasudeo B.Phadke Chowk"
+    },
+    {
+      "route": "126",
+      "stopName": "Central Talkies"
+    },
+    {
+      "route": "126",
+      "stopName": "Railway Hotel"
+    },
+    {
+      "route": "126",
+      "stopName": "Alexandra Cinema"
+    },
+    {
+      "route": "126",
+      "stopName": "Masiana Hospital / Rustum Baug"
+    },
+    {
+      "route": "134",
+      "stopName": "Parel Village"
+    },
+    {
+      "route": "134",
+      "stopName": "Masiana Hospital / Rustum Baug"
+    },
+    {
+      "route": "134",
+      "stopName": "Vasudeo B.Phadke Chowk"
+    },
+    {
+      "route": "134",
+      "stopName": "Ahilyabai Holkar Chk. Eross Cinema"
+    },
+    {
+      "route": "134",
+      "stopName": "Golden Gate (Mantralaya)"
+    },
+    {
+      "route": "134",
+      "stopName": "Cuffe Parade Machhimar Nagar"
+    },
+    {
+      "route": "134",
+      "stopName": "Cuffe Parade (Hotel President)"
+    },
+    {
+      "route": "134",
+      "stopName": "G.D.Somani High School"
+    },
+    {
+      "route": "14",
+      "stopName": "M.M.R.D.A. Colony Kokari Depot"
+    },
+    {
+      "route": "14",
+      "stopName": "Mahadev Nagar"
+    },
+    {
+      "route": "14",
+      "stopName": "Kidwai Road Police Stn."
+    }
+  ]
+}

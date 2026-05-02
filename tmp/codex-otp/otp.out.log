@@ -1,0 +1,139 @@
+00:28:43.406 INFO [main]  (OtpStartupInfo.java:40) OTP STARTING UP - Run Server - Version: 2.8.1, ser.ver.id: 203, commit: 719cb97337e6df44dba5c8fee94ec83cc9110aee, branch: master - Java 22.0.1
+00:28:43.414 INFO [main]  (ApplicationShutdownSupport.java:27) Adding shutdown hook 'server-shutdown-info'.
+00:28:43.422 INFO [main]  (OtpStartupInfo.java:49) 
+  ___                 _____     _       ____  _                             
+ / _ \ _ __   ___ _ _|_   _| __(_)_ __ |  _ \| | __ _ _ __  _ __   ___ _ __ 
+| | | | '_ \ / _ \ '_ \| || '__| | '_ \| |_) | |/ _` | '_ \| '_ \ / _ \ '__|
+| |_| | |_) |  __/ | | | || |  | | |_) |  __/| | (_| | | | | | | |  __/ |   
+ \___/| .__/ \___|_| |_|_||_|  |_| .__/|_|   |_|\__,_|_| |_|_| |_|\___|_| 
+      |_|                        |_| 
+Version:     2.8.1
+Ser.ver.id:  203
+Commit:      719cb97337e6df44dba5c8fee94ec83cc9110aee
+Branch:      master
+Build:       2025-09-22T10:00:04+02:00
+
+00:28:43.422 INFO [main]  (OTPMain.java:107) Searching for configuration and input files in C:\Users\achal\Medio\Project-Medio\otp-project\otp-data
+00:28:43.534 INFO [main]  (ConfigFileLoader.java:130) Load JSON configuration file 'otp-data\otp-config.json'
+00:28:43.543 INFO [main]  (ConfigFileLoader.java:131) Summarizing 'otp-config.json': {
+  "otpFeatures" : {
+    "SandboxAPIGeocoder" : true,
+    "SandboxAPITravelTime" : true
+  },
+  "geocoder" : {
+    "type" : "nominatim",
+    "url" : "https://nominatim.openstreetmap.org/"
+  }
+}
+00:28:43.549 WARN [main]  (NodeAdapter.java:169) Unexpected config parameter: 'geocoder:{"type":"nominatim","url":"https://nominatim.openstreetmap.org/"}' in 'otp-config.json'
+00:28:43.550 WARN [main]  (NodeAdapter.java:169) Unexpected config parameter: 'otpFeatures.SandboxAPITravelTime:true' in 'otp-config.json'
+00:28:43.551 WARN [main]  (ArrayList.java:1709) The enum value 'SandboxAPITravelTime' is not legal. Expected one of [AlertMetrics, APIServerInfo, APIUpdaterStatus, IncludeEmptyRailStopsInTransfers, ConsiderPatternsForDirectTransfers, DebugUi, ExtraTransferLegOnSameStop, FloatingBike, GtfsGraphQlApi, MinimumTransferTimeIsDefinitive, OptimizeTransfers, ParallelRouting, TransferConstraints, TransmodelGraphQlApi, ActuatorAPI, AsyncGraphQLFetchers, WaitForGraphUpdateInPollingUpdaters, Emission, DataOverlay, DebugRasterTiles, FaresV2, FlexRouting, GoogleCloudStorage, MultiCriteriaGroupMaxFilter, RealtimeResolver, ReportApi, SandboxAPIGeocoder, SandboxAPIMapboxVectorTilesApi, SandboxAPIParkAndRideApi, Sorlandsbanen, TransferAnalyzer, TriasApi]. Parameter: otpFeatures. Source: otp-config.json.
+00:28:43.553 INFO [main]  (ConfigFileLoader.java:130) Load JSON configuration file 'otp-data\build-config.json'
+00:28:43.554 INFO [main]  (ConfigFileLoader.java:131) Summarizing 'build-config.json': {
+  "osm" : [ {
+    "source" : "mumbai.osm.pbf"
+  } ],
+  "transitFeeds" : [ {
+    "type" : "gtfs",
+    "source" : "GTFS"
+  } ],
+  "streetLinking" : {
+    "maxLinkDistance" : 5000
+  }
+}
+00:28:43.599 WARN [main]  (NodeAdapter.java:169) Unexpected config parameter: 'streetLinking:{"maxLinkDistance":5000}' in 'build-config.json'
+00:28:43.600 INFO [main]  (ConfigFileLoader.java:130) Load JSON configuration file 'otp-data\router-config.json'
+00:28:43.600 INFO [main]  (ConfigFileLoader.java:131) Summarizing 'router-config.json': {
+  "routingDefaults" : {
+    "numItineraries" : 5
+  },
+  "transit" : {
+    "stopTransferCost" : 0
+  },
+  "api" : {
+    "enableGraphQl" : true,
+    "enableRestApi" : true
+  }
+}
+00:28:43.631 WARN [main]  (NodeAdapter.java:169) Unexpected config parameter: 'api:{"enableGraphQl":true,"enableRestApi":true}' in 'router-config.json'
+00:28:43.632 WARN [main]  (NodeAdapter.java:169) Unexpected config parameter: 'transit.stopTransferCost:0' in 'router-config.json'
+00:28:43.632 INFO [main]  (ConfigFileLoader.java:134) File 'otp-data\debug-ui-config.json' is not present. Using default configuration.
+00:28:43.633 INFO [main]  (OTPFeature.java:168) Features turned on: 
+	APIServerInfo
+	APIUpdaterStatus
+	ConsiderPatternsForDirectTransfers
+	DebugUi
+	FloatingBike
+	GtfsGraphQlApi
+	OptimizeTransfers
+	TransferConstraints
+	TransmodelGraphQlApi
+	WaitForGraphUpdateInPollingUpdaters
+	SandboxAPIGeocoder
+00:28:43.634 INFO [main]  (OTPFeature.java:169) Features turned off: 
+	AlertMetrics
+	IncludeEmptyRailStopsInTransfers
+	ExtraTransferLegOnSameStop
+	MinimumTransferTimeIsDefinitive
+	ParallelRouting
+	ActuatorAPI
+	AsyncGraphQLFetchers
+	Emission
+	DataOverlay
+	DebugRasterTiles
+	FaresV2
+	FlexRouting
+	GoogleCloudStorage
+	MultiCriteriaGroupMaxFilter
+	RealtimeResolver
+	ReportApi
+	SandboxAPIMapboxVectorTilesApi
+	SandboxAPIParkAndRideApi
+	Sorlandsbanen
+	TransferAnalyzer
+	TriasApi
+00:28:43.642 INFO [main]  (GraphBuilderDataSources.java:258) Data source location(s): HTTPS, otp-data
+00:28:43.642 INFO [main]  (GraphBuilderDataSources.java:261) Existing files expected to be read or written:
+00:28:43.647 INFO [main]  (GraphBuilderDataSources.java:264) - ⚙️ build-config.json  otp-data  2026-04-24 16:22:08  214 bytes
+00:28:43.648 INFO [main]  (GraphBuilderDataSources.java:264) - ⚙️ otp-config.json  otp-data  2026-04-24 16:22:08  198 bytes
+00:28:43.649 INFO [main]  (GraphBuilderDataSources.java:264) - ⚙️ router-config.json  otp-data  2026-04-24 16:22:08  182 bytes
+00:28:43.650 INFO [main]  (GraphBuilderDataSources.java:264) - 🌐 graph.obj  otp-data  2026-05-03 00:28:26  42.6 MB
+00:28:43.650 INFO [main]  (GraphBuilderDataSources.java:269) Files excluded due to command line switches or unknown type:
+00:28:43.651 INFO [main]  (GraphBuilderDataSources.java:272) - 🌍 mumbai.osm.pbf  otp-data  2026-04-24 16:22:08  29.2 MB
+00:28:43.651 INFO [main]  (GraphBuilderDataSources.java:272) - 🚌 GTFS  otp-data  2026-05-03 00:26:25  4 kB
+00:28:43.652 INFO [main]  (GraphBuilderDataSources.java:272) - ❓ GTFS-bus-test-generation-report.json  otp-data  2026-05-02 23:39:15  15 kB
+00:28:43.653 INFO [main]  (SerializedGraphObject.java:185) Reading graph from 'otp-data\graph.obj'
+00:28:44.843 INFO [main]  (SiteRepository.java:300) Index site repository...
+00:28:44.849 INFO [main]  (SiteRepository.java:302) Index site repository complete.
+00:28:44.850 INFO [main]  (TimetableRepository.java:156) Index timetable repository...
+00:28:44.852 INFO [main]  (TimetableRepositoryIndex.java:64) Timetable repository index init...
+00:28:44.921 INFO [main]  (TimetableRepositoryIndex.java:118) Timetable repository index init complete.
+00:28:44.922 INFO [main]  (TimetableRepository.java:158) Index timetable repository complete.
+00:28:44.950 INFO [main]  (SerializedGraphObject.java:286) Graph loaded.   |V|=207,274 |E|=522,577
+00:28:44.951 INFO [main]  (SerializedGraphObject.java:287) Transit loaded. |Stops|=2,955 |Patterns|=898 |ConstrainedTransfers|=12
+00:28:44.988 INFO [main]  (Graph.java:306) Index street model...
+00:28:45.022 INFO [main]  (StreetIndex.java:132) Index street vertex progress tracking started.
+00:28:45.589 INFO [main]  (StreetIndex.java:149) Index street vertex progress tracking complete. 207,274 done in 0s (366,208 per second). 
+00:28:45.589 INFO [main]  (Graph.java:308) Index street model complete.
+00:28:45.591 INFO [main]  (ConstructApplication.java:172) Wiring up and configuring server.
+00:28:45.632 INFO [main]  (ConstructApplication.java:228) Creating transit layer for Raptor routing.
+00:28:45.634 INFO [main]  (RaptorTransitDataMapper.java:68) Mapping raptorTransitData from TimetableRepository...
+00:28:46.199 INFO [main]  (RaptorTransitDataMapper.java:87) Mapping complete.
+00:28:46.226 INFO [main]  (GraphUpdaterManager.java:141) Stopping updater manager with 0 updaters.
+00:28:46.227 INFO [updater-ready]  (GraphUpdaterManager.java:276) OTP UPDATERS INITIALIZED (0 updaters) - OTP 2.8.1 is ready for routing!
+00:28:46.227 INFO [main]  (GraphUpdaterManager.java:180) Stopped updater manager
+00:28:46.675 INFO [main]  (Graph.java:375) Computed ellipsoid/geoid offset at (19.109958, 72.863091) as -68.60609601838686
+00:28:46.678 INFO [main]  (ConstructApplication.java:249) Creating initial raptor transfer cache progress tracking started.
+00:28:46.819 INFO [main]  (RaptorRequestTransferCache.java:44) Initializing cache with request: StreetRelevantOptions{transferMode: WALK}
+00:28:46.826 INFO [main]  (ConstructApplication.java:258) Creating initial raptor transfer cache progress tracking complete. 1 done in 0s (7 per second). 
+00:28:46.826 INFO [main]  (ConstructApplication.java:200) Initializing geocoder
+00:28:46.879 WARN [main]  (VectorizationProvider.java:153) Java vector incubator module is not readable. For optimal vector performance, pass '--add-modules jdk.incubator.vector' to enable Vector API.
+00:28:47.943 INFO [main]  (ApplicationShutdownSupport.java:27) Adding shutdown hook 'server-shutdown'.
+00:28:47.947 INFO [main]  (GrizzlyServer.java:61) Starting OTP Grizzly server on port 8080 of interface 0.0.0.0
+00:28:47.948 INFO [main]  (GrizzlyServer.java:66) OTP server base directory is: [otp-data]
+00:28:48.003 INFO [main]  (GrizzlyServer.java:163) Java reports that this machine has 16 available processors.
+00:28:48.004 INFO [main]  (GrizzlyServer.java:174) Maximum HTTP handler thread pool size will be 20 threads.
+00:28:48.830 INFO [main]  (ApplicationShutdownSupport.java:27) Adding shutdown hook 'grizzly-shutdown'.
+00:28:49.001 INFO [main]  (NetworkListener.java:812) Started listener bound to [0.0.0.0:8080]
+00:28:49.002 INFO [main]  (HttpServer.java:254) [HttpServer] Started.
+00:28:49.002 INFO [main]  (GrizzlyServer.java:143) Grizzly server running.
