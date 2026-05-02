@@ -374,6 +374,66 @@ html.light-mode .medio-page header {
   box-shadow: 0 14px 34px rgba(14, 116, 144, 0.08);
 }
 
+.local-transport-card {
+  background:
+    radial-gradient(circle at 5% 15%, var(--local-transport-card), transparent 38%),
+    rgba(2, 6, 23, 0.72);
+}
+
+.local-transport-card--active {
+  border-color: var(--local-transport-soft);
+  background:
+    radial-gradient(circle at 5% 18%, var(--local-transport-soft), transparent 42%),
+    linear-gradient(135deg, var(--local-transport-card), rgba(15, 23, 42, 0.9));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 24px rgba(0, 0, 0, 0.16);
+}
+
+.local-transport-switch {
+  width: 3.2rem;
+  height: 1.75rem;
+  padding: 0.18rem;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background:
+    linear-gradient(135deg, rgba(51, 65, 85, 0.92), rgba(15, 23, 42, 0.92)) !important;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.34),
+    0 8px 18px rgba(0, 0, 0, 0.16);
+}
+
+.local-transport-switch[data-state="checked"] {
+  border-color: var(--local-transport-soft);
+  background:
+    radial-gradient(circle at 72% 45%, rgba(255, 255, 255, 0.28), transparent 38%),
+    linear-gradient(135deg, var(--local-transport-color), rgba(13, 108, 242, 0.9)) !important;
+  box-shadow:
+    0 0 0 1px var(--local-transport-soft),
+    0 10px 22px var(--local-transport-card);
+}
+
+.local-transport-switch:focus-visible {
+  outline: 2px solid var(--local-transport-color);
+  outline-offset: 3px;
+}
+
+.local-transport-switch [data-slot="switch-thumb"] {
+  width: 1.28rem;
+  height: 1.28rem;
+  background:
+    radial-gradient(circle at 34% 26%, #ffffff 0%, #e2e8f0 56%, #cbd5e1 100%) !important;
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  transform: translateX(0);
+}
+
+.local-transport-switch[data-state="checked"] [data-slot="switch-thumb"] {
+  background:
+    radial-gradient(circle at 34% 26%, #ffffff 0%, #f8fafc 58%, #dbeafe 100%) !important;
+  transform: translateX(1.42rem);
+}
+
 html.light-mode .profile-hero {
   background:
     radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.6), transparent 30%),

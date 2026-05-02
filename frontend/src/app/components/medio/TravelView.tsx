@@ -78,6 +78,12 @@ const defaultLocalTransport = {
   subway: true,
 };
 
+type LocalTransportStyle = React.CSSProperties & {
+  "--local-transport-color": string;
+  "--local-transport-soft": string;
+  "--local-transport-card": string;
+};
+
 const modeLabels: Record<string, string> = {
   WALK: "Walk",
   SUBWAY: "Metro",
@@ -458,35 +464,52 @@ export const TravelView = () => {
               </div>
 
               <div className="grid gap-2">
-                {localTransportChoices.map(({ id, label, detail, color, Icon }) => (
-                  <div
-                    key={id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-2"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span
-                        className="flex size-8 shrink-0 items-center justify-center rounded-full text-white"
-                        style={{ backgroundColor: color }}
-                      >
-                        <Icon size={16} />
-                      </span>
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-slate-100">
-                          {label}
-                        </div>
-                        <div className="truncate text-xs text-slate-500">
-                          {detail}
+                {localTransportChoices.map(({ id, label, detail, color, Icon }) => {
+                  const isEnabled = localTransport[id];
+                  const transportStyle: LocalTransportStyle = {
+                    "--local-transport-color": color,
+                    "--local-transport-soft": `${color}33`,
+                    "--local-transport-card": `${color}14`,
+                  };
+
+                  return (
+                    <div
+                      key={id}
+                      className={`local-transport-card flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 transition-all ${
+                        isEnabled
+                          ? "local-transport-card--active"
+                          : "border-slate-800 bg-slate-950/70"
+                      }`}
+                      style={transportStyle}
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span
+                          className={`flex size-9 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition-transform ${
+                            isEnabled ? "scale-100" : "scale-95 opacity-70"
+                          }`}
+                          style={{ backgroundColor: color }}
+                        >
+                          <Icon size={17} />
+                        </span>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-slate-100">
+                            {label}
+                          </div>
+                          <div className="truncate text-xs text-slate-500">
+                            {detail}
+                          </div>
                         </div>
                       </div>
+                      <Switch
+                        checked={isEnabled}
+                        onCheckedChange={(checked) => updateLocalTransport(id, checked)}
+                        aria-label={`Use ${label}`}
+                        className="local-transport-switch"
+                        style={transportStyle}
+                      />
                     </div>
-                    <Switch
-                      checked={localTransport[id]}
-                      onCheckedChange={(checked) => updateLocalTransport(id, checked)}
-                      aria-label={`Use ${label}`}
-                      className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-700 dark:data-[state=unchecked]:bg-slate-700"
-                    />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {!hasLocalTransportMode && (
