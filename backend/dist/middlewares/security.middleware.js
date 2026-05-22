@@ -25,6 +25,14 @@ const sanitizeValue = (value) => {
     })
         .map(([key, entry]) => [key, sanitizeValue(entry)]));
 };
+const replaceObjectContents = (target, source) => {
+    if (!source || typeof source !== "object" || Array.isArray(source))
+        return;
+    for (const key of Object.keys(target)) {
+        delete target[key];
+    }
+    Object.assign(target, source);
+};
 const getOriginFromReferer = (referer) => {
     if (!referer)
         return null;
@@ -62,8 +70,8 @@ exports.securityHeaders = (0, helmet_1.default)({
 });
 const requestSanitizer = (req, _res, next) => {
     req.body = sanitizeValue(req.body);
-    req.query = sanitizeValue(req.query);
-    req.params = sanitizeValue(req.params);
+    replaceObjectContents(req.query, sanitizeValue(req.query));
+    replaceObjectContents(req.params, sanitizeValue(req.params));
     next();
 };
 exports.requestSanitizer = requestSanitizer;

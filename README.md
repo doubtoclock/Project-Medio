@@ -9,3 +9,6 @@ An app for finding shortest 2 way distances
 5. Start OTP:
    - Build: `java -Xmx4G -jar otp.jar --build --save otp-data`
    - Run: `java -Xmx4G -jar otp.jar --load otp-data --serve`
+
+# Clean dir of metadata files
+find . -type f -name '._*' -delete

@@ -120,8 +120,8 @@ export const ProfileView: React.FC = () => {
 
       const data = (await res.json()) as ProfilePayload;
       syncProfileState(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load profile");
+    } catch {
+      setError("Failed to load profile");
     } finally {
       setLoading(false);
     }
@@ -549,6 +549,9 @@ const PreferenceRow = ({
     </div>
 
     <button
+      type="button"
+      aria-label={`Toggle ${title}`}
+      aria-pressed={checked}
       onClick={() => onToggle(!checked)}
       className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition ${
         checked ? "bg-primary" : "bg-slate-300 dark:bg-slate-700"

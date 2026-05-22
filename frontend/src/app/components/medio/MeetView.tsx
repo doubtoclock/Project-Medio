@@ -345,7 +345,7 @@ export const MeetView: React.FC = () => {
       <section className="relative z-30 flex flex-col gap-3 bg-slate-900/40 px-4 py-6 overflow-visible">
 
         {/* LOCATION A */}
-        <div className="relative z-30">
+        <div className="relative z-40">
           <div className="flex items-center bg-slate-800 rounded-xl px-3 py-3 border border-slate-700">
             <MapPin size={16} className="text-primary mr-2" />
             <input
@@ -357,7 +357,16 @@ export const MeetView: React.FC = () => {
               placeholder="Location A"
               className="bg-transparent flex-1 outline-none text-sm"
             />
-            {locA && <X size={16} onClick={() => clearLocation("A")} />}
+            {locA && (
+              <button
+                type="button"
+                aria-label="Clear location A"
+                onClick={() => clearLocation("A")}
+                className="inline-flex items-center justify-center"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
 
           {activeField === "A" && suggestionsA.length > 0 && (
@@ -388,7 +397,16 @@ export const MeetView: React.FC = () => {
               placeholder="Location B"
               className="bg-transparent flex-1 outline-none text-sm"
             />
-            {locB && <X size={16} onClick={() => clearLocation("B")} />}
+            {locB && (
+              <button
+                type="button"
+                aria-label="Clear location B"
+                onClick={() => clearLocation("B")}
+                className="inline-flex items-center justify-center"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
 
           {activeField === "B" && suggestionsB.length > 0 && (
@@ -682,4 +700,3 @@ export const MeetView: React.FC = () => {
     </div>
   );
 };
-

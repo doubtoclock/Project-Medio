@@ -586,22 +586,26 @@ export const TravelView = () => {
           {/* Saved Places row */}
           <div className="mb-3 flex gap-2 overflow-x-auto no-scrollbar mt-2">
             {savedPlaces.map((p) => (
-              <button
-                key={p._id}
-                onClick={() => handleSavedPlaceClick(p)}
-                className="relative flex items-center gap-2 bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl pl-4 pr-8 py-2 shrink-0 hover:bg-slate-800 hover:border-zinc-700 transition-all"
-              >
-                <MapPin size={14} className="text-emerald-400 shrink-0" />
-                <span className="text-xs font-medium text-zinc-200 whitespace-nowrap">
-                  {p.label}
-                </span>
-                <span
+              <div key={p._id} className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleSavedPlaceClick(p)}
+                  className="flex items-center gap-2 bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl pl-4 pr-8 py-2 hover:bg-slate-800 hover:border-zinc-700 transition-all"
+                >
+                  <MapPin size={14} className="text-emerald-400 shrink-0" />
+                  <span className="text-xs font-medium text-zinc-200 whitespace-nowrap">
+                    {p.label}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Delete saved place ${p.label}`}
                   onClick={(e) => handleDeletePlace(p._id, e)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-red-400 transition-colors"
                 >
                   <X size={12} />
-                </span>
-              </button>
+                </button>
+              </div>
             ))}
             <button
               onClick={() => setShowAddModal(true)}
@@ -613,7 +617,7 @@ export const TravelView = () => {
           </div>
 
           {/* From */}
-          <div className="relative z-30 mb-4">
+          <div className="relative z-40 mb-4">
             <input
               value={locA}
               onChange={(e) => {
@@ -689,6 +693,8 @@ export const TravelView = () => {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center px-4" style={{ zIndex: 10000 }}>
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 w-full max-w-sm relative">
             <button
+              type="button"
+              aria-label="Close save place dialog"
               onClick={() => {
                 setShowAddModal(false);
                 setNewLabel("");

@@ -193,6 +193,7 @@ html.light-mode body {
   position: absolute;
   inset: -0.3rem;
   z-index: -1;
+  pointer-events: none;
   border-radius: inherit;
   background:
     radial-gradient(circle at 24% 45%, rgba(96, 165, 250, 0.42), transparent 42%),
@@ -576,8 +577,8 @@ html.light-mode textarea::placeholder {
 
 @media (max-width: 480px) {
   .theme-toggle {
-    top: calc(max(1rem, env(safe-area-inset-top)) + 4.25rem);
-    right: 0.85rem;
+    top: max(1rem, env(safe-area-inset-top));
+    right: 4.25rem;
     width: 4rem;
     height: 2.2rem;
   }

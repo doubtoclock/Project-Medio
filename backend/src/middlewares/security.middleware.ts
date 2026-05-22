@@ -29,6 +29,19 @@ const sanitizeValue = (value: unknown): unknown => {
   );
 };
 
+const replaceObjectContents = (
+  target: Record<string, unknown>,
+  source: unknown
+) => {
+  if (!source || typeof source !== "object" || Array.isArray(source)) return;
+
+  for (const key of Object.keys(target)) {
+    delete target[key];
+  }
+
+  Object.assign(target, source);
+};
+
 const getOriginFromReferer = (referer: string | undefined) => {
   if (!referer) return null;
 
@@ -75,8 +88,14 @@ export const requestSanitizer = (
   next: NextFunction
 ) => {
   req.body = sanitizeValue(req.body);
-  req.query = sanitizeValue(req.query) as Request["query"];
-  req.params = sanitizeValue(req.params) as Request["params"];
+  replaceObjectContents(
+    req.query as Record<string, unknown>,
+    sanitizeValue(req.query)
+  );
+  replaceObjectContents(
+    req.params as Record<string, unknown>,
+    sanitizeValue(req.params)
+  );
   next();
 };
 
