@@ -566,6 +566,9 @@ export const TravelView = () => {
                   Select at least one local transport mode.
                 </div>
               )}
+              <div className="mt-2 text-xs text-white/40">
+                Transit routing is available between 6 AM and 11 PM.
+              </div>
             </div>
           )}
         </div>
