@@ -1,4 +1,4 @@
-import { getBackendUrl } from "./backend";
+import { apiFetch } from "./api";
 
 export interface LocationResult {
   name: string;
@@ -54,8 +54,8 @@ export const fetchLocationSuggestions = async (
   if (trimmedQuery.length < 3) return [];
 
   try {
-    const res = await fetch(
-      `${getBackendUrl()}/api/search?q=${encodeURIComponent(trimmedQuery)}`,
+    const res = await apiFetch(
+      `/api/search?q=${encodeURIComponent(trimmedQuery)}`,
       { signal }
     );
     if (!res.ok) return [];

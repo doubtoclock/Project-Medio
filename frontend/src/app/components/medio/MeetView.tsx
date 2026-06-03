@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Clock, MapPin, Route, Star, X } from "lucide-react";
 import { RealMap } from "./Map";
 import { BottomNav } from "./BottomNav";
-import { getBackendUrl } from "../../lib/backend";
+import { apiFetch } from "../../lib/api";
 import {
   fetchLocationSuggestions,
   type LocationResult,
@@ -197,7 +197,7 @@ export const MeetView: React.FC = () => {
     setSelectedRouteIndex(0);
 
     try {
-      const res = await fetch(`${getBackendUrl()}/api/meet`, {
+      const res = await apiFetch("/api/meet", {
         credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -250,7 +250,7 @@ export const MeetView: React.FC = () => {
     setLoadingRouteKey(routeKey);
 
     try {
-      const res = await fetch(`${getBackendUrl()}/api/otp/route`, {
+      const res = await apiFetch("/api/otp/route", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

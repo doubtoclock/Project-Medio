@@ -26,3 +26,6 @@ android
 *.njsproj
 *.sln
 *.sw?
+.vercel
+package-lock.json
+package.json

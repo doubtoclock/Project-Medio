@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { apiFetch, setAuthToken } from "../../../lib/api";
 import { getBackendUrl } from "../../../lib/backend";
 
 export const LoginPage: React.FC = () => {
@@ -7,13 +8,18 @@ export const LoginPage: React.FC = () => {
   const [params] = useSearchParams();
   const isSuccess = params.get("login") === "success";
 
-  const backendURL = getBackendUrl();
+  // Save token from OAuth redirect
+  useEffect(() => {
+    const token = params.get("token");
+    if (token) {
+      setAuthToken(token);
+      navigate("/login", { replace: true });
+    }
+  }, [params, navigate]);
 
   // If user already authenticated → go to /meet
   useEffect(() => {
-    fetch(`${backendURL}/api/auth/me`, {
-      credentials: "include",
-    })
+    apiFetch("/api/auth/me")
       .then((res) => res.json())
       .then((res) => {
         if (res?.authenticated) {
@@ -21,10 +27,10 @@ export const LoginPage: React.FC = () => {
         }
       })
       .catch(() => {});
-  }, [navigate, backendURL]);
+  }, [navigate]);
 
   const handleGoogleLogin = () => {
-    window.location.href = `${backendURL}/api/auth/google`;
+    window.location.href = `${getBackendUrl()}/api/auth/google`;
   };
 
   const handleContinue = () => {

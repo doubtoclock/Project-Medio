@@ -35,8 +35,11 @@ const cookieOptions = (maxAge?: number): CookieOptions => ({
 
 const getFallbackName = (email: string) => email.split("@")[0] || "Medio User";
 
-const getSafeRedirectUrl = (success: boolean) =>
-  `${env.FRONTEND_URL}/login?login=${success ? "success" : "failed"}`;
+const getSafeRedirectUrl = (success: boolean, token?: string) => {
+  const base = `${env.FRONTEND_URL}/login?login=${success ? "success" : "failed"}`;
+  if (token) return `${base}&token=${encodeURIComponent(token)}`;
+  return base;
+};
 
 const upsertGoogleUser = async (payload: {
   email: string;
@@ -263,16 +266,28 @@ export const googleRedirectCallback = async (
       cookieOptions(AUTH_COOKIE_MAX_AGE_MS)
     );
 
-    res.redirect(getSafeRedirectUrl(true));
+    res.redirect(getSafeRedirectUrl(true, appToken));
   } catch (error) {
     logger.error("Google OAuth callback failed", { error });
     res.redirect(getSafeRedirectUrl(false));
   }
 };
 
+const extractToken = (req: Request): string | null => {
+  const fromCookie = req.cookies?.[AUTH_COOKIE_NAME];
+  if (fromCookie) return fromCookie;
+
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.slice(7);
+  }
+
+  return null;
+};
+
 export const checkAuth = async (req: Request, res: Response) => {
   try {
-    const token = req.cookies?.[AUTH_COOKIE_NAME];
+    const token = extractToken(req);
 
     if (!token) {
       return res.status(200).json({

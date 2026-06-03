@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { BottomNav } from "./BottomNav";
 import { Switch } from "../ui/switch";
-import { getBackendUrl } from "../../lib/backend";
+import { apiFetch } from "../../lib/api";
 import {
   fetchLocationSuggestions,
   type LocationResult,
@@ -106,7 +106,7 @@ const getForegroundForRouteColor = (color: string) =>
 
 const fetchSavedPlaces = async (): Promise<SavedPlace[]> => {
   try {
-    const res = await fetch(`${getBackendUrl()}/api/places`, {
+    const res = await apiFetch("/api/places", {
       credentials: "include",
     });
     if (!res.ok) {
@@ -126,7 +126,7 @@ const savePlaceToBackend = async (place: {
   lng?: number;
 }) => {
   try {
-    const res = await fetch(`${getBackendUrl()}/api/places`, {
+    const res = await apiFetch("/api/places", {
       method: "POST",
       credentials: "include",
       headers: {
@@ -146,7 +146,7 @@ const savePlaceToBackend = async (place: {
 
 const deletePlaceFromBackend = async (id: string) => {
   try {
-    const res = await fetch(`${getBackendUrl()}/api/places/${id}`, {
+    const res = await apiFetch(`/api/places/${id}`, {
       method: "DELETE",
       credentials: "include",
     });
@@ -353,7 +353,7 @@ export const TravelView = () => {
     setRouteNotice("");
     setSelectedIndex(0);
     try {
-      const res = await fetch(`${getBackendUrl()}/api/otp/route`, {
+      const res = await apiFetch("/api/otp/route", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

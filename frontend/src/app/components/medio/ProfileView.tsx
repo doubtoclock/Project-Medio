@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BottomNav } from "./BottomNav";
-import { getBackendUrl } from "../../lib/backend";
+import { apiFetch, clearAuthToken } from "../../lib/api";
 
 type SavedPlace = {
   _id: string;
@@ -87,7 +87,6 @@ const getActivityLabel = (action: string) => {
 
 export const ProfileView: React.FC = () => {
   const navigate = useNavigate();
-  const backendURL = getBackendUrl();
 
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,7 +109,7 @@ export const ProfileView: React.FC = () => {
     setError("");
 
     try {
-      const res = await fetch(`${backendURL}/api/auth/profile`, {
+      const res = await apiFetch("/api/auth/profile", {
         credentials: "include",
       });
 
@@ -146,7 +145,7 @@ export const ProfileView: React.FC = () => {
     setSuccessMessage("");
 
     try {
-      const res = await fetch(`${backendURL}/api/auth/profile`, {
+      const res = await apiFetch("/api/auth/profile", {
         method: "PATCH",
         credentials: "include",
         headers: {
@@ -186,7 +185,7 @@ export const ProfileView: React.FC = () => {
 
   const handleDeletePlace = async (placeId: string) => {
     try {
-      const res = await fetch(`${backendURL}/api/places/${placeId}`, {
+      const res = await apiFetch(`/api/places/${placeId}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -203,11 +202,12 @@ export const ProfileView: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${backendURL}/api/auth/logout`, {
+      await apiFetch("/api/auth/logout", {
         method: "POST",
         credentials: "include",
       });
     } finally {
+      clearAuthToken();
       navigate("/login", { replace: true });
     }
   };

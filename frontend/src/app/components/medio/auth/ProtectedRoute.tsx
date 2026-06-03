@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { getBackendUrl } from "../../../lib/backend";
+import { apiFetch } from "../../../lib/api";
 
 export const ProtectedRoute = ({
   children,
@@ -12,11 +12,8 @@ export const ProtectedRoute = ({
 
   useEffect(() => {
     let isMounted = true;
-    const backendURL = getBackendUrl();
 
-    fetch(`${backendURL}/api/auth/me`, {
-      credentials: "include",
-    })
+    apiFetch("/api/auth/me")
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;
