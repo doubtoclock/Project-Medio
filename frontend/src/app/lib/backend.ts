@@ -10,7 +10,7 @@ export const getBackendUrl = () => {
       return `https://${window.location.hostname.replace("-5173", "-5001")}`;
     }
 
-    if (window.Capacitor?.isNativePlatform?.()) {
+    if ((window as any).Capacitor?.isNativePlatform?.()) {
       return "https://medio-api.onrender.com";
     }
   }
