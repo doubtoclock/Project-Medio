@@ -380,10 +380,6 @@ export const MeetView: React.FC = () => {
 
       {/* HEADER */}
       <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-4 backdrop-blur-md bg-background-dark/80 border-b border-slate-800">
-        <div className="flex size-10 items-center justify-center rounded-full bg-slate-800">
-          <span className="material-symbols-outlined">menu</span>
-        </div>
-
         <h1 className="text-lg font-bold">Medio Meet</h1>
 
         <button className="relative flex items-center justify-center rounded-full">

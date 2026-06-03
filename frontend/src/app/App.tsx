@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
 import { Moon, Sun } from "lucide-react";
 import { MeetView } from "./components/medio/MeetView";
 import { TravelView } from "./components/medio/TravelView";
@@ -8,6 +10,7 @@ import { ProfileView } from "./components/medio/ProfileView";
 
 import { LoginPage } from "./components/medio/auth/Login";
 import { ProtectedRoute } from "./components/medio/auth/ProtectedRoute";
+import { setAuthToken } from "./lib/api";
 
 import SplashScreen from "./components/medio/SplashScreen";
 
@@ -73,6 +76,35 @@ export default function App() {
     root.classList.toggle("dark", theme === "dark");
     window.localStorage.setItem("medio-theme", theme);
   }, [theme]);
+
+  // Handle deep link redirect from Capacitor OAuth
+  useEffect(() => {
+    const setup = async () => {
+      await CapacitorApp.addListener("appUrlOpen", async (data) => {
+        const url = data.url;
+        if (!url || !url.startsWith("medio://login")) return;
+
+        const params = new URLSearchParams(url.split("?")[1] || "");
+        const token = params.get("token");
+
+        if (token) {
+          setAuthToken(token);
+          try { await Browser.close(); } catch {}
+        }
+
+        window.location.href = "/login";
+      });
+    };
+
+    setup();
+
+    // Fallback: if browser is left open after OAuth (e.g. error in flow)
+    CapacitorApp.addListener("appStateChange", (state) => {
+      if (state.isActive) {
+        Browser.close();
+      }
+    });
+  }, []);
 
   return (
     <>

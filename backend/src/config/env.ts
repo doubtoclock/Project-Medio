@@ -89,6 +89,9 @@ const allowedOrigins = Array.from(
     ...(frontendUrl ? [frontendUrl] : []),
     ...csv(values.ALLOWED_ORIGINS),
     ...csv(values.CAPACITOR_ORIGINS),
+    "capacitor://localhost",
+    "http://localhost",
+    "https://localhost",
   ])
 );
 

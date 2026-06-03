@@ -1,7 +1,11 @@
 import React, { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { Browser } from "@capacitor/browser";
 import { apiFetch, setAuthToken } from "../../../lib/api";
 import { getBackendUrl } from "../../../lib/backend";
+
+const isCapacitor = typeof (window as any).Capacitor?.isNativePlatform === "function"
+  && (window as any).Capacitor.isNativePlatform();
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -30,7 +34,12 @@ export const LoginPage: React.FC = () => {
   }, [navigate]);
 
   const handleGoogleLogin = () => {
-    window.location.href = `${getBackendUrl()}/api/auth/google`;
+    if (isCapacitor) {
+      const url = `${getBackendUrl()}/api/auth/google?redirect=${encodeURIComponent("medio://login")}`;
+      Browser.open({ url });
+    } else {
+      window.location.href = `${getBackendUrl()}/api/auth/google`;
+    }
   };
 
   const handleContinue = () => {
