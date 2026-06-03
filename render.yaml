@@ -1,0 +1,55 @@
+services:
+  - type: pserv
+    name: medio-otp
+    runtime: docker
+    dockerfilePath: otp-project/Dockerfile
+    dockerContext: otp-project
+    plan: starter
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: JAVA_OPTS
+        value: -Xmx4G
+
+  - type: web
+    name: medio-api
+    runtime: node
+    rootDir: backend
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: CAPACITOR_ORIGINS
+        value: capacitor://localhost,http://localhost,https://localhost
+      - key: OTP_HOSTPORT
+        fromService:
+          name: medio-otp
+          type: pserv
+          property: hostport
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ISSUER
+        value: medio-api
+      - key: JWT_AUDIENCE
+        value: medio-web
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        sync: false
+      - key: BCRYPT_ROUNDS
+        value: 12
+      - key: LOG_LEVEL
+        value: info

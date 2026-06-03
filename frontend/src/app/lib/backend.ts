@@ -5,8 +5,14 @@ export const getBackendUrl = () => {
     return configuredUrl.replace(/\/+$/, "");
   }
 
-  if (typeof window !== "undefined" && window.location.hostname.includes("github.dev")) {
-    return `https://${window.location.hostname.replace("-5173", "-5001")}`;
+  if (typeof window !== "undefined") {
+    if (window.location.hostname.includes("github.dev")) {
+      return `https://${window.location.hostname.replace("-5173", "-5001")}`;
+    }
+
+    if (window.Capacitor?.isNativePlatform?.()) {
+      return "https://medio-api.onrender.com";
+    }
   }
 
   return "http://localhost:5001";
