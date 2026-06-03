@@ -203,7 +203,7 @@ const getRouteFromOTP = async (req, res) => {
             headers: {
                 "Content-Type": "application/json",
             },
-            maxRedirects: 0,
+            maxRedirects: 5,
             timeout: 8000,
         });
         const routeData = filterItinerariesByModes(otpResponse.data, transportModes);

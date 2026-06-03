@@ -260,7 +260,7 @@ export const getRouteFromOTP = async (req: Request, res: Response) => {
         headers: {
           "Content-Type": "application/json",
         },
-        maxRedirects: 0,
+        maxRedirects: 5,
         timeout: 8000,
       }
     );
