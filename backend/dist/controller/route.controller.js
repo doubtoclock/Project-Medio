@@ -1,10 +1,6 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getRouteFromOTP = void 0;
-const axios_1 = __importDefault(require("axios"));
 const env_1 = require("../config/env");
 const history_1 = require("../models/history");
 const current_user_1 = require("../utils/current-user");
@@ -199,14 +195,25 @@ const getRouteFromOTP = async (req, res) => {
                 time: routingDateTime.time,
             },
         };
-        const otpResponse = await axios_1.default.post(env_1.env.OTP_GRAPHQL_URL, graphqlQuery, {
-            headers: {
-                "Content-Type": "application/json",
-            },
-            maxRedirects: 5,
-            timeout: 8000,
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        const response = await fetch(env_1.env.OTP_GRAPHQL_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(graphqlQuery),
+            signal: controller.signal,
         });
-        const routeData = filterItinerariesByModes(otpResponse.data, transportModes);
+        clearTimeout(timeout);
+        if (!response.ok) {
+            logger_1.logger.error("OTP route request failed", {
+                status: response.status,
+                statusText: response.statusText,
+                url: env_1.env.OTP_GRAPHQL_URL,
+            });
+            return res.status(502).json({ message: "Failed to fetch route from OTP" });
+        }
+        const otpData = await response.json();
+        const routeData = filterItinerariesByModes(otpData, transportModes);
         logger_1.logger.info("OTP route calculated", {
             requestedModes: transportModes,
             itineraryCount: routeData?.data?.plan?.itineraries?.length ?? 0,
@@ -238,9 +245,14 @@ const getRouteFromOTP = async (req, res) => {
     }
     catch (error) {
         logger_1.logger.error("OTP route request failed", {
-            error: error.response?.data || error,
+            error: {
+                name: error.name,
+                message: error.message,
+                cause: error.cause,
+                url: env_1.env.OTP_GRAPHQL_URL,
+            },
         });
-        return res.status(500).json({
+        return res.status(502).json({
             message: "Failed to fetch route from OTP",
         });
     }

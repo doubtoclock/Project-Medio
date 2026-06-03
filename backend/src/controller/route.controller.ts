@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import axios from "axios";
 import { env } from "../config/env";
 import { History } from "../models/history";
 import { getOrCreateCurrentUser } from "../utils/current-user";
@@ -253,19 +252,29 @@ export const getRouteFromOTP = async (req: Request, res: Response) => {
       },
     };
 
-    const otpResponse = await axios.post(
-      env.OTP_GRAPHQL_URL,
-      graphqlQuery,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        maxRedirects: 5,
-        timeout: 8000,
-      }
-    );
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
-    const routeData = filterItinerariesByModes(otpResponse.data, transportModes);
+    const response = await fetch(env.OTP_GRAPHQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(graphqlQuery),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      logger.error("OTP route request failed", {
+        status: response.status,
+        statusText: response.statusText,
+        url: env.OTP_GRAPHQL_URL,
+      });
+      return res.status(502).json({ message: "Failed to fetch route from OTP" });
+    }
+
+    const otpData = await response.json();
+    const routeData = filterItinerariesByModes(otpData, transportModes);
     logger.info("OTP route calculated", {
       requestedModes: transportModes,
       itineraryCount: routeData?.data?.plan?.itineraries?.length ?? 0,
@@ -299,10 +308,15 @@ export const getRouteFromOTP = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     logger.error("OTP route request failed", {
-      error: error.response?.data || error,
+      error: {
+        name: error.name,
+        message: error.message,
+        cause: error.cause,
+        url: env.OTP_GRAPHQL_URL,
+      },
     });
 
-    return res.status(500).json({
+    return res.status(502).json({
       message: "Failed to fetch route from OTP",
     });
   }
