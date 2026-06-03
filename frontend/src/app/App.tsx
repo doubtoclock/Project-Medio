@@ -74,8 +74,6 @@ export default function App() {
     window.localStorage.setItem("medio-theme", theme);
   }, [theme]);
 
-  // Handle deep link redirect from Capacitor OAuth (in-app WebView handles the flow natively)
-
   return (
     <>
       <ThemeToggle
