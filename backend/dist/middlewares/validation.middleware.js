@@ -13,7 +13,14 @@ const validate = (target, schema) => (req, res, next) => {
             errors: formatZodError(parsed.error),
         });
     }
-    req[target] = parsed.data;
+    // Some properties on the underlying IncomingMessage (which Express's
+    // Request extends) can be getter-only at runtime, causing a TypeError
+    // when assigning (see: "which has only a getter"). Instead of
+    // overwriting `req` properties, store validated values on `res.locals`.
+    // Downstream handlers can read validated inputs from `res.locals.validated`.
+    if (!res.locals.validated)
+        res.locals.validated = {};
+    res.locals.validated[target] = parsed.data;
     return next();
 };
 const validateBody = (schema) => validate("body", schema);

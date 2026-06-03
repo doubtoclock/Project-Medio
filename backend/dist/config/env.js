@@ -60,16 +60,11 @@ const envSchema = zod_1.z.object({
     GOOGLE_CALLBACK_URL: zod_1.z.string().trim().url(),
     FRONTEND_URL: zod_1.z.string().trim().url().optional(),
     ALLOWED_ORIGINS: zod_1.z.string().optional(),
-    OTP_GRAPHQL_URL: zod_1.z
-        .string()
-        .trim()
-        .url()
-        .default("http://localhost:8080/otp/routers/default/index/graphql"),
-    OTP_ISOCHRONE_URL: zod_1.z
-        .string()
-        .trim()
-        .url()
-        .default("http://localhost:8080/otp/routers/default/isochrone"),
+    CAPACITOR_ORIGINS: zod_1.z.string().optional(),
+    OTP_HOSTPORT: zod_1.z.string().trim().optional(),
+    OTP_BASE_URL: zod_1.z.string().trim().url().optional(),
+    OTP_GRAPHQL_URL: zod_1.z.string().trim().url().optional(),
+    OTP_ISOCHRONE_URL: zod_1.z.string().trim().url().optional(),
     BCRYPT_ROUNDS: zod_1.z.coerce.number().int().min(12).max(15).default(12),
     LOG_LEVEL: zod_1.z.enum(["debug", "info", "warn", "error"]).default("info"),
 });
@@ -81,15 +76,32 @@ if (!parsedEnv.success) {
     throw new Error(`Invalid environment configuration: ${issues}`);
 }
 const values = parsedEnv.data;
-const frontendUrl = values.FRONTEND_URL ?? defaultFrontendUrl;
-const allowedOrigins = Array.from(new Set([frontendUrl, ...csv(values.ALLOWED_ORIGINS)]));
+const frontendUrl = values.FRONTEND_URL ?? (values.NODE_ENV === "production" ? undefined : defaultFrontendUrl);
+const allowedOrigins = Array.from(new Set([
+    ...(frontendUrl ? [frontendUrl] : []),
+    ...csv(values.ALLOWED_ORIGINS),
+    ...csv(values.CAPACITOR_ORIGINS),
+]));
+if (values.NODE_ENV === "production" && !frontendUrl) {
+    throw new Error("FRONTEND_URL is required in production");
+}
 if (values.NODE_ENV === "production" && allowedOrigins.length === 0) {
     throw new Error("At least one allowed frontend origin is required");
 }
+const normalizeUrl = (url) => url.replace(/\/+$/, "");
+const otpBaseUrl = normalizeUrl(values.OTP_BASE_URL ??
+    (values.OTP_HOSTPORT
+        ? `http://${values.OTP_HOSTPORT}`
+        : "http://localhost:8080"));
+const otpGraphqlUrl = values.OTP_GRAPHQL_URL ?? `${otpBaseUrl}/otp/routers/default/index/graphql`;
+const otpIsochroneUrl = values.OTP_ISOCHRONE_URL ?? `${otpBaseUrl}/otp/routers/default/isochrone`;
 exports.env = {
     ...values,
     FRONTEND_URL: frontendUrl,
     ALLOWED_ORIGINS: allowedOrigins,
+    OTP_BASE_URL: otpBaseUrl,
+    OTP_GRAPHQL_URL: otpGraphqlUrl,
+    OTP_ISOCHRONE_URL: otpIsochroneUrl,
     IS_CODESPACE: isCodespace,
     IS_PRODUCTION: values.NODE_ENV === "production",
 };
