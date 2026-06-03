@@ -1,21 +1,19 @@
 services:
-  - type: pserv
+  - type: web
     name: medio-otp
     runtime: docker
     dockerfilePath: otp-project/Dockerfile
     dockerContext: otp-project
-    plan: starter
     envVars:
       - key: PORT
         value: 8080
       - key: JAVA_OPTS
-        value: -Xmx4G
+        value: -Xmx350m
 
   - type: web
     name: medio-api
     runtime: node
     rootDir: backend
-    plan: starter
     buildCommand: npm ci && npm run build
     startCommand: npm start
     healthCheckPath: /
@@ -31,7 +29,7 @@ services:
       - key: OTP_HOSTPORT
         fromService:
           name: medio-otp
-          type: pserv
+          type: web
           property: hostport
       - key: MONGO_URI
         sync: false

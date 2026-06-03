@@ -101,11 +101,10 @@ if (values.NODE_ENV === "production" && allowedOrigins.length === 0) {
 }
 
 const normalizeUrl = (url: string) => url.replace(/\/+$/, "");
+const otpHostport = values.OTP_HOSTPORT ?? "localhost:8080";
+const otpProtocol = otpHostport.includes("localhost") || otpHostport.includes("127.0.0.1") ? "http" : "https";
 const otpBaseUrl = normalizeUrl(
-  values.OTP_BASE_URL ??
-    (values.OTP_HOSTPORT
-      ? `http://${values.OTP_HOSTPORT}`
-      : "http://localhost:8080")
+  values.OTP_BASE_URL ?? `${otpProtocol}://${otpHostport}`
 );
 const otpGraphqlUrl =
   values.OTP_GRAPHQL_URL ?? `${otpBaseUrl}/otp/routers/default/index/graphql`;
