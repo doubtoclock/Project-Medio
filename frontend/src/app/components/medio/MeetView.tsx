@@ -3,13 +3,11 @@ import { Clock, MapPin, Route, Star, X } from "lucide-react";
 import { RealMap } from "./Map";
 import { BottomNav } from "./BottomNav";
 import { getBackendUrl } from "../../lib/backend";
+import {
+  fetchLocationSuggestions,
+  type LocationResult,
+} from "../../lib/locationSearch";
 
-
-interface LocationResult {
-  name: string;
-  lat: number;
-  lng: number;
-}
 
 interface MeetResult {
   id: number;
@@ -58,18 +56,6 @@ const CATEGORY_ORDER = [
 
 const getMeetCategory = (place: MeetResult) => place.category || "Place";
 
-const fetchLocationSuggestions = async (query: string) => {
-  try {
-    const res = await fetch(
-      `${getBackendUrl()}/api/search?q=${encodeURIComponent(query)}`
-    );
-    if (!res.ok) return [];
-    return await res.json();
-  } catch {
-    return [];
-  }
-};
-
 export const MeetView: React.FC = () => {
   const [locA, setLocA] = useState("");
   const [locB, setLocB] = useState("");
@@ -107,20 +93,82 @@ export const MeetView: React.FC = () => {
   }, [locB]);
 
   useEffect(() => {
-    if (debouncedA.length > 2) {
-      fetchLocationSuggestions(debouncedA).then(setSuggestionsA);
-    } else {
+    const query = debouncedA.trim();
+    if (query.length < 3) {
       setSuggestionsA([]);
+      return;
     }
+
+    const controller = new AbortController();
+    let isCurrent = true;
+
+    fetchLocationSuggestions(query, controller.signal)
+      .then((suggestions) => {
+        if (isCurrent) setSuggestionsA(suggestions);
+      })
+      .catch(() => {
+        if (isCurrent && !controller.signal.aborted) {
+          setSuggestionsA([]);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+      controller.abort();
+    };
   }, [debouncedA]);
 
   useEffect(() => {
-    if (debouncedB.length > 2) {
-      fetchLocationSuggestions(debouncedB).then(setSuggestionsB);
+    const query = debouncedB.trim();
+    if (query.length < 3) {
+      setSuggestionsB([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    let isCurrent = true;
+
+    fetchLocationSuggestions(query, controller.signal)
+      .then((suggestions) => {
+        if (isCurrent) setSuggestionsB(suggestions);
+      })
+      .catch(() => {
+        if (isCurrent && !controller.signal.aborted) {
+          setSuggestionsB([]);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+      controller.abort();
+    };
+  }, [debouncedB]);
+
+  const resetMeetState = () => {
+    setMeetResults([]);
+    setSelectedMeet(null);
+    setSelectedCategories([]);
+    setRouteCache({});
+    setLoadingRouteKey(null);
+    setRouteError("");
+    setMeetNotice("");
+    setSelectedRouteIndex(0);
+  };
+
+  const handleLocationInputChange = (value: string, type: "A" | "B") => {
+    if (type === "A") {
+      setLocA(value);
+      setCoordsA(null);
+      setSuggestionsA([]);
     } else {
+      setLocB(value);
+      setCoordsB(null);
       setSuggestionsB([]);
     }
-  }, [debouncedB]);
+
+    setActiveField(type);
+    resetMeetState();
+  };
 
   const handleSelectLocation = (location: LocationResult, type: "A" | "B") => {
     if (type === "A") {
@@ -133,6 +181,7 @@ export const MeetView: React.FC = () => {
       setSuggestionsB([]);
     }
     setActiveField(null);
+    resetMeetState();
   };
 
   const handleFindMeetingPoint = async () => {
@@ -244,6 +293,8 @@ export const MeetView: React.FC = () => {
       setCoordsB(null);
       setSuggestionsB([]);
     }
+    setActiveField(null);
+    resetMeetState();
   };
 
   const categoryCounts = useMemo(() => {
@@ -350,10 +401,7 @@ export const MeetView: React.FC = () => {
             <MapPin size={16} className="text-primary mr-2" />
             <input
               value={locA}
-              onChange={(e) => {
-                setLocA(e.target.value);
-                setActiveField("A");
-              }}
+              onChange={(e) => handleLocationInputChange(e.target.value, "A")}
               placeholder="Location A"
               className="bg-transparent flex-1 outline-none text-sm"
             />
@@ -390,10 +438,7 @@ export const MeetView: React.FC = () => {
             <MapPin size={16} className="text-indigo-400 mr-2" />
             <input
               value={locB}
-              onChange={(e) => {
-                setLocB(e.target.value);
-                setActiveField("B");
-              }}
+              onChange={(e) => handleLocationInputChange(e.target.value, "B")}
               placeholder="Location B"
               className="bg-transparent flex-1 outline-none text-sm"
             />

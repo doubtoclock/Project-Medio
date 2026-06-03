@@ -9,6 +9,7 @@ type MatrixCase = ViewportCase & {
   theme: ThemeMode;
 };
 type ApiMode = "success" | "empty" | "error" | "network";
+type SearchMockMode = "default" | "stale" | "duplicate-names";
 
 type SavedPlace = {
   _id: string;
@@ -52,6 +53,7 @@ type MockOptions = {
   theme?: ThemeMode;
   viewport?: ViewportCase;
   places?: SavedPlace[];
+  searchMode?: SearchMockMode;
   routeMode?: ApiMode;
   meetMode?: ApiMode;
   profileMode?: ApiMode;
@@ -96,6 +98,19 @@ const searchLocations = [
   { name: "Ghatkopar Metro", lat: 19.0863, lng: 72.9081 },
   { name: "Powai Lake", lat: 19.1273, lng: 72.9048 },
 ];
+
+const duplicateKandivaliLocations = [
+  { name: "Kandivali", lat: 19.204, lng: 72.853 },
+  { name: "Kandivali", lat: 19.205, lng: 72.854 },
+  { name: "Kandivali", lat: 19.206, lng: 72.855 },
+  { name: "Kandivali", lat: 19.207, lng: 72.856 },
+  { name: "Kandivali West", lat: 19.2141, lng: 72.8373 },
+];
+
+const staleSearchLocations = {
+  kandivali: [{ name: "Kandivali", lat: 19.204, lng: 72.853 }],
+  powai: [{ name: "Powai Lake", lat: 19.1273, lng: 72.9048 }],
+};
 
 const defaultPlaces: SavedPlace[] = [
   {
@@ -297,6 +312,26 @@ async function fulfillJson(route: Route, body: unknown, status = 200) {
   });
 }
 
+const wait = (ms: number) =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+async function fulfillJsonIfOpen(route: Route, body: unknown, status = 200) {
+  try {
+    await fulfillJson(route, body, status);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (
+      !/Target page, context or browser has been closed|Request was already handled|intercepted request.*(?:failed|canceled|disposed)/i.test(
+        message
+      )
+    ) {
+      throw error;
+    }
+  }
+}
+
 async function installMocks(page: Page, options: MockOptions = {}) {
   const places = clone(options.places ?? defaultPlaces);
   let profile = clone(options.profile ?? defaultProfile());
@@ -349,6 +384,22 @@ async function installMocks(page: Page, options: MockOptions = {}) {
 
       if (url.pathname === "/api/search") {
         const query = url.searchParams.get("q")?.toLowerCase() ?? "";
+
+        if (options.searchMode === "duplicate-names") {
+          await fulfillJson(route, duplicateKandivaliLocations);
+          return;
+        }
+
+        if (options.searchMode === "stale") {
+          const isKandivali = query.includes("kandivali");
+          await wait(isKandivali ? 800 : 20);
+          await fulfillJsonIfOpen(
+            route,
+            isKandivali ? staleSearchLocations.kandivali : staleSearchLocations.powai
+          );
+          return;
+        }
+
         const results = searchLocations.filter((location) =>
           location.name.toLowerCase().includes(query[0] ?? "")
         );
@@ -715,6 +766,46 @@ for (let index = 0; index < 12; index += 1) {
   });
 }
 
+add("travel search keeps only the latest locality results after replacement", async (page) => {
+  await openApp(page, "/travel", {
+    authenticated: true,
+    viewport: viewports[0],
+    theme: "dark",
+    searchMode: "stale",
+  });
+
+  const field = page.getByPlaceholder("From...");
+  const firstRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url());
+    return (
+      url.origin === backendOrigin &&
+      url.pathname === "/api/search" &&
+      url.searchParams.get("q") === "kandivali"
+    );
+  });
+
+  await field.fill("kandivali");
+  await firstRequest;
+  await field.fill("");
+  await field.fill("powai");
+  await expect(page.getByRole("button", { name: "Powai Lake", exact: true })).toBeVisible();
+  await wait(900);
+  await expect(page.getByRole("button", { name: "Kandivali", exact: true })).toHaveCount(0);
+});
+
+add("travel search deduplicates same-named locality suggestions", async (page) => {
+  await openApp(page, "/travel", {
+    authenticated: true,
+    viewport: viewports[2],
+    theme: "light",
+    searchMode: "duplicate-names",
+  });
+
+  await page.getByPlaceholder("To...").fill("kandivali");
+  await expect(page.getByRole("button", { name: "Kandivali", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Kandivali West", exact: true })).toBeVisible();
+});
+
 for (let index = 0; index < 6; index += 1) {
   const variant = variantFor(index);
   add(`travel route option selector changes active option on ${variant.name} ${variant.theme}`, async (page) => {
@@ -786,6 +877,46 @@ for (let index = 0; index < 12; index += 1) {
     await expect(page.getByPlaceholder(field)).toHaveValue("Andheri Station");
   });
 }
+
+add("meet search keeps only the latest locality results after replacement", async (page) => {
+  await openApp(page, "/meet", {
+    authenticated: true,
+    viewport: viewports[1],
+    theme: "dark",
+    searchMode: "stale",
+  });
+
+  const field = page.getByPlaceholder("Location A");
+  const firstRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url());
+    return (
+      url.origin === backendOrigin &&
+      url.pathname === "/api/search" &&
+      url.searchParams.get("q") === "kandivali"
+    );
+  });
+
+  await field.fill("kandivali");
+  await firstRequest;
+  await field.fill("");
+  await field.fill("powai");
+  await expect(page.getByRole("button", { name: "Powai Lake", exact: true })).toBeVisible();
+  await wait(900);
+  await expect(page.getByRole("button", { name: "Kandivali", exact: true })).toHaveCount(0);
+});
+
+add("meet search deduplicates same-named locality suggestions", async (page) => {
+  await openApp(page, "/meet", {
+    authenticated: true,
+    viewport: viewports[2],
+    theme: "light",
+    searchMode: "duplicate-names",
+  });
+
+  await page.getByPlaceholder("Location B").fill("kandivali");
+  await expect(page.getByRole("button", { name: "Kandivali", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Kandivali West", exact: true })).toBeVisible();
+});
 
 for (let index = 0; index < 12; index += 1) {
   const variant = variantFor(index);
@@ -1050,8 +1181,8 @@ for (let index = 0; index < 4; index += 1) {
   });
 }
 
-if (cases.length !== 600) {
-  throw new Error(`Expected to register 600 Playwright cases, got ${cases.length}`);
+if (cases.length !== 604) {
+  throw new Error(`Expected to register 604 Playwright cases, got ${cases.length}`);
 }
 
 test.describe.configure({ mode: "parallel" });

@@ -23,6 +23,8 @@ const PHOTON_TIMEOUT_MS = 1800;
 const SEARCH_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const SEARCH_CACHE_LIMIT = 160;
 const MIN_SIMILAR_QUERY_LENGTH = 5;
+const MAX_SEARCH_RESULTS = 5;
+const PHOTON_RESULT_LIMIT = 12;
 
 const searchCache = new Map<string, SearchCacheEntry>();
 const pendingSearches = new Map<string, Promise<LocationSuggestion[]>>();
@@ -55,6 +57,45 @@ const getQueryTokens = (query: string) =>
 
 const getSearchCacheKey = (query: string) =>
   getQueryTokens(query).sort().join(" ");
+
+const normalizeSuggestionName = (name: string) =>
+  name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const dedupeLocationSuggestions = (suggestions: LocationSuggestion[]) => {
+  const seen = new Set<string>();
+  const unique: LocationSuggestion[] = [];
+
+  for (const suggestion of suggestions) {
+    const name = suggestion.name.trim();
+    const key = normalizeSuggestionName(name);
+
+    if (
+      !key ||
+      seen.has(key) ||
+      !Number.isFinite(suggestion.lat) ||
+      !Number.isFinite(suggestion.lng)
+    ) {
+      continue;
+    }
+
+    seen.add(key);
+    unique.push({
+      name,
+      lat: suggestion.lat,
+      lng: suggestion.lng
+    });
+
+    if (unique.length >= MAX_SEARCH_RESULTS) break;
+  }
+
+  return unique;
+};
 
 const getBigrams = (value: string) => {
   const compact = value.replace(/\s+/g, "");
@@ -158,8 +199,10 @@ const getCachedSearch = (key: string) => {
 };
 
 const setCachedSearch = (key: string, results: LocationSuggestion[]) => {
+  const normalizedResults = dedupeLocationSuggestions(results);
+
   searchCache.set(key, {
-    results,
+    results: normalizedResults,
     expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
     lastUsed: Date.now(),
     hits: 0
@@ -175,7 +218,7 @@ const fetchPhotonSuggestions = async (
 
   try {
     const response = await fetch(
-      `https://photon.komoot.io/api?q=${encodeURIComponent(query)}&limit=5&lat=19.076&lon=72.8777`,
+      `https://photon.komoot.io/api?q=${encodeURIComponent(query)}&limit=${PHOTON_RESULT_LIMIT}&lat=19.076&lon=72.8777`,
       {
         headers: {
           "User-Agent": "Medio/1.0 (location-search)"
@@ -193,7 +236,7 @@ const fetchPhotonSuggestions = async (
       }[];
     };
 
-    return (data.features ?? [])
+    const suggestions = (data.features ?? [])
       .map((item) => ({
         name:
           item.properties.name ||
@@ -209,6 +252,8 @@ const fetchPhotonSuggestions = async (
           Number.isFinite(item.lat) &&
           Number.isFinite(item.lng)
       );
+
+    return dedupeLocationSuggestions(suggestions);
   } finally {
     clearTimeout(timeout);
   }

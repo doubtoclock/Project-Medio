@@ -13,14 +13,12 @@ import {
 import { BottomNav } from "./BottomNav";
 import { Switch } from "../ui/switch";
 import { getBackendUrl } from "../../lib/backend";
+import {
+  fetchLocationSuggestions,
+  type LocationResult,
+} from "../../lib/locationSearch";
 import { getTransportColor } from "./transportColors";
 import type { OtpItinerary, OtpLeg, OtpRouteResponse } from "./otpTypes";
-
-interface LocationResult {
-  name: string;
-  lat: number;
-  lng: number;
-}
 
 interface SavedPlace {
   _id: string;
@@ -105,18 +103,6 @@ const modeIcons: Record<string, React.ComponentType<{ size?: number; className?:
 const getForegroundForRouteColor = (color: string) =>
   color.toLowerCase() === "#facc15" ? "#0f172a" : "#ffffff";
 
-
-const fetchLocationSuggestions = async (query: string) => {
-  try {
-    const res = await fetch(
-      `${getBackendUrl()}/api/search?q=${encodeURIComponent(query)}`
-    );
-    if (!res.ok) return [];
-    return await res.json();
-  } catch {
-    return [];
-  }
-};
 
 const fetchSavedPlaces = async (): Promise<SavedPlace[]> => {
   try {
@@ -219,11 +205,29 @@ export const TravelView = () => {
   }, [newAddress]);
 
   useEffect(() => {
-    if (debouncedNewAddr.length > 2) {
-      fetchLocationSuggestions(debouncedNewAddr).then(setNewAddrSuggestions);
-    } else {
+    const query = debouncedNewAddr.trim();
+    if (query.length < 3) {
       setNewAddrSuggestions([]);
+      return;
     }
+
+    const controller = new AbortController();
+    let isCurrent = true;
+
+    fetchLocationSuggestions(query, controller.signal)
+      .then((suggestions) => {
+        if (isCurrent) setNewAddrSuggestions(suggestions);
+      })
+      .catch(() => {
+        if (isCurrent && !controller.signal.aborted) {
+          setNewAddrSuggestions([]);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+      controller.abort();
+    };
   }, [debouncedNewAddr]);
 
   /* -------------------- Debounce -------------------- */
@@ -241,19 +245,55 @@ export const TravelView = () => {
   /* -------------------- Fetch -------------------- */
 
   useEffect(() => {
-    if (debouncedA.length > 2) {
-      fetchLocationSuggestions(debouncedA).then(setSuggestionsA);
-    } else {
+    const query = debouncedA.trim();
+    if (query.length < 3) {
       setSuggestionsA([]);
+      return;
     }
+
+    const controller = new AbortController();
+    let isCurrent = true;
+
+    fetchLocationSuggestions(query, controller.signal)
+      .then((suggestions) => {
+        if (isCurrent) setSuggestionsA(suggestions);
+      })
+      .catch(() => {
+        if (isCurrent && !controller.signal.aborted) {
+          setSuggestionsA([]);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+      controller.abort();
+    };
   }, [debouncedA]);
 
   useEffect(() => {
-    if (debouncedB.length > 2) {
-      fetchLocationSuggestions(debouncedB).then(setSuggestionsB);
-    } else {
+    const query = debouncedB.trim();
+    if (query.length < 3) {
       setSuggestionsB([]);
+      return;
     }
+
+    const controller = new AbortController();
+    let isCurrent = true;
+
+    fetchLocationSuggestions(query, controller.signal)
+      .then((suggestions) => {
+        if (isCurrent) setSuggestionsB(suggestions);
+      })
+      .catch(() => {
+        if (isCurrent && !controller.signal.aborted) {
+          setSuggestionsB([]);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+      controller.abort();
+    };
   }, [debouncedB]);
 
   const hasLocalTransportMode = Object.values(localTransport).some(Boolean);
@@ -283,6 +323,28 @@ export const TravelView = () => {
     setRouteData(null);
     setSelectedIndex(0);
     setIsSearchCollapsed(false);
+  };
+
+  const resetRouteState = () => {
+    setRouteData(null);
+    setRouteNotice("");
+    setSelectedIndex(0);
+    setIsSearchCollapsed(false);
+  };
+
+  const handleLocationInputChange = (value: string, type: "A" | "B") => {
+    if (type === "A") {
+      setLocA(value);
+      setCoordsA(null);
+      setSuggestionsA([]);
+    } else {
+      setLocB(value);
+      setCoordsB(null);
+      setSuggestionsB([]);
+    }
+
+    setActiveField(type);
+    resetRouteState();
   };
 
   const handleRoute = async () => {
@@ -335,10 +397,7 @@ export const TravelView = () => {
       setSuggestionsB([]);
     }
     setActiveField(null);
-    setRouteData(null);
-    setRouteNotice("");
-    setSelectedIndex(0);
-    setIsSearchCollapsed(false);
+    resetRouteState();
   };
 
   const handleSavedPlaceClick = (place: SavedPlace) => {
@@ -620,10 +679,7 @@ export const TravelView = () => {
           <div className="relative z-40 mb-4">
             <input
               value={locA}
-              onChange={(e) => {
-                setLocA(e.target.value);
-                setActiveField("A");
-              }}
+              onChange={(e) => handleLocationInputChange(e.target.value, "A")}
               placeholder="From..."
               className="w-full bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
             />
@@ -646,10 +702,7 @@ export const TravelView = () => {
           <div className="relative z-30 mb-6">
             <input
               value={locB}
-              onChange={(e) => {
-                setLocB(e.target.value);
-                setActiveField("B");
-              }}
+              onChange={(e) => handleLocationInputChange(e.target.value, "B")}
               placeholder="To..."
               className="w-full bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
             />
@@ -719,6 +772,7 @@ export const TravelView = () => {
                 onChange={(e) => {
                   setNewAddress(e.target.value);
                   setNewCoords(null);
+                  setNewAddrSuggestions([]);
                 }}
                 placeholder="Search address..."
                 className="w-full bg-slate-800 border border-zinc-700 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
