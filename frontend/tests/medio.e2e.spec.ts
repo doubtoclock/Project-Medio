@@ -48,6 +48,15 @@ type ProfilePayload = {
   recentActivity: ActivityItem[];
 };
 
+type RouteRequestPayload = {
+  travelMode?: string;
+  localTransport?: {
+    bus?: boolean;
+    rail?: boolean;
+    subway?: boolean;
+  };
+};
+
 type MockOptions = {
   authenticated?: boolean;
   theme?: ThemeMode;
@@ -337,6 +346,7 @@ async function installMocks(page: Page, options: MockOptions = {}) {
   let profile = clone(options.profile ?? defaultProfile());
   let authenticated = options.authenticated ?? true;
   const calls: string[] = [];
+  const routePayloads: RouteRequestPayload[] = [];
 
   await page.setViewportSize(options.viewport?.size ?? viewports[0].size);
   await page.addInitScript((theme) => {
@@ -440,6 +450,7 @@ async function installMocks(page: Page, options: MockOptions = {}) {
       }
 
       if (url.pathname === "/api/otp/route" && method === "POST") {
+        routePayloads.push(request.postDataJSON() as RouteRequestPayload);
         if (options.routeMode === "network") {
           await route.abort("failed");
           return;
@@ -517,12 +528,13 @@ async function installMocks(page: Page, options: MockOptions = {}) {
     await route.continue();
   });
 
-  return { calls };
+  return { calls, routePayloads };
 }
 
 async function openApp(page: Page, path: string, options: MockOptions = {}) {
-  await installMocks(page, options);
+  const mocks = await installMocks(page, options);
   await page.goto(path);
+  return mocks;
 }
 
 async function chooseTravelLocations(page: Page) {
@@ -815,6 +827,24 @@ for (let index = 0; index < 6; index += 1) {
     await expect(page.getByRole("button", { name: /Option 2/ })).toHaveClass(/bg-primary/);
   });
 }
+
+add("travel method can be changed after route results are shown", async (page) => {
+  const mocks = await openApp(page, "/travel", {
+    authenticated: true,
+    viewport: viewports[2],
+    theme: "dark",
+  });
+
+  await findTravelRoute(page);
+  await page.getByRole("button", { name: "Edit Route" }).click();
+  await expect(page.getByText("Swipe down to collapse")).toHaveCount(0);
+  await page.getByRole("button", { name: "Bike" }).click();
+  await page.getByRole("button", { name: "Find Route" }).click();
+
+  expect(mocks.routePayloads).toHaveLength(2);
+  expect(mocks.routePayloads[0].travelMode).toBe("local");
+  expect(mocks.routePayloads[1].travelMode).toBe("bike");
+});
 
 for (let index = 0; index < 6; index += 1) {
   const variant = variantFor(index);
@@ -1181,8 +1211,8 @@ for (let index = 0; index < 4; index += 1) {
   });
 }
 
-if (cases.length !== 604) {
-  throw new Error(`Expected to register 604 Playwright cases, got ${cases.length}`);
+if (cases.length !== 605) {
+  throw new Error(`Expected to register 605 Playwright cases, got ${cases.length}`);
 }
 
 test.describe.configure({ mode: "parallel" });

@@ -443,7 +443,7 @@ export const TravelView = () => {
   };
 
   const itineraries: OtpItinerary[] = routeData?.data?.plan?.itineraries || [];
-  const itinerary = itineraries[selectedIndex];
+  const itinerary = isSearchCollapsed ? itineraries[selectedIndex] : undefined;
   const routingNote = routeData?.routing?.adjustedToNextMetroService
     ? `Showing next metro service at ${routeData.routing.time}`
     : "";
@@ -732,7 +732,7 @@ export const TravelView = () => {
                 ...(coordsA ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA }] : []),
                 ...(coordsB ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB }] : []),
               ]}
-              routeData={routeData}
+              routeData={isSearchCollapsed ? routeData : null}
               selectedIndex={selectedIndex}
             />
 
