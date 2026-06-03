@@ -50,7 +50,7 @@ export const LoginPage: React.FC = () => {
       try {
         const res = await SocialLogin.login({
           provider: "google",
-          options: { scopes: ["email", "profile"] },
+          options: {},
         });
         if (res.provider !== "google") return;
         const { idToken } = res.result as { idToken: string | null };
