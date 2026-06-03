@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logout = exports.updateProfile = exports.getProfile = exports.checkAuth = exports.googleRedirectCallback = exports.googleRedirectLogin = exports.login = exports.register = void 0;
+exports.logout = exports.updateProfile = exports.getProfile = exports.checkAuth = exports.googleNativeSignIn = exports.googleRedirectCallback = exports.googleRedirectLogin = exports.login = exports.register = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 const google_auth_library_1 = require("google-auth-library");
 const env_1 = require("../config/env");
@@ -17,6 +17,7 @@ const jwt_1 = require("../utils/jwt");
 const auth_validator_1 = require("../validators/auth.validator");
 const AUTH_COOKIE_NAME = "token";
 const OAUTH_STATE_COOKIE_NAME = "oauth_state";
+const OAUTH_REDIRECT_COOKIE_NAME = "oauth_redirect";
 const AUTH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000;
 const googleClient = new google_auth_library_1.OAuth2Client(env_1.env.GOOGLE_CLIENT_ID, env_1.env.GOOGLE_CLIENT_SECRET);
@@ -28,8 +29,8 @@ const cookieOptions = (maxAge) => ({
     ...(maxAge ? { maxAge } : {}),
 });
 const getFallbackName = (email) => email.split("@")[0] || "Medio User";
-const getSafeRedirectUrl = (success, token) => {
-    const base = `${env_1.env.FRONTEND_URL}/login?login=${success ? "success" : "failed"}`;
+const getSafeRedirectUrl = (success, token, customBase) => {
+    const base = customBase || `${env_1.env.FRONTEND_URL}/login?login=${success ? "success" : "failed"}`;
     if (token)
         return `${base}&token=${encodeURIComponent(token)}`;
     return base;
@@ -148,10 +149,14 @@ const login = async (req, res) => {
     }
 };
 exports.login = login;
-const googleRedirectLogin = (_req, res) => {
+const googleRedirectLogin = (req, res) => {
     try {
         const state = crypto_1.default.randomBytes(32).toString("base64url");
+        const redirect = typeof req.query.redirect === "string" ? req.query.redirect : "";
         res.cookie(OAUTH_STATE_COOKIE_NAME, state, cookieOptions(OAUTH_STATE_MAX_AGE_MS));
+        if (redirect) {
+            res.cookie(OAUTH_REDIRECT_COOKIE_NAME, redirect, cookieOptions(OAUTH_STATE_MAX_AGE_MS));
+        }
         const url = googleClient.generateAuthUrl({
             access_type: "online",
             scope: ["profile", "email"],
@@ -168,6 +173,9 @@ const googleRedirectLogin = (_req, res) => {
 };
 exports.googleRedirectLogin = googleRedirectLogin;
 const googleRedirectCallback = async (req, res) => {
+    const customRedirect = typeof req.cookies?.[OAUTH_REDIRECT_COOKIE_NAME] === "string"
+        ? req.cookies[OAUTH_REDIRECT_COOKIE_NAME]
+        : "";
     try {
         const code = typeof req.query.code === "string" ? req.query.code : "";
         const state = typeof req.query.state === "string" ? req.query.state : "";
@@ -175,15 +183,16 @@ const googleRedirectCallback = async (req, res) => {
             ? req.cookies[OAUTH_STATE_COOKIE_NAME]
             : "";
         res.clearCookie(OAUTH_STATE_COOKIE_NAME, cookieOptions());
+        res.clearCookie(OAUTH_REDIRECT_COOKIE_NAME, cookieOptions());
         if (!code || !state || !expectedState || state !== expectedState) {
-            return res.redirect(getSafeRedirectUrl(false));
+            return res.redirect(getSafeRedirectUrl(false, undefined, customRedirect || undefined));
         }
         const { tokens } = await googleClient.getToken({
             code,
             redirect_uri: env_1.env.GOOGLE_CALLBACK_URL,
         });
         if (!tokens.id_token) {
-            return res.redirect(getSafeRedirectUrl(false));
+            return res.redirect(getSafeRedirectUrl(false, undefined, customRedirect || undefined));
         }
         const ticket = await googleClient.verifyIdToken({
             idToken: tokens.id_token,
@@ -191,7 +200,7 @@ const googleRedirectCallback = async (req, res) => {
         });
         const payload = ticket.getPayload();
         if (!payload?.email) {
-            return res.redirect(getSafeRedirectUrl(false));
+            return res.redirect(getSafeRedirectUrl(false, undefined, customRedirect || undefined));
         }
         const user = await upsertGoogleUser({
             email: payload.email,
@@ -206,11 +215,11 @@ const googleRedirectCallback = async (req, res) => {
             picture: user.avatarUrl,
         });
         res.cookie(AUTH_COOKIE_NAME, appToken, cookieOptions(AUTH_COOKIE_MAX_AGE_MS));
-        res.redirect(getSafeRedirectUrl(true, appToken));
+        res.redirect(getSafeRedirectUrl(true, appToken, customRedirect || undefined));
     }
     catch (error) {
         logger_1.logger.error("Google OAuth callback failed", { error });
-        res.redirect(getSafeRedirectUrl(false));
+        res.redirect(getSafeRedirectUrl(false, undefined, customRedirect || undefined));
     }
 };
 exports.googleRedirectCallback = googleRedirectCallback;
@@ -224,6 +233,49 @@ const extractToken = (req) => {
     }
     return null;
 };
+const googleNativeSignIn = async (req, res) => {
+    try {
+        const { idToken } = req.body;
+        if (!idToken || typeof idToken !== "string") {
+            return res.status(400).json({ message: "Missing idToken" });
+        }
+        const ticket = await googleClient.verifyIdToken({
+            idToken,
+            audience: env_1.env.GOOGLE_CLIENT_ID,
+        });
+        const payload = ticket.getPayload();
+        if (!payload?.email) {
+            return res.status(400).json({ message: "Invalid token" });
+        }
+        const user = await upsertGoogleUser({
+            email: payload.email,
+            name: payload.name,
+            picture: payload.picture,
+        });
+        const appToken = (0, jwt_1.signToken)({
+            userId: user._id.toString(),
+            email: user.email,
+            role: user.role,
+            name: user.name,
+            picture: user.avatarUrl,
+        });
+        return res.status(200).json({
+            token: appToken,
+            user: {
+                id: user._id,
+                email: user.email,
+                name: user.name,
+                avatarUrl: user.avatarUrl,
+                role: user.role,
+            },
+        });
+    }
+    catch (error) {
+        logger_1.logger.error("Google native sign-in failed", { error });
+        return res.status(401).json({ message: "Google sign-in failed" });
+    }
+};
+exports.googleNativeSignIn = googleNativeSignIn;
 const checkAuth = async (req, res) => {
     try {
         const token = extractToken(req);
@@ -338,6 +390,7 @@ exports.updateProfile = updateProfile;
 const logout = (_req, res) => {
     res.clearCookie(AUTH_COOKIE_NAME, cookieOptions());
     res.clearCookie(OAUTH_STATE_COOKIE_NAME, cookieOptions());
+    res.clearCookie(OAUTH_REDIRECT_COOKIE_NAME, cookieOptions());
     return res.status(200).json({
         message: "Logged out successfully",
     });

@@ -8,13 +8,11 @@ const config: CapacitorConfig = {
     hostname: "localhost",
     androidScheme: "https",
     iosScheme: "capacitor",
-    allowNavigation: [
-      "medio-api.onrender.com",
-      "medio-otp.onrender.com",
-      "accounts.google.com",
-      "google.com",
-      "*.vercel.app",
-    ],
+  },
+  plugins: {
+    SocialLogin: {
+      google: true,
+    },
   },
 };
 

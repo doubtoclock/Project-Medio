@@ -2,6 +2,7 @@ import { Request, Response, Router } from "express";
 import {
   checkAuth,
   getProfile,
+  googleNativeSignIn,
   googleRedirectCallback,
   googleRedirectLogin,
   login,
@@ -25,6 +26,7 @@ router.post("/login", authRateLimiter, validateBody(loginSchema), login);
 
 router.get("/google", authRateLimiter, googleRedirectLogin);
 router.get("/google/callback", authRateLimiter, googleRedirectCallback);
+router.post("/google/native", googleNativeSignIn);
 
 router.get("/me", checkAuth);
 router.get("/profile", authMiddleware, getProfile);

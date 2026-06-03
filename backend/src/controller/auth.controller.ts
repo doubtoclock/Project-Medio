@@ -222,16 +222,17 @@ export const googleRedirectCallback = async (
   req: Request,
   res: Response
 ) => {
+  const customRedirect =
+    typeof req.cookies?.[OAUTH_REDIRECT_COOKIE_NAME] === "string"
+      ? req.cookies[OAUTH_REDIRECT_COOKIE_NAME]
+      : "";
+
   try {
     const code = typeof req.query.code === "string" ? req.query.code : "";
     const state = typeof req.query.state === "string" ? req.query.state : "";
     const expectedState =
       typeof req.cookies?.[OAUTH_STATE_COOKIE_NAME] === "string"
         ? req.cookies[OAUTH_STATE_COOKIE_NAME]
-        : "";
-    const customRedirect =
-      typeof req.cookies?.[OAUTH_REDIRECT_COOKIE_NAME] === "string"
-        ? req.cookies[OAUTH_REDIRECT_COOKIE_NAME]
         : "";
 
     res.clearCookie(OAUTH_STATE_COOKIE_NAME, cookieOptions());
@@ -298,6 +299,55 @@ const extractToken = (req: Request): string | null => {
   }
 
   return null;
+};
+
+export const googleNativeSignIn = async (req: Request, res: Response) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken || typeof idToken !== "string") {
+      return res.status(400).json({ message: "Missing idToken" });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload?.email) {
+      return res.status(400).json({ message: "Invalid token" });
+    }
+
+    const user = await upsertGoogleUser({
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture,
+    });
+
+    const appToken = signToken({
+      userId: user._id.toString(),
+      email: user.email,
+      role: user.role,
+      name: user.name,
+      picture: user.avatarUrl,
+    });
+
+    return res.status(200).json({
+      token: appToken,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    logger.error("Google native sign-in failed", { error });
+    return res.status(401).json({ message: "Google sign-in failed" });
+  }
 };
 
 export const checkAuth = async (req: Request, res: Response) => {

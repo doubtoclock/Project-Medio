@@ -81,6 +81,9 @@ const allowedOrigins = Array.from(new Set([
     ...(frontendUrl ? [frontendUrl] : []),
     ...csv(values.ALLOWED_ORIGINS),
     ...csv(values.CAPACITOR_ORIGINS),
+    "capacitor://localhost",
+    "http://localhost",
+    "https://localhost",
 ]));
 if (values.NODE_ENV === "production" && !frontendUrl) {
     throw new Error("FRONTEND_URL is required in production");

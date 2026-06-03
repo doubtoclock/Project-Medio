@@ -1,14 +1,19 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { SocialLogin } from "@capgo/capacitor-social-login";
 import { apiFetch, setAuthToken } from "../../../lib/api";
 import { getBackendUrl } from "../../../lib/backend";
+
+const isCapacitor = typeof (window as any).Capacitor?.isNativePlatform === "function"
+  && (window as any).Capacitor.isNativePlatform();
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const isSuccess = params.get("login") === "success";
+  const initRef = useRef(false);
 
-  // Save token from OAuth redirect
+  // Save token from OAuth redirect (web flow)
   useEffect(() => {
     const token = params.get("token");
     if (token) {
@@ -16,6 +21,17 @@ export const LoginPage: React.FC = () => {
       navigate("/login", { replace: true });
     }
   }, [params, navigate]);
+
+  // Initialize native Google auth once on mount
+  useEffect(() => {
+    if (!isCapacitor || initRef.current) return;
+    initRef.current = true;
+    SocialLogin.initialize({
+      google: {
+        webClientId: "943070343124-rnkq374mo63g67qoet5e14d6jf6e8cjv.apps.googleusercontent.com",
+      },
+    }).catch(() => {});
+  }, []);
 
   // If user already authenticated → go to /meet
   useEffect(() => {
@@ -29,8 +45,35 @@ export const LoginPage: React.FC = () => {
       .catch(() => {});
   }, [navigate]);
 
-  const handleGoogleLogin = () => {
-    window.location.href = `${getBackendUrl()}/api/auth/google`;
+  const handleGoogleLogin = async () => {
+    if (isCapacitor) {
+      try {
+        const res = await SocialLogin.login({
+          provider: "google",
+          options: { scopes: ["email", "profile"] },
+        });
+        if (res.provider !== "google") return;
+        const { idToken } = res.result as { idToken: string | null };
+        if (!idToken) return;
+
+        const apiRes = await fetch(`${getBackendUrl()}/api/auth/google/native`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken }),
+        });
+        const data = await apiRes.json();
+        if (data.token) {
+          setAuthToken(data.token);
+          navigate("/meet", { replace: true });
+        }
+      } catch (e: any) {
+        if (e?.code !== "USER_CANCELLED") {
+          console.error("Google sign-in failed", e);
+        }
+      }
+    } else {
+      window.location.href = `${getBackendUrl()}/api/auth/google`;
+    }
   };
 
   const handleContinue = () => {
