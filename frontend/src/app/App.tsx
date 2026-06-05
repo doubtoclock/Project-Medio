@@ -5,6 +5,7 @@ import { MeetView } from "./components/medio/MeetView";
 import { TravelView } from "./components/medio/TravelView";
 import { UserGuideView } from "./components/medio/UserGuideView";
 import { ProfileView } from "./components/medio/ProfileView";
+import { NotificationBell } from "./components/medio/NotificationBell";
 
 import { LoginPage } from "./components/medio/auth/Login";
 import { ProtectedRoute } from "./components/medio/auth/ProtectedRoute";
@@ -57,6 +58,7 @@ const ThemeToggle = ({
 const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="min-h-screen w-full">
+      <NotificationBell />
       {children}
     </div>
   );
@@ -96,7 +98,9 @@ export default function App() {
           path="/meet"
           element={
             <ProtectedRoute>
-              <MeetView />
+              <ProtectedLayout>
+                <MeetView />
+              </ProtectedLayout>
             </ProtectedRoute>
           }
         />

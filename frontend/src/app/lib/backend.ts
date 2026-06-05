@@ -1,3 +1,9 @@
+type CapacitorWindow = Window & {
+  Capacitor?: {
+    isNativePlatform?: () => boolean;
+  };
+};
+
 export const getBackendUrl = () => {
   const configuredUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -10,7 +16,7 @@ export const getBackendUrl = () => {
       return `https://${window.location.hostname.replace("-5173", "-5001")}`;
     }
 
-    if ((window as any).Capacitor?.isNativePlatform?.()) {
+    if ((window as CapacitorWindow).Capacitor?.isNativePlatform?.()) {
       return "https://medio-api.onrender.com";
     }
   }

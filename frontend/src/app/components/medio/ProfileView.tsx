@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BottomNav } from "./BottomNav";
 import { apiFetch, clearAuthToken } from "../../lib/api";
@@ -98,13 +98,13 @@ export const ProfileView: React.FC = () => {
   const [editedName, setEditedName] = useState("");
   const [editedAvatarUrl, setEditedAvatarUrl] = useState("");
 
-  const syncProfileState = (payload: ProfilePayload) => {
+  const syncProfileState = useCallback((payload: ProfilePayload) => {
     setProfile(payload);
     setEditedName(payload.user.name);
     setEditedAvatarUrl(payload.user.avatarUrl || "");
-  };
+  }, []);
 
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     setLoading(true);
     setError("");
 
@@ -124,11 +124,11 @@ export const ProfileView: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [syncProfileState]);
 
   useEffect(() => {
     void loadProfile();
-  }, []);
+  }, [loadProfile]);
 
   const hasUnsavedProfileChanges = useMemo(() => {
     if (!profile) return false;
@@ -236,8 +236,8 @@ export const ProfileView: React.FC = () => {
   return (
     <div className="medio-page min-h-screen bg-background-light font-display text-slate-900 dark:bg-background-dark dark:text-slate-100">
       <div className="medio-page-shell flex min-h-screen w-full flex-col pb-28">
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-background-light/90 px-4 py-4 backdrop-blur-md dark:border-slate-800 dark:bg-background-dark/90">
-          <div className="flex items-center justify-between">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-background-light/90 px-4 py-4 pr-36 backdrop-blur-md dark:border-slate-800 dark:bg-background-dark/90">
+          <div className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-3">
             <button
               onClick={() => navigate(-1)}
               className="flex size-10 items-center justify-center rounded-full bg-slate-200 text-slate-700 transition hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
@@ -245,15 +245,7 @@ export const ProfileView: React.FC = () => {
               <span className="material-symbols-outlined">arrow_back</span>
             </button>
 
-            <h1 className="text-lg font-bold">Profile</h1>
-
-            <button
-              onClick={handleSaveProfile}
-              disabled={!hasUnsavedProfileChanges || saving}
-              className="rounded-full bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white transition disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {saving ? "Saving" : "Save"}
-            </button>
+            <h1 className="min-w-0 truncate text-lg font-bold">Profile</h1>
           </div>
         </header>
 
@@ -343,6 +335,14 @@ export const ProfileView: React.FC = () => {
                   placeholder="https://..."
                 />
               </label>
+
+              <button
+                onClick={handleSaveProfile}
+                disabled={!hasUnsavedProfileChanges || saving}
+                className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving ? "Saving" : "Save Profile"}
+              </button>
             </div>
           </section>
 

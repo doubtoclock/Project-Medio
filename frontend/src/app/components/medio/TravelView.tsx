@@ -595,7 +595,7 @@ export const TravelView = () => {
   return (
    <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 relative">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background-light dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 p-4">
+      <header className="sticky top-0 z-40 bg-background-light dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 p-4 pr-36">
         <div className="max-w-xl mx-auto space-y-4">
 
           <div className="flex items-center gap-4">

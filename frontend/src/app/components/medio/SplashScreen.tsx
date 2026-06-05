@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../../lib/api";
 
 const SPLASH_DURATION_MS = 10000;
 
@@ -46,9 +47,21 @@ const SplashScreen: React.FC = () => {
   const navigate = useNavigate();
   const [progress, setProgress] = useState(0);
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
+  const destinationRef = useRef("/login");
 
   useEffect(() => {
     const startTime = performance.now();
+    let isMounted = true;
+
+    apiFetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        destinationRef.current = data?.authenticated ? "/meet" : "/login";
+      })
+      .catch(() => {
+        destinationRef.current = "/login";
+      });
 
     const frame = window.setInterval(() => {
       const elapsed = performance.now() - startTime;
@@ -65,11 +78,14 @@ const SplashScreen: React.FC = () => {
         window.clearInterval(frame);
         setProgress(100);
         setCurrentStageIndex(loadingStages.length - 1);
-        navigate("/login");
+        navigate(destinationRef.current, { replace: true });
       }
     }, 50);
 
-    return () => window.clearInterval(frame);
+    return () => {
+      isMounted = false;
+      window.clearInterval(frame);
+    };
   }, [navigate]);
 
   const currentStage = loadingStages[currentStageIndex];

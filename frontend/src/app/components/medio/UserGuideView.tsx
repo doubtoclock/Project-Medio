@@ -7,7 +7,7 @@ export const UserGuideView: React.FC = () => {
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
-        <div className="medio-page-shell flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+        <div className="medio-page-shell flex items-center justify-between gap-3 px-4 py-4 pr-36 sm:px-6 sm:pr-36 lg:px-8 lg:pr-36">
 
           <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100">
             <span className="material-symbols-outlined">arrow_back</span>
@@ -17,11 +17,7 @@ export const UserGuideView: React.FC = () => {
             Travel Guide
           </h2>
 
-          <div className="flex size-10 items-center justify-center">
-            <button className="flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 size-10 text-slate-900 dark:text-slate-100">
-              <span className="material-symbols-outlined">search</span>
-            </button>
-          </div>
+          <div className="size-10 shrink-0" aria-hidden="true" />
 
         </div>
       </header>

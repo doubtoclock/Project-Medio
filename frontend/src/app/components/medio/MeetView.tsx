@@ -7,6 +7,7 @@ import {
   fetchLocationSuggestions,
   type LocationResult,
 } from "../../lib/locationSearch";
+import type { OtpItinerary, OtpLeg, OtpRouteResponse } from "./otpTypes";
 
 
 interface MeetResult {
@@ -25,6 +26,14 @@ interface MeetResult {
 }
 
 type RouteSide = "A" | "B";
+
+type MeetRouteStep = {
+  mode: string;
+  from?: string;
+  to?: string;
+  routeName?: string;
+  duration: number;
+};
 
 const CATEGORY_ORDER = [
   "Cafe",
@@ -76,7 +85,7 @@ export const MeetView: React.FC = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [loadingMeet, setLoadingMeet] = useState(false);
   const [routeSide, setRouteSide] = useState<RouteSide>("A");
-  const [routeCache, setRouteCache] = useState<Record<string, any>>({});
+  const [routeCache, setRouteCache] = useState<Record<string, OtpRouteResponse>>({});
   const [loadingRouteKey, setLoadingRouteKey] = useState<string | null>(null);
   const [routeError, setRouteError] = useState("");
   const [meetNotice, setMeetNotice] = useState("");
@@ -262,7 +271,7 @@ export const MeetView: React.FC = () => {
         }),
       });
 
-      const data = await res.json();
+      const data = (await res.json()) as OtpRouteResponse;
       const itineraries = data?.data?.plan?.itineraries || [];
 
       if (!res.ok || itineraries.length === 0) {
@@ -342,9 +351,9 @@ export const MeetView: React.FC = () => {
     ? getRouteKey(routeSide, selectedMeet)
     : "";
   const routeData = activeRouteKey ? routeCache[activeRouteKey] : null;
-  const itineraries = routeData?.data?.plan?.itineraries || [];
+  const itineraries: OtpItinerary[] = routeData?.data?.plan?.itineraries || [];
   const selectedItinerary = itineraries[selectedRouteIndex];
-  const routeSteps = selectedItinerary?.legs?.map((leg: any) => ({
+  const routeSteps: MeetRouteStep[] | undefined = selectedItinerary?.legs?.map((leg: OtpLeg) => ({
     mode: leg.mode,
     from: leg.from?.name,
     to: leg.to?.name,
@@ -379,13 +388,8 @@ export const MeetView: React.FC = () => {
     <div className="relative flex min-h-screen flex-col bg-background-dark text-slate-100">
 
       {/* HEADER */}
-      <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-4 backdrop-blur-md bg-background-dark/80 border-b border-slate-800">
+      <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-4 pr-36 backdrop-blur-md bg-background-dark/80 border-b border-slate-800">
         <h1 className="text-lg font-bold">Medio Meet</h1>
-
-        <button className="relative flex items-center justify-center rounded-full">
-          <span className="material-symbols-outlined">notifications</span>
-          <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-primary"></span>
-        </button>
       </header>
 
       {/* LOCATION INPUTS */}
@@ -674,7 +678,7 @@ export const MeetView: React.FC = () => {
 
                 {itineraries.length > 1 && (
                   <div className="mt-3 flex gap-2 overflow-x-auto">
-                    {itineraries.map((itinerary: any, index: number) => (
+                    {itineraries.map((itinerary: OtpItinerary, index: number) => (
                       <button
                         key={index}
                         onClick={() => setSelectedRouteIndex(index)}
@@ -698,7 +702,7 @@ export const MeetView: React.FC = () => {
 
                 {routeSteps && (
                   <div className="mt-3 space-y-2">
-                    {routeSteps.map((step: any, index: number) => (
+                    {routeSteps.map((step: MeetRouteStep, index: number) => (
                       <div
                         key={index}
                         className="rounded-lg border border-slate-800 bg-slate-950/60 p-3 text-sm"

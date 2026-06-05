@@ -4,8 +4,26 @@ import { SocialLogin } from "@capgo/capacitor-social-login";
 import { apiFetch, setAuthToken } from "../../../lib/api";
 import { getBackendUrl } from "../../../lib/backend";
 
-const isCapacitor = typeof (window as any).Capacitor?.isNativePlatform === "function"
-  && (window as any).Capacitor.isNativePlatform();
+type CapacitorWindow = Window & {
+  Capacitor?: {
+    isNativePlatform?: () => boolean;
+  };
+};
+
+type NativeGoogleResponse = {
+  token?: string;
+};
+
+const getCapacitor = () => (window as CapacitorWindow).Capacitor;
+
+const isCapacitor = typeof getCapacitor()?.isNativePlatform === "function"
+  && Boolean(getCapacitor()?.isNativePlatform?.());
+
+const isUserCancelledError = (error: unknown) =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  (error as { code?: unknown }).code === "USER_CANCELLED";
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,7 +36,7 @@ export const LoginPage: React.FC = () => {
     const token = params.get("token");
     if (token) {
       setAuthToken(token);
-      navigate("/login", { replace: true });
+      navigate("/meet", { replace: true });
     }
   }, [params, navigate]);
 
@@ -61,14 +79,14 @@ export const LoginPage: React.FC = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ idToken }),
         });
-        const data = await apiRes.json();
+        const data = (await apiRes.json()) as NativeGoogleResponse;
         if (data.token) {
           setAuthToken(data.token);
           navigate("/meet", { replace: true });
         }
-      } catch (e: any) {
-        if (e?.code !== "USER_CANCELLED") {
-          console.error("Google sign-in failed", e);
+      } catch (error: unknown) {
+        if (!isUserCancelledError(error)) {
+          console.error("Google sign-in failed", error);
         }
       }
     } else {
