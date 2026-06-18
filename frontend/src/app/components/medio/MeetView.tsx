@@ -384,8 +384,17 @@ export const MeetView: React.FC = () => {
     setSelectedMeet(filteredMeetResults[0] ?? null);
   }, [filteredMeetResults, selectedMeet]);
 
+  const isLoading = loadingMeet || loadingRouteKey !== null;
+
   return (
     <div className="relative flex min-h-screen flex-col bg-background-dark text-slate-100">
+
+      {/* Loading bar */}
+      {isLoading && (
+        <div className="fixed top-0 left-0 right-0 z-[10000] h-[3px] bg-primary/20 overflow-hidden">
+          <div className="loading-bar-inner bg-primary" />
+        </div>
+      )}
 
       {/* HEADER */}
       <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-4 pr-36 backdrop-blur-md bg-background-dark/80 border-b border-slate-800">
@@ -478,13 +487,7 @@ export const MeetView: React.FC = () => {
           </button>
         )}
 
-        {loadingMeet && (
-          <p className="text-sm text-slate-400">
-            Finding best meeting spots...
-          </p>
-        )}
-
-        {!loadingMeet && meetNotice && (
+        {meetNotice && (
           <p className="text-sm text-slate-400">{meetNotice}</p>
         )}
       </section>
@@ -660,11 +663,6 @@ export const MeetView: React.FC = () => {
                       </p>
                     )}
                   </div>
-                  {loadingRouteKey === activeRouteKey && (
-                    <span className="shrink-0 text-xs text-slate-400">
-                      Loading...
-                    </span>
-                  )}
                 </div>
 
                 {!routeData && loadingRouteKey !== activeRouteKey && (

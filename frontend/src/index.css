@@ -104,3 +104,18 @@ body {
   z-index: 6 !important;
 }
 
+/* ---------------- LOADING BAR ---------------- */
+
+@keyframes loading-slide {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(200%); }
+  100% { transform: translateX(500%); }
+}
+
+.loading-bar-inner {
+  width: 35%;
+  height: 100%;
+  border-radius: 9999px;
+  animation: loading-slide 1.8s ease-in-out infinite;
+}
+

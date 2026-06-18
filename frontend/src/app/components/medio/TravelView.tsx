@@ -594,17 +594,26 @@ export const TravelView = () => {
 
   return (
    <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 relative">
+      {/* Loading bar */}
+      {loading && (
+        <div className="fixed top-0 left-0 right-0 z-[10000] h-[3px] bg-primary/20 overflow-hidden">
+          <div className="loading-bar-inner bg-primary" />
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background-light dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 p-4 pr-36">
         <div className="max-w-xl mx-auto space-y-4">
 
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setIsSearchCollapsed(false)}
-              className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors"
-            >
-              <span className="material-symbols-outlined">arrow_back</span>
-            </button>
+            {isSearchCollapsed && (
+              <button
+                onClick={() => setIsSearchCollapsed(false)}
+                className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors"
+              >
+                <span className="material-symbols-outlined">arrow_back</span>
+              </button>
+            )}
 
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
               Route Planner
@@ -811,7 +820,7 @@ export const TravelView = () => {
 
       {/* Itinerary Selector */}
       {isSearchCollapsed && itineraries.length > 1 && (
-        <div className="fixed left-0 right-0 top-24 px-4" style={{ zIndex: 25 }}>
+        <div className="fixed left-0 right-0 top-36 px-4" style={{ zIndex: 25 }}>
           <div className="flex gap-2 overflow-x-auto">
             {itineraries.map((it: OtpItinerary, index: number) => (
               <button
