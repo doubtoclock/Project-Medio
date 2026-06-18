@@ -179,6 +179,16 @@ export const MeetView: React.FC = () => {
     resetMeetState();
   };
 
+  const handleFieldBlur = (type: "A" | "B") => {
+    setTimeout(() => {
+      const suggestions = type === "A" ? suggestionsA : suggestionsB;
+      const coords = type === "A" ? coordsA : coordsB;
+      if (suggestions.length > 0 && !coords) {
+        handleSelectLocation(suggestions[0], type);
+      }
+    }, 0);
+  };
+
   const handleSelectLocation = (location: LocationResult, type: "A" | "B") => {
     if (type === "A") {
       setLocA(location.name);
@@ -389,10 +399,15 @@ export const MeetView: React.FC = () => {
   return (
     <div className="relative flex min-h-screen flex-col bg-background-dark text-slate-100">
 
-      {/* Loading bar */}
+      {/* Loading overlay */}
       {isLoading && (
-        <div className="fixed top-0 left-0 right-0 z-[10000] h-[3px] bg-primary/20 overflow-hidden">
-          <div className="loading-bar-inner bg-primary" />
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-2xl bg-slate-900 px-10 py-8 border border-slate-700 shadow-2xl">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/30 border-t-primary" />
+            <p className="text-sm text-slate-300">
+              {loadingMeet ? "Finding best meeting spots..." : "Loading route..."}
+            </p>
+          </div>
         </div>
       )}
 
@@ -411,6 +426,7 @@ export const MeetView: React.FC = () => {
             <input
               value={locA}
               onChange={(e) => handleLocationInputChange(e.target.value, "A")}
+              onBlur={() => handleFieldBlur("A")}
               placeholder="Location A"
               className="bg-transparent flex-1 outline-none text-sm"
             />
@@ -448,6 +464,7 @@ export const MeetView: React.FC = () => {
             <input
               value={locB}
               onChange={(e) => handleLocationInputChange(e.target.value, "B")}
+              onBlur={() => handleFieldBlur("B")}
               placeholder="Location B"
               className="bg-transparent flex-1 outline-none text-sm"
             />

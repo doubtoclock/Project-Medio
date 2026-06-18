@@ -347,6 +347,16 @@ export const TravelView = () => {
     resetRouteState();
   };
 
+  const handleFieldBlur = (type: "A" | "B") => {
+    setTimeout(() => {
+      const suggestions = type === "A" ? suggestionsA : suggestionsB;
+      const coords = type === "A" ? coordsA : coordsB;
+      if (suggestions.length > 0 && !coords) {
+        handleSelect(suggestions[0], type);
+      }
+    }, 0);
+  };
+
   const handleRoute = async () => {
     if (!coordsA || !coordsB || !canRequestRoute) return;
     setLoading(true);
@@ -599,10 +609,13 @@ export const TravelView = () => {
 
   return (
    <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 relative">
-      {/* Loading bar */}
+      {/* Loading overlay */}
       {loading && (
-        <div className="fixed top-0 left-0 right-0 z-[10000] h-[3px] bg-primary/20 overflow-hidden">
-          <div className="loading-bar-inner bg-primary" />
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-2xl bg-slate-900 px-10 py-8 border border-slate-700 shadow-2xl">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/30 border-t-primary" />
+            <p className="text-sm text-slate-300">Finding your route...</p>
+          </div>
         </div>
       )}
 
@@ -697,6 +710,7 @@ export const TravelView = () => {
             <input
               value={locA}
               onChange={(e) => handleLocationInputChange(e.target.value, "A")}
+              onBlur={() => handleFieldBlur("A")}
               placeholder="From..."
               className="w-full bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
             />
@@ -720,6 +734,7 @@ export const TravelView = () => {
             <input
               value={locB}
               onChange={(e) => handleLocationInputChange(e.target.value, "B")}
+              onBlur={() => handleFieldBlur("B")}
               placeholder="To..."
               className="w-full bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
             />
