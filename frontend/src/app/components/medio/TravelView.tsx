@@ -370,10 +370,15 @@ export const TravelView = () => {
           },
         }),
       });
-      const data = await res.json() as OtpRouteResponse;
-      setRouteData(data);
-      const nextItineraries = data?.data?.plan?.itineraries || [];
-      if (!res.ok || nextItineraries.length === 0) {
+      const data = await res.json() as OtpRouteResponse & { message?: string };
+      if (!res.ok) {
+        setRouteNotice(data?.message || "Could not find a route right now.");
+        setIsSearchCollapsed(false);
+        return;
+      }
+      setRouteData(data as OtpRouteResponse);
+      const nextItineraries = (data as OtpRouteResponse)?.data?.plan?.itineraries || [];
+      if (nextItineraries.length === 0) {
         setRouteNotice("No route found for the selected travel modes.");
         setIsSearchCollapsed(false);
         return;
