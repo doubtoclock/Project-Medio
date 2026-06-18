@@ -103,6 +103,13 @@ if (values.NODE_ENV === "production" && allowedOrigins.length === 0) {
   throw new Error("At least one allowed frontend origin is required");
 }
 
+const isProduction = values.NODE_ENV === "production";
+
+// Ensure production frontend origins are always allowed
+const productionOrigins = isProduction
+  ? ["https://app.medio.is", "https://frontend.vercel.app"]
+  : [];
+
 const normalizeUrl = (url: string) => url.replace(/\/+$/, "");
 const otpHostport = values.OTP_HOSTPORT ?? "localhost:8080";
 const otpProtocol = otpHostport.includes("localhost") || otpHostport.includes("127.0.0.1") ? "http" : "https";
@@ -114,13 +121,20 @@ const otpGraphqlUrl =
 const otpIsochroneUrl =
   values.OTP_ISOCHRONE_URL ?? `${otpBaseUrl}/otp/routers/default/isochrone`;
 
+const finalAllowedOrigins = Array.from(
+  new Set([
+    ...allowedOrigins,
+    ...productionOrigins,
+  ])
+);
+
 export const env = {
   ...values,
   FRONTEND_URL: frontendUrl,
-  ALLOWED_ORIGINS: allowedOrigins,
+  ALLOWED_ORIGINS: finalAllowedOrigins,
   OTP_BASE_URL: otpBaseUrl,
   OTP_GRAPHQL_URL: otpGraphqlUrl,
   OTP_ISOCHRONE_URL: otpIsochroneUrl,
   IS_CODESPACE: isCodespace,
-  IS_PRODUCTION: values.NODE_ENV === "production",
+  IS_PRODUCTION: isProduction,
 };

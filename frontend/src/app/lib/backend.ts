@@ -21,5 +21,5 @@ export const getBackendUrl = () => {
     }
   }
 
-  return "http://localhost:5001";
+  return "https://medio-api.onrender.com";
 };

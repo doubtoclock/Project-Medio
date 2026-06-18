@@ -196,7 +196,7 @@ const getRouteFromOTP = async (req, res) => {
             },
         };
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 8000);
+        const timeout = setTimeout(() => controller.abort(), 30000);
         const response = await fetch(env_1.env.OTP_GRAPHQL_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },

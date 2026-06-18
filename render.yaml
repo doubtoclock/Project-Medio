@@ -21,9 +21,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: FRONTEND_URL
-        sync: false
+        value: https://app.medio.is
       - key: ALLOWED_ORIGINS
-        sync: false
+        value: https://app.medio.is,https://frontend.vercel.app
       - key: CAPACITOR_ORIGINS
         value: capacitor://localhost,http://localhost,https://localhost
       - key: OTP_HOSTPORT

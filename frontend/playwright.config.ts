@@ -26,6 +26,9 @@ export default defineConfig({
     url: `http://${host}:${port}`,
     reuseExistingServer: true,
     timeout: 120_000,
+    env: {
+      VITE_BACKEND_URL: "http://localhost:5001",
+    },
   },
   projects: [
     {
