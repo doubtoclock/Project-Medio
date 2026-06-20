@@ -1,7 +1,8 @@
 services:
-  - type: pserv
+  - type: web
     name: medio-otp
     runtime: docker
+    plan: free
     dockerfilePath: otp-project/Dockerfile
     dockerContext: otp-project
     envVars:
@@ -13,8 +14,9 @@ services:
   - type: web
     name: medio-api
     runtime: node
+    plan: free
     rootDir: backend
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -26,11 +28,8 @@ services:
         value: https://app.medio.is,https://frontend.vercel.app
       - key: CAPACITOR_ORIGINS
         value: capacitor://localhost,http://localhost,https://localhost
-      - key: OTP_HOSTPORT
-        fromService:
-          name: medio-otp
-          type: pserv
-          property: hostport
+      - key: OTP_BASE_URL
+        value: https://medio-otp.onrender.com
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
