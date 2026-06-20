@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const env_1 = require("./config/env");
+const db_1 = require("./lib/db");
 const error_middleware_1 = require("./middlewares/error.middleware");
 const security_middleware_1 = require("./middlewares/security.middleware");
 const logger_1 = require("./utils/logger");
@@ -28,6 +29,24 @@ app.use(security_middleware_1.requestSanitizer);
 app.use(security_middleware_1.csrfOriginGuard);
 app.get("/", (_req, res) => {
     res.status(200).json({ message: "Server is running" });
+});
+app.get("/health", (_req, res) => {
+    res.status(200).json({
+        status: "ok",
+        uptime: process.uptime(),
+    });
+});
+app.get("/ready", (_req, res) => {
+    if (!(0, db_1.isMongoReady)()) {
+        return res.status(503).json({
+            status: "not_ready",
+            mongo: "disconnected",
+        });
+    }
+    return res.status(200).json({
+        status: "ready",
+        mongo: "connected",
+    });
 });
 app.use("/api/auth", auth_routes_1.default);
 app.use("/api/meet", meet_routes_1.default);

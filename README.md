@@ -17,7 +17,7 @@ An app for finding shortest 2 way distances
 The backend deploy is split into two Render services in `render.yaml`:
 
 - `medio-otp`: a private Docker service that runs `otp-project/otp.jar` with `otp-project/otp-data`.
-- `medio-api`: the public Node/Express API. Render injects the OTP private address as `OTP_HOSTPORT`, and the API derives the OTP GraphQL/isochrone URLs from it.
+- `medio-api`: the public Node/Express API. Render injects the OTP private address as `OTP_HOSTPORT`, and the API connects to that internal address over HTTP before deriving the OTP GraphQL/isochrone URLs.
 
 Create a Render Blueprint from this repo and fill the synced env vars:
 

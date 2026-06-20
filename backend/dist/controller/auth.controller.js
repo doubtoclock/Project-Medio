@@ -29,11 +29,22 @@ const cookieOptions = (maxAge) => ({
     ...(maxAge ? { maxAge } : {}),
 });
 const getFallbackName = (email) => email.split("@")[0] || "Medio User";
-const getSafeRedirectUrl = (success, token, customBase) => {
-    const base = customBase || `${env_1.env.FRONTEND_URL}/login?login=${success ? "success" : "failed"}`;
-    if (token)
-        return `${base}&token=${encodeURIComponent(token)}`;
-    return base;
+const getAllowedFrontendOrigin = (url) => {
+    try {
+        const parsed = new URL(url);
+        return env_1.env.ALLOWED_ORIGINS.includes(parsed.origin) ? parsed : null;
+    }
+    catch {
+        return null;
+    }
+};
+const getSafeRedirectUrl = (success, customBase) => {
+    const fallbackBase = `${env_1.env.FRONTEND_URL}/login`;
+    const customUrl = customBase ? getAllowedFrontendOrigin(customBase) : null;
+    const redirectUrl = customUrl ?? new URL(fallbackBase);
+    redirectUrl.searchParams.set("login", success ? "success" : "failed");
+    redirectUrl.searchParams.delete("token");
+    return redirectUrl.toString();
 };
 const upsertGoogleUser = async (payload) => {
     const email = payload.email.toLowerCase();
@@ -153,9 +164,13 @@ const googleRedirectLogin = (req, res) => {
     try {
         const state = crypto_1.default.randomBytes(32).toString("base64url");
         const redirect = typeof req.query.redirect === "string" ? req.query.redirect : "";
+        const safeRedirect = redirect ? getAllowedFrontendOrigin(redirect) : null;
         res.cookie(OAUTH_STATE_COOKIE_NAME, state, cookieOptions(OAUTH_STATE_MAX_AGE_MS));
-        if (redirect) {
-            res.cookie(OAUTH_REDIRECT_COOKIE_NAME, redirect, cookieOptions(OAUTH_STATE_MAX_AGE_MS));
+        if (safeRedirect) {
+            res.cookie(OAUTH_REDIRECT_COOKIE_NAME, safeRedirect.toString(), cookieOptions(OAUTH_STATE_MAX_AGE_MS));
+        }
+        else if (redirect) {
+            logger_1.logger.warn("Ignored unsafe OAuth redirect", { redirect });
         }
         const url = googleClient.generateAuthUrl({
             access_type: "online",
@@ -185,14 +200,14 @@ const googleRedirectCallback = async (req, res) => {
         res.clearCookie(OAUTH_STATE_COOKIE_NAME, cookieOptions());
         res.clearCookie(OAUTH_REDIRECT_COOKIE_NAME, cookieOptions());
         if (!code || !state || !expectedState || state !== expectedState) {
-            return res.redirect(getSafeRedirectUrl(false, undefined, customRedirect || undefined));
+            return res.redirect(getSafeRedirectUrl(false, customRedirect || undefined));
         }
         const { tokens } = await googleClient.getToken({
             code,
             redirect_uri: env_1.env.GOOGLE_CALLBACK_URL,
         });
         if (!tokens.id_token) {
-            return res.redirect(getSafeRedirectUrl(false, undefined, customRedirect || undefined));
+            return res.redirect(getSafeRedirectUrl(false, customRedirect || undefined));
         }
         const ticket = await googleClient.verifyIdToken({
             idToken: tokens.id_token,
@@ -200,7 +215,7 @@ const googleRedirectCallback = async (req, res) => {
         });
         const payload = ticket.getPayload();
         if (!payload?.email) {
-            return res.redirect(getSafeRedirectUrl(false, undefined, customRedirect || undefined));
+            return res.redirect(getSafeRedirectUrl(false, customRedirect || undefined));
         }
         const user = await upsertGoogleUser({
             email: payload.email,
@@ -215,11 +230,11 @@ const googleRedirectCallback = async (req, res) => {
             picture: user.avatarUrl,
         });
         res.cookie(AUTH_COOKIE_NAME, appToken, cookieOptions(AUTH_COOKIE_MAX_AGE_MS));
-        res.redirect(getSafeRedirectUrl(true, appToken, customRedirect || undefined));
+        res.redirect(getSafeRedirectUrl(true, customRedirect || undefined));
     }
     catch (error) {
         logger_1.logger.error("Google OAuth callback failed", { error });
-        res.redirect(getSafeRedirectUrl(false, undefined, customRedirect || undefined));
+        res.redirect(getSafeRedirectUrl(false, customRedirect || undefined));
     }
 };
 exports.googleRedirectCallback = googleRedirectCallback;

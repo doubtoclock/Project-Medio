@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import { env } from "./config/env";
+import { isMongoReady } from "./lib/db";
 import { errorHandler } from "./middlewares/error.middleware";
 import {
   corsOptions,
@@ -36,6 +37,27 @@ app.use(csrfOriginGuard);
 
 app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({ message: "Server is running" });
+});
+
+app.get("/health", (_req: Request, res: Response) => {
+  res.status(200).json({
+    status: "ok",
+    uptime: process.uptime(),
+  });
+});
+
+app.get("/ready", (_req: Request, res: Response) => {
+  if (!isMongoReady()) {
+    return res.status(503).json({
+      status: "not_ready",
+      mongo: "disconnected",
+    });
+  }
+
+  return res.status(200).json({
+    status: "ready",
+    mongo: "connected",
+  });
 });
 
 app.use("/api/auth", authRoutes);

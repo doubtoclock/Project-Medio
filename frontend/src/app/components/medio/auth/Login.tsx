@@ -31,15 +31,6 @@ export const LoginPage: React.FC = () => {
   const isSuccess = params.get("login") === "success";
   const initRef = useRef(false);
 
-  // Save token from OAuth redirect (web flow)
-  useEffect(() => {
-    const token = params.get("token");
-    if (token) {
-      setAuthToken(token);
-      navigate("/meet", { replace: true });
-    }
-  }, [params, navigate]);
-
   // Initialize native Google auth once on mount
   useEffect(() => {
     if (!isCapacitor || initRef.current) return;

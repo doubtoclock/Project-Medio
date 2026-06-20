@@ -24,3 +24,5 @@ export const connectDB = async () => {
     throw error;
   }
 };
+
+export const isMongoReady = () => mongoose.connection.readyState === 1;

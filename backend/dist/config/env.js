@@ -97,9 +97,9 @@ const productionOrigins = isProduction
     ? ["https://app.medio.is", "https://frontend.vercel.app"]
     : [];
 const normalizeUrl = (url) => url.replace(/\/+$/, "");
-const otpHostport = values.OTP_HOSTPORT ?? "localhost:8080";
-const otpProtocol = otpHostport.includes("localhost") || otpHostport.includes("127.0.0.1") ? "http" : "https";
-const otpBaseUrl = normalizeUrl(values.OTP_BASE_URL ?? `${otpProtocol}://${otpHostport}`);
+const hasHttpProtocol = (url) => /^https?:\/\//i.test(url);
+const otpHostport = values.OTP_HOSTPORT || "localhost:8080";
+const otpBaseUrl = normalizeUrl(values.OTP_BASE_URL ?? (hasHttpProtocol(otpHostport) ? otpHostport : `http://${otpHostport}`));
 const otpGraphqlUrl = values.OTP_GRAPHQL_URL ?? `${otpBaseUrl}/otp/routers/default/index/graphql`;
 const otpIsochroneUrl = values.OTP_ISOCHRONE_URL ?? `${otpBaseUrl}/otp/routers/default/isochrone`;
 const finalAllowedOrigins = Array.from(new Set([

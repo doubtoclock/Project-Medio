@@ -36,10 +36,24 @@ const cookieOptions = (maxAge?: number): CookieOptions => ({
 
 const getFallbackName = (email: string) => email.split("@")[0] || "Medio User";
 
-const getSafeRedirectUrl = (success: boolean, token?: string, customBase?: string) => {
-  const base = customBase || `${env.FRONTEND_URL}/login?login=${success ? "success" : "failed"}`;
-  if (token) return `${base}&token=${encodeURIComponent(token)}`;
-  return base;
+const getAllowedFrontendOrigin = (url: string) => {
+  try {
+    const parsed = new URL(url);
+    return env.ALLOWED_ORIGINS.includes(parsed.origin) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const getSafeRedirectUrl = (success: boolean, customBase?: string) => {
+  const fallbackBase = `${env.FRONTEND_URL}/login`;
+  const customUrl = customBase ? getAllowedFrontendOrigin(customBase) : null;
+  const redirectUrl = customUrl ?? new URL(fallbackBase);
+
+  redirectUrl.searchParams.set("login", success ? "success" : "failed");
+  redirectUrl.searchParams.delete("token");
+
+  return redirectUrl.toString();
 };
 
 const upsertGoogleUser = async (payload: {
@@ -188,6 +202,7 @@ export const googleRedirectLogin = (req: Request, res: Response) => {
   try {
     const state = crypto.randomBytes(32).toString("base64url");
     const redirect = typeof req.query.redirect === "string" ? req.query.redirect : "";
+    const safeRedirect = redirect ? getAllowedFrontendOrigin(redirect) : null;
 
     res.cookie(
       OAUTH_STATE_COOKIE_NAME,
@@ -195,12 +210,14 @@ export const googleRedirectLogin = (req: Request, res: Response) => {
       cookieOptions(OAUTH_STATE_MAX_AGE_MS)
     );
 
-    if (redirect) {
+    if (safeRedirect) {
       res.cookie(
         OAUTH_REDIRECT_COOKIE_NAME,
-        redirect,
+        safeRedirect.toString(),
         cookieOptions(OAUTH_STATE_MAX_AGE_MS)
       );
+    } else if (redirect) {
+      logger.warn("Ignored unsafe OAuth redirect", { redirect });
     }
 
     const url = googleClient.generateAuthUrl({
@@ -239,7 +256,7 @@ export const googleRedirectCallback = async (
     res.clearCookie(OAUTH_REDIRECT_COOKIE_NAME, cookieOptions());
 
     if (!code || !state || !expectedState || state !== expectedState) {
-      return res.redirect(getSafeRedirectUrl(false, undefined, customRedirect || undefined));
+      return res.redirect(getSafeRedirectUrl(false, customRedirect || undefined));
     }
 
     const { tokens } = await googleClient.getToken({
@@ -248,7 +265,7 @@ export const googleRedirectCallback = async (
     });
 
     if (!tokens.id_token) {
-      return res.redirect(getSafeRedirectUrl(false, undefined, customRedirect || undefined));
+      return res.redirect(getSafeRedirectUrl(false, customRedirect || undefined));
     }
 
     const ticket = await googleClient.verifyIdToken({
@@ -259,7 +276,7 @@ export const googleRedirectCallback = async (
     const payload = ticket.getPayload();
 
     if (!payload?.email) {
-      return res.redirect(getSafeRedirectUrl(false, undefined, customRedirect || undefined));
+      return res.redirect(getSafeRedirectUrl(false, customRedirect || undefined));
     }
 
     const user = await upsertGoogleUser({
@@ -282,10 +299,10 @@ export const googleRedirectCallback = async (
       cookieOptions(AUTH_COOKIE_MAX_AGE_MS)
     );
 
-    res.redirect(getSafeRedirectUrl(true, appToken, customRedirect || undefined));
+    res.redirect(getSafeRedirectUrl(true, customRedirect || undefined));
   } catch (error) {
     logger.error("Google OAuth callback failed", { error });
-    res.redirect(getSafeRedirectUrl(false, undefined, customRedirect || undefined));
+    res.redirect(getSafeRedirectUrl(false, customRedirect || undefined));
   }
 };
 
