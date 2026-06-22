@@ -1,0 +1,35 @@
+substitutions:
+  _REGION: us-central1
+  _REPOSITORY: medio
+  _BACKEND_IMAGE: medio-backend
+  _FRONTEND_IMAGE: medio-frontend
+  _VITE_BACKEND_URL: https://medio-api-REPLACE_ME.a.run.app
+
+steps:
+  - id: Build backend image
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_BACKEND_IMAGE}:${SHORT_SHA}
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_BACKEND_IMAGE}:latest
+      - ./backend
+
+  - id: Build frontend image
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - VITE_BACKEND_URL=${_VITE_BACKEND_URL}
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_FRONTEND_IMAGE}:${SHORT_SHA}
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_FRONTEND_IMAGE}:latest
+      - ./frontend
+
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_BACKEND_IMAGE}:${SHORT_SHA}
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_BACKEND_IMAGE}:latest
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_FRONTEND_IMAGE}:${SHORT_SHA}
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_FRONTEND_IMAGE}:latest
