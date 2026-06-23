@@ -3,6 +3,8 @@ substitutions:
   _REPOSITORY: medio
   _BACKEND_IMAGE: medio-backend
   _FRONTEND_IMAGE: medio-frontend
+  _OTP_JAR_GCS_URI: gs://medio-500217-otp-artifacts/otp/otp.jar
+  _OTP_JAR_SHA256: eb4224cb0f59ed913ee240d17838091a0e6da2d81d8216c31c07c51502831697
   _VITE_BACKEND_URL: https://medio-api-REPLACE_ME.a.run.app
 
 steps:
@@ -27,6 +29,23 @@ steps:
       - -t
       - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_FRONTEND_IMAGE}:latest
       - ./frontend
+
+  - id: Fetch OTP jar
+    name: gcr.io/cloud-builders/gsutil
+    args:
+      - cp
+      - ${_OTP_JAR_GCS_URI}
+      - otp-project/otp.jar
+
+  - id: Verify OTP jar
+    name: eclipse-temurin:21-jre
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        echo "${_OTP_JAR_SHA256}  otp-project/otp.jar" | sha256sum -c -
+        test "$(stat -c%s otp-project/otp.jar)" -gt 100000000
+        java -jar otp-project/otp.jar --version
 
   - id: Build OTP image
     name: gcr.io/cloud-builders/docker
