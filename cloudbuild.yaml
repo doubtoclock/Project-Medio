@@ -33,3 +33,6 @@ images:
   - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_BACKEND_IMAGE}:latest
   - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_FRONTEND_IMAGE}:${SHORT_SHA}
   - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_FRONTEND_IMAGE}:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
