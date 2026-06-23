@@ -2,3 +2,8 @@
 tmp
 .DS_Store
 ._*
+.git
+.gitignore
+otp-test.html
+*.tmp
+cache
