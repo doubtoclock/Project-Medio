@@ -1,5 +1,5 @@
 substitutions:
-  _REGION: us-central1
+  _REGION: asia-south1
   _REPOSITORY: medio
   _BACKEND_IMAGE: medio-backend
   _FRONTEND_IMAGE: medio-frontend
