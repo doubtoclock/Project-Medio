@@ -28,11 +28,23 @@ steps:
       - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_FRONTEND_IMAGE}:latest
       - ./frontend
 
+  - id: Build OTP image
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - asia-south1-docker.pkg.dev/medio-500217/medio/medio-otp:${SHORT_SHA}
+      - -t
+      - asia-south1-docker.pkg.dev/medio-500217/medio/medio-otp:latest
+      - ./otp-project
+
 images:
   - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_BACKEND_IMAGE}:${SHORT_SHA}
   - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_BACKEND_IMAGE}:latest
   - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_FRONTEND_IMAGE}:${SHORT_SHA}
   - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_FRONTEND_IMAGE}:latest
+  - asia-south1-docker.pkg.dev/medio-500217/medio/medio-otp:${SHORT_SHA}
+  - asia-south1-docker.pkg.dev/medio-500217/medio/medio-otp:latest
 
 options:
   logging: CLOUD_LOGGING_ONLY
