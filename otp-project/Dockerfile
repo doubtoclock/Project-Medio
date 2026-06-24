@@ -14,4 +14,4 @@ COPY otp-data ./otp-data
 ENV PORT=8080
 ENV JAVA_OPTS="-Xmx700m"
 EXPOSE 8080
-CMD ["sh", "-c", "java $JAVA_OPTS -jar otp.jar --load otp-data --serve --port $PORT"]
+CMD ["java", "-jar", "otp.jar", "--version"]
