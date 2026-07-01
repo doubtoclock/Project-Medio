@@ -42,6 +42,23 @@ export const LoginPage: React.FC = () => {
     }).catch(() => {});
   }, []);
 
+  // Capture token from URL (set by backend after OAuth callback) and store in localStorage
+  useEffect(() => {
+    const urlToken = params.get("token");
+    if (urlToken) {
+      setAuthToken(urlToken);
+      const cleaned = new URLSearchParams(params);
+      cleaned.delete("token");
+      const search = cleaned.toString();
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + (search ? `?${search}` : "")
+      );
+      navigate("/meet", { replace: true });
+    }
+  }, [params, navigate]);
+
   // If user already authenticated → go to /meet
   useEffect(() => {
     apiFetch("/api/auth/me")

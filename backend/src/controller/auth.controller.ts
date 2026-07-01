@@ -45,13 +45,17 @@ const getAllowedFrontendOrigin = (url: string) => {
   }
 };
 
-const getSafeRedirectUrl = (success: boolean, customBase?: string) => {
+const getSafeRedirectUrl = (success: boolean, customBase?: string, token?: string) => {
   const fallbackBase = `${env.FRONTEND_URL}/login`;
   const customUrl = customBase ? getAllowedFrontendOrigin(customBase) : null;
   const redirectUrl = customUrl ?? new URL(fallbackBase);
 
   redirectUrl.searchParams.set("login", success ? "success" : "failed");
-  redirectUrl.searchParams.delete("token");
+  if (token) {
+    redirectUrl.searchParams.set("token", token);
+  } else {
+    redirectUrl.searchParams.delete("token");
+  }
 
   return redirectUrl.toString();
 };
@@ -299,7 +303,7 @@ export const googleRedirectCallback = async (
       cookieOptions(AUTH_COOKIE_MAX_AGE_MS)
     );
 
-    res.redirect(getSafeRedirectUrl(true, customRedirect || undefined));
+    res.redirect(getSafeRedirectUrl(true, customRedirect || undefined, appToken));
   } catch (error) {
     logger.error("Google OAuth callback failed", { error });
     res.redirect(getSafeRedirectUrl(false, customRedirect || undefined));

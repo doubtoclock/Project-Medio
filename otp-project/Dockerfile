@@ -1,6 +1,9 @@
 FROM eclipse-temurin:21-jre
 WORKDIR /opt/otp
 COPY otp.jar ./otp.jar
+RUN ls -lh otp.jar \
+ && sha256sum otp.jar \
+ && jar tf otp.jar | head -20
 RUN set -eux; \
     ls -lh /opt/otp; \
     stat -c '%s bytes' otp.jar; \
