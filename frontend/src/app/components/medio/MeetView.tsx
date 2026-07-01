@@ -357,11 +357,15 @@ export const MeetView: React.FC = () => {
     );
   };
 
+  const routeKeyA = selectedMeet ? getRouteKey("A", selectedMeet) : "";
+  const routeKeyB = selectedMeet ? getRouteKey("B", selectedMeet) : "";
+  const routeDataA = routeKeyA ? routeCache[routeKeyA] : null;
+  const routeDataB = routeKeyB ? routeCache[routeKeyB] : null;
   const activeRouteKey = selectedMeet
     ? getRouteKey(routeSide, selectedMeet)
     : "";
-  const routeData = activeRouteKey ? routeCache[activeRouteKey] : null;
-  const itineraries: OtpItinerary[] = routeData?.data?.plan?.itineraries || [];
+  const activeRouteData = activeRouteKey ? routeCache[activeRouteKey] : null;
+  const itineraries: OtpItinerary[] = activeRouteData?.data?.plan?.itineraries || [];
   const selectedItinerary = itineraries[selectedRouteIndex];
   const routeSteps: MeetRouteStep[] | undefined = selectedItinerary?.legs?.map((leg: OtpLeg) => ({
     mode: leg.mode,
@@ -378,6 +382,17 @@ export const MeetView: React.FC = () => {
   useEffect(() => {
     setRouteError("");
   }, [selectedMeet, routeSide]);
+
+  // Auto-fetch both participants' routes when a meet point is selected
+  useEffect(() => {
+    if (!selectedMeet || !coordsA || !coordsB) return;
+    if (!routeCache[getRouteKey("A", selectedMeet)]) {
+      fetchMeetRoute("A", selectedMeet);
+    }
+    if (!routeCache[getRouteKey("B", selectedMeet)]) {
+      fetchMeetRoute("B", selectedMeet);
+    }
+  }, [selectedMeet]);
 
   useEffect(() => {
     if (!selectedMeet) {
@@ -527,8 +542,18 @@ export const MeetView: React.FC = () => {
                 color: selectedMeet?.id === p.id ? "yellow" : "blue",
               })),
             ]}
-            routeData={routeData}
-            selectedIndex={selectedRouteIndex}
+            multiRouteData={
+              selectedMeet
+                ? [
+                    ...(routeDataA
+                      ? [{ routeData: routeDataA, selectedIndex: selectedRouteIndex, color: "#3B82F6", label: "User A" }]
+                      : []),
+                    ...(routeDataB
+                      ? [{ routeData: routeDataB, selectedIndex: selectedRouteIndex, color: "#EF4444", label: "User B" }]
+                      : []),
+                  ]
+                : undefined
+            }
           />
         </div>
 
@@ -681,15 +706,6 @@ export const MeetView: React.FC = () => {
                     )}
                   </div>
                 </div>
-
-                {!routeData && loadingRouteKey !== activeRouteKey && (
-                  <button
-                    onClick={() => fetchMeetRoute(routeSide, selectedMeet)}
-                    className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white"
-                  >
-                    Show route
-                  </button>
-                )}
 
                 {itineraries.length > 1 && (
                   <div className="mt-3 flex gap-2 overflow-x-auto">
