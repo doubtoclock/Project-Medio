@@ -337,7 +337,7 @@ export const RealMap: React.FC<RealMapProps> = ({
             <Marker
               key={idx}
               position={[marker.lat, marker.lng]}
-              icon={icon}
+              {...(icon ? { icon } : {})}
             >
               <Popup>{marker.name}</Popup>
             </Marker>
