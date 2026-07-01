@@ -17,8 +17,7 @@ import {
   fetchLocationSuggestions,
   type LocationResult,
 } from "../../lib/locationSearch";
-import { getTransportColor } from "./transportColors";
-import type { OtpItinerary, OtpLeg, OtpRouteResponse } from "./otpTypes";
+import type { OtpItinerary, OtpRouteResponse } from "./otpTypes";
 
 interface SavedPlace {
   _id: string;
@@ -30,15 +29,6 @@ interface SavedPlace {
 
 type TravelMode = "car" | "bike" | "local" | "walk";
 type LocalTransportMode = "bus" | "rail" | "subway";
-
-interface RouteStep {
-  mode: string;
-  from?: string;
-  to?: string;
-  routeName?: string;
-  color: string;
-  duration: number;
-}
 
 const travelModeChoices: Array<{
   id: TravelMode;
@@ -81,28 +71,6 @@ type LocalTransportStyle = React.CSSProperties & {
   "--local-transport-soft": string;
   "--local-transport-card": string;
 };
-
-const modeLabels: Record<string, string> = {
-  WALK: "Walk",
-  SUBWAY: "Metro",
-  BUS: "Bus",
-  RAIL: "Local",
-  CAR: "Car",
-  BICYCLE: "Bike",
-};
-
-const modeIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-  WALK: Footprints,
-  SUBWAY: TrainFront,
-  BUS: BusFront,
-  RAIL: TrainFront,
-  CAR: Car,
-  BICYCLE: Bike,
-};
-
-const getForegroundForRouteColor = (color: string) =>
-  color.toLowerCase() === "#facc15" ? "#0f172a" : "#ffffff";
-
 
 const fetchSavedPlaces = async (): Promise<SavedPlace[]> => {
   try {
@@ -174,14 +142,13 @@ export const TravelView = () => {
   const [routeData, setRouteData] = useState<OtpRouteResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [routeNotice, setRouteNotice] = useState("");
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const [travelMode, setTravelMode] = useState<TravelMode>("local");
   const [localTransport, setLocalTransport] = useState<Record<LocalTransportMode, boolean>>(
     defaultLocalTransport
   );
 
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [isSearchCollapsed, setIsSearchCollapsed] = useState(false);
+  const [selectedRoute, setSelectedRoute] = useState<number | null>(null);
+  const [showMap, setShowMap] = useState(false);
 
   // Saved places
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
@@ -307,8 +274,8 @@ export const TravelView = () => {
     setTravelMode(mode);
     setRouteNotice("");
     setRouteData(null);
-    setSelectedIndex(0);
-    setIsSearchCollapsed(false);
+    setSelectedRoute(null);
+    setShowMap(false);
   };
 
   const updateLocalTransport = (
@@ -321,15 +288,15 @@ export const TravelView = () => {
     }));
     setRouteNotice("");
     setRouteData(null);
-    setSelectedIndex(0);
-    setIsSearchCollapsed(false);
+    setSelectedRoute(null);
+    setShowMap(false);
   };
 
   const resetRouteState = () => {
     setRouteData(null);
     setRouteNotice("");
-    setSelectedIndex(0);
-    setIsSearchCollapsed(false);
+    setSelectedRoute(null);
+    setShowMap(false);
   };
 
   const handleLocationInputChange = (value: string, type: "A" | "B") => {
@@ -361,7 +328,7 @@ export const TravelView = () => {
     if (!coordsA || !coordsB || !canRequestRoute) return;
     setLoading(true);
     setRouteNotice("");
-    setSelectedIndex(0);
+    setSelectedRoute(null);
     try {
       const res = await apiFetch("/api/otp/route", {
         method: "POST",
@@ -383,17 +350,14 @@ export const TravelView = () => {
       const data = await res.json() as OtpRouteResponse & { message?: string };
       if (!res.ok) {
         setRouteNotice(data?.message || "Could not find a route right now.");
-        setIsSearchCollapsed(false);
         return;
       }
       setRouteData(data as OtpRouteResponse);
       const nextItineraries = (data as OtpRouteResponse)?.data?.plan?.itineraries || [];
       if (nextItineraries.length === 0) {
         setRouteNotice("No route found for the selected travel modes.");
-        setIsSearchCollapsed(false);
         return;
       }
-      setIsSearchCollapsed(true);
     } catch {
       setRouteNotice("Could not find a route right now.");
     } finally {
@@ -421,14 +385,13 @@ export const TravelView = () => {
       setCoordsB({ name: place.address, lat: place.lat, lng: place.lng });
     } else {
       setCoordsB(null);
-      // trigger a search so suggestions appear
       setActiveField("B");
     }
     setSuggestionsB([]);
     setRouteData(null);
     setRouteNotice("");
-    setSelectedIndex(0);
-    setIsSearchCollapsed(false);
+    setSelectedRoute(null);
+    setShowMap(false);
   };
 
   const handleAddPlace = async () => {
@@ -458,22 +421,6 @@ export const TravelView = () => {
   };
 
   const itineraries: OtpItinerary[] = routeData?.data?.plan?.itineraries || [];
-  const itinerary = isSearchCollapsed ? itineraries[selectedIndex] : undefined;
-  const routingNote = routeData?.routing?.adjustedToNextMetroService
-    ? `Showing next metro service at ${routeData.routing.time}`
-    : "";
-
-  const steps: RouteStep[] | undefined = itinerary?.legs?.map((leg: OtpLeg) => ({
-    mode: leg.mode,
-    from: leg.from?.name,
-    to: leg.to?.name,
-    routeName: leg.route?.shortName || leg.route?.longName,
-    color: getTransportColor(
-      leg.mode,
-      leg.route?.shortName || leg.route?.longName || ""
-    ),
-    duration: Math.round((leg.endTime - leg.startTime) / 60000),
-  }));
 
   const routeControls = (
     <section className="relative z-20 px-4 pb-24">
@@ -608,7 +555,8 @@ export const TravelView = () => {
   );
 
   return (
-   <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 relative">
+    <>
+    <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 relative">
       {/* Loading overlay */}
       {loading && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -622,156 +570,168 @@ export const TravelView = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background-light dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 p-4 pr-36">
         <div className="max-w-xl mx-auto space-y-4">
-
           <div className="flex items-center gap-4">
-            {isSearchCollapsed && (
-              <button
-                onClick={() => setIsSearchCollapsed(false)}
-                className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors"
-              >
-                <span className="material-symbols-outlined">arrow_back</span>
-              </button>
-            )}
-
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
               Route Planner
             </h1>
           </div>
-
         </div>
       </header>
 
-      {/* Edit Route button when search collapsed */}
-      {isSearchCollapsed && (
-        <button
-          onClick={() => {
-            setIsSearchCollapsed(false);
-            setIsExpanded(false);
-          }}
-          className="fixed top-20 right-4 bg-primary px-4 py-2 rounded-full shadow-lg"
-          style={{ zIndex: 9999 }}
-        >
-          Edit Route
-        </button>
-      )}
-
       {/* Search panel */}
-      {!isSearchCollapsed && (
-          <div
-              className="relative z-30 mt-4 px-4 overflow-visible"
-            >
-          {routeData && (
-            <div className="mb-3 flex justify-end">
+      <div className="relative z-30 mt-4 px-4 overflow-visible">
+        {/* Saved Places row */}
+        <div className="mb-3 flex gap-2 overflow-x-auto no-scrollbar mt-2">
+          {savedPlaces.map((p) => (
+            <div key={p._id} className="relative shrink-0">
               <button
-                onClick={() => setIsSearchCollapsed(true)}
-                className="inline-flex size-8 items-center justify-center rounded-full border border-slate-700 bg-slate-900/90 text-slate-300 transition-colors hover:border-slate-500 hover:text-white"
-                aria-label="Collapse route editor"
+                type="button"
+                onClick={() => handleSavedPlaceClick(p)}
+                className="flex items-center gap-2 bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl pl-4 pr-8 py-2 hover:bg-slate-800 hover:border-zinc-700 transition-all"
               >
-                <X size={14} />
+                <MapPin size={14} className="text-emerald-400 shrink-0" />
+                <span className="text-xs font-medium text-zinc-200 whitespace-nowrap">
+                  {p.label}
+                </span>
+              </button>
+              <button
+                type="button"
+                aria-label={`Delete saved place ${p.label}`}
+                onClick={(e) => handleDeletePlace(p._id, e)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-red-400 transition-colors"
+              >
+                <X size={12} />
               </button>
             </div>
-          )}
-
-          {/* Saved Places row */}
-          <div className="mb-3 flex gap-2 overflow-x-auto no-scrollbar mt-2">
-            {savedPlaces.map((p) => (
-              <div key={p._id} className="relative shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleSavedPlaceClick(p)}
-                  className="flex items-center gap-2 bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl pl-4 pr-8 py-2 hover:bg-slate-800 hover:border-zinc-700 transition-all"
-                >
-                  <MapPin size={14} className="text-emerald-400 shrink-0" />
-                  <span className="text-xs font-medium text-zinc-200 whitespace-nowrap">
-                    {p.label}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Delete saved place ${p.label}`}
-                  onClick={(e) => handleDeletePlace(p._id, e)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-red-400 transition-colors"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 bg-slate-900/90 backdrop-blur border border-dashed border-zinc-700 rounded-xl px-4 py-2 shrink-0 hover:bg-slate-800 hover:border-emerald-500/50 transition-all"
-            >
-              <Plus size={16} className="text-emerald-400" />
-              <span className="text-xs text-slate-400 whitespace-nowrap">Add</span>
-            </button>
-          </div>
-
-          {/* From */}
-          <div className="relative z-40 mb-4">
-            <input
-              value={locA}
-              onChange={(e) => handleLocationInputChange(e.target.value, "A")}
-              onBlur={() => handleFieldBlur("A")}
-              placeholder="From..."
-              className="w-full bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
-            />
-            {activeField === "A" && suggestionsA.length > 0 && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl bg-slate-800 shadow-2xl">
-                {suggestionsA.map((s) => (
-                  <button
-                    key={`${s.name}-${s.lat}`}
-                    onClick={() => handleSelect(s, "A")}
-                    className="block w-full text-left px-4 py-3 hover:bg-zinc-700 text-sm"
-                  >
-                    {s.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* To */}
-          <div className="relative z-30 mb-6">
-            <input
-              value={locB}
-              onChange={(e) => handleLocationInputChange(e.target.value, "B")}
-              onBlur={() => handleFieldBlur("B")}
-              placeholder="To..."
-              className="w-full bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
-            />
-            {activeField === "B" && suggestionsB.length > 0 && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl bg-slate-800 shadow-2xl">
-                {suggestionsB.map((s) => (
-                  <button
-                    key={`${s.name}-${s.lat}`}
-                    onClick={() => handleSelect(s, "B")}
-                    className="block w-full text-left px-4 py-3 hover:bg-zinc-700 text-sm"
-                  >
-                    {s.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
+          ))}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 bg-slate-900/90 backdrop-blur border border-dashed border-zinc-700 rounded-xl px-4 py-2 shrink-0 hover:bg-slate-800 hover:border-emerald-500/50 transition-all"
+          >
+            <Plus size={16} className="text-emerald-400" />
+            <span className="text-xs text-slate-400 whitespace-nowrap">Add</span>
+          </button>
         </div>
-      )}
-      {/* Map layer */}
-        <section className="relative z-0 px-4 pb-4">
-          <div className="relative z-0 w-full h-[40vh] overflow-hidden rounded-xl border border-slate-800 shadow-lg sm:h-[45vh] lg:h-[55vh]">
 
-            <RealMap
-              markers={[
-                ...(coordsA ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA }] : []),
-                ...(coordsB ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB }] : []),
-              ]}
-              routeData={isSearchCollapsed ? routeData : null}
-              selectedIndex={selectedIndex}
-            />
+        {/* From */}
+        <div className="relative z-40 mb-4">
+          <input
+            value={locA}
+            onChange={(e) => handleLocationInputChange(e.target.value, "A")}
+            onBlur={() => handleFieldBlur("A")}
+            placeholder="From..."
+            className="w-full bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+          />
+          {activeField === "A" && suggestionsA.length > 0 && (
+            <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl bg-slate-800 shadow-2xl">
+              {suggestionsA.map((s) => (
+                <button
+                  key={`${s.name}-${s.lat}`}
+                  onClick={() => handleSelect(s, "A")}
+                  className="block w-full text-left px-4 py-3 hover:bg-zinc-700 text-sm"
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
+        {/* To */}
+        <div className="relative z-30 mb-6">
+          <input
+            value={locB}
+            onChange={(e) => handleLocationInputChange(e.target.value, "B")}
+            onBlur={() => handleFieldBlur("B")}
+            placeholder="To..."
+            className="w-full bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+          />
+          {activeField === "B" && suggestionsB.length > 0 && (
+            <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl bg-slate-800 shadow-2xl">
+              {suggestionsB.map((s) => (
+                <button
+                  key={`${s.name}-${s.lat}`}
+                  onClick={() => handleSelect(s, "B")}
+                  className="block w-full text-left px-4 py-3 hover:bg-zinc-700 text-sm"
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {routeControls}
+
+      {/* Route option cards */}
+      {routeData && itineraries.length > 0 && (
+        <section className="relative z-20 px-4 mt-2">
+          <div className="mx-auto max-w-xl space-y-2">
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {itineraries.map((it: OtpItinerary, index: number) => (
+                <button
+                  key={index}
+                  onClick={() => setSelectedRoute(index)}
+                  className={`shrink-0 px-4 py-2 rounded-xl text-sm whitespace-nowrap transition-all ${
+                    selectedRoute === index
+                      ? "bg-primary text-white shadow-lg"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  }`}
+                >
+                  Option {index + 1} - {Math.round(it.duration / 60)} mins
+                </button>
+              ))}
+            </div>
+
+            {selectedRoute !== null && selectedRoute >= 0 && itineraries[selectedRoute] && (
+              <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                <p className="text-xs text-slate-400">
+                  <span className="font-semibold text-slate-200">
+                    {Math.round(itineraries[selectedRoute].duration / 60)} min
+                  </span>{" "}
+                  route via{" "}
+                  <span className="text-slate-200">
+                    {itineraries[selectedRoute].legs
+                      ?.filter((l) => l.mode !== "WALK")
+                      .map((l) => l.route?.shortName || l.mode)
+                      .filter(Boolean)
+                      .join(", ") || "selected modes"}
+                  </span>
+                </p>
+              </div>
+            )}
           </div>
         </section>
+      )}
 
-      {!isSearchCollapsed && routeControls}
+      {/* Map layer */}
+      <section className="relative z-0 px-4 pb-4 mt-4">
+        <div className="relative z-0 w-full h-[40vh] overflow-hidden rounded-xl border border-slate-800 shadow-lg sm:h-[45vh] lg:h-[55vh]">
+          <RealMap
+            markers={[
+              ...(coordsA ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA }] : []),
+              ...(coordsB ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB }] : []),
+            ]}
+            routeData={null}
+          />
+        </div>
+      </section>
+
+      {/* Show Route button */}
+      {routeData && itineraries.length > 0 && (
+        <div className="fixed bottom-20 left-0 right-0 z-30 px-4 pb-2">
+          <button
+            onClick={() => setShowMap(true)}
+            disabled={selectedRoute === null}
+            className="w-full bg-primary py-3 rounded-xl font-medium text-white disabled:opacity-40 shadow-lg transition-all enabled:hover:bg-primary/90"
+          >
+            {selectedRoute !== null
+              ? `Show Route - ${Math.round(itineraries[selectedRoute].duration / 60)} mins`
+              : "Select a route option"}
+          </button>
+        </div>
+      )}
 
       {/* Add Place Modal */}
       {showAddModal && (
@@ -838,107 +798,38 @@ export const TravelView = () => {
         </div>
       )}
 
-      {/* Itinerary Selector */}
-      {isSearchCollapsed && itineraries.length > 1 && (
-        <div className="fixed left-0 right-0 top-36 px-4" style={{ zIndex: 25 }}>
-          <div className="flex gap-2 overflow-x-auto">
-            {itineraries.map((it: OtpItinerary, index: number) => (
-              <button
-                key={index}
-                onClick={() => setSelectedIndex(index)}
-                className={`px-4 py-2 rounded-xl text-sm whitespace-nowrap ${
-                  selectedIndex === index ? "bg-primary" : "bg-slate-800"
-                }`}
-              >
-                Option {index + 1} - {Math.round(it.duration / 60)} mins
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Bottom Sheet */}
-      {itinerary && (
-        <div
-          className={`fixed bottom-[72px] left-0 right-0 z-20 rounded-t-3xl border-t border-slate-800 bg-background-dark shadow-2xl transition-all duration-300 ${
-            isExpanded ? "h-[50vh]" : "h-[88px]"
-          }`}
-        >
-          <div
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="p-4 cursor-pointer flex flex-col items-center"
-          >
-            <div className="w-12 h-1 bg-zinc-600 rounded-full mb-3" />
-            <div className="text-sm font-medium text-zinc-300">
-              {isExpanded
-                ? "Swipe down to collapse"
-                : `Route - ${Math.round(itinerary.duration / 60)} mins (Tap to expand)`}
-            </div>
-            {routingNote && (
-              <div className="mt-1 text-xs font-medium text-amber-300">
-                {routingNote}
-              </div>
-            )}
-          </div>
-
-          {isExpanded && (
-            <div className="h-[calc(100%-88px)] overflow-y-auto px-4 pb-6">
-              {steps?.map((step: RouteStep, index: number) => {
-                const StepIcon = modeIcons[step.mode] || MapPin;
-                const modeLabel = modeLabels[step.mode] || step.mode;
-                const stepForeground = getForegroundForRouteColor(step.color);
-
-                return (
-                  <div
-                    key={index}
-                    className="mb-3 rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm"
-                    style={{ borderLeftColor: step.color, borderLeftWidth: 4 }}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-2 font-medium text-slate-100">
-                        <span
-                          className="flex size-8 shrink-0 items-center justify-center rounded-full"
-                          style={{
-                            backgroundColor: step.color,
-                            color: stepForeground,
-                          }}
-                        >
-                          <StepIcon size={16} />
-                        </span>
-                        <span>{modeLabel}</span>
-                      </div>
-                      <div className="shrink-0 text-xs font-medium text-slate-400">
-                        {step.duration} mins
-                      </div>
-                    </div>
-
-                    {step.routeName && step.mode !== "WALK" && (
-                      <div className="mt-2 inline-flex items-center rounded-full bg-slate-950 px-3 py-1 text-xs font-medium">
-                        <span
-                          className="mr-2 h-2 w-6 rounded-full"
-                          style={{ backgroundColor: step.color }}
-                        />
-                        <span style={{ color: step.color }}>
-                          Line {step.routeName}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="mt-2 text-slate-400">
-                      From{" "}
-                      <span className="font-medium text-white">{step.from}</span>{" "}
-                      to{" "}
-                      <span className="font-medium text-white">{step.to}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-        <BottomNav active="travel" />
+      <BottomNav active="travel" />
     </div>
+
+    {/* Full-screen map overlay */}
+    {showMap && routeData && selectedRoute !== null && itineraries[selectedRoute] && (
+      <div className="fixed inset-0 z-[9999] bg-background-dark flex flex-col">
+        <header className="sticky top-0 z-40 bg-background-light dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 p-4">
+          <div className="max-w-xl mx-auto flex items-center gap-4">
+            <button
+              onClick={() => setShowMap(false)}
+              className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors"
+              aria-label="Back to route options"
+            >
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+            <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              Option {selectedRoute + 1} - {Math.round(itineraries[selectedRoute].duration / 60)} mins
+            </h1>
+          </div>
+        </header>
+        <div className="flex-1 relative">
+          <RealMap
+            markers={[
+              ...(coordsA ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA }] : []),
+              ...(coordsB ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB }] : []),
+            ]}
+            routeData={routeData}
+            selectedIndex={selectedRoute}
+          />
+        </div>
+      </div>
+    )}
+    </>
   );
 };
