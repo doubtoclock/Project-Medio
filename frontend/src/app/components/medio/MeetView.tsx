@@ -530,16 +530,16 @@ export const MeetView: React.FC = () => {
           <RealMap
             markers={[
               ...(coordsA
-                ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA, color: "green" }]
+                ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA, kind: "user" as const }]
                 : []),
               ...(coordsB
-                ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB, color: "red" }]
+                ? [{ lat: coordsB.lat, lng: coordsB.lng, name: locB, color: "red", kind: "destination" as const }]
                 : []),
               ...filteredMeetResults.map((p) => ({
                 lat: p.lat,
                 lng: p.lon,
                 name: p.name,
-                color: selectedMeet?.id === p.id ? "yellow" : "blue",
+                kind: (selectedMeet?.id === p.id ? "meeting" : "nearby") as "meeting" | "nearby",
               })),
             ]}
             multiRouteData={

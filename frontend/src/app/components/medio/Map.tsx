@@ -1,4 +1,3 @@
-"use client";
 import React, { useMemo, useEffect } from "react";
 import {
   MapContainer,
@@ -11,19 +10,9 @@ import {
 import L from "leaflet";
 import polyline from "@mapbox/polyline";
 import { getTransportColor } from "./transportColors";
+import { createMarkerIcon } from "./travel/markerIcons";
+import type { MarkerRole } from "./travel/markerIcons";
 import type { OtpLeg, OtpRouteResponse } from "./otpTypes";
-
-// Fix default marker icon issue
-type DefaultIconPrototype = L.Icon.Default & { _getIconUrl?: unknown };
-delete (L.Icon.Default.prototype as DefaultIconPrototype)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
 
 type RouteEntry = {
   routeData: OtpRouteResponse;
@@ -32,14 +21,12 @@ type RouteEntry = {
   label?: string;
 };
 
-type MarkerKind = "origin" | "destination" | "meeting" | "nearby" | "current";
-
 type MapMarker = {
   lat: number;
   lng: number;
   name: string;
   color?: string;
-  kind?: MarkerKind;
+  kind?: MarkerRole;
   selected?: boolean;
 };
 
@@ -75,91 +62,6 @@ const resolveColor = (color?: string) => {
   if (!color) return undefined;
   if (color.startsWith("#")) return color;
   return MARKER_COLORS[color.toLowerCase()] || color;
-};
-
-export const createColoredIcon = (color: string, isMeetingPoint = false) => {
-  if (isMeetingPoint) {
-    return L.divIcon({
-      className: "",
-      html: `<div style="
-        width:30px;height:30px;
-        background:#F59E0B;
-        border:3px solid #fff;
-        border-radius:4px;
-        display:flex;align-items:center;justify-content:center;
-        font-size:16px;color:white;font-weight:bold;
-        box-shadow:0 2px 8px rgba(0,0,0,0.4);
-      ">★</div>`,
-      iconSize: [30, 30],
-      iconAnchor: [15, 15],
-    });
-  }
-  return L.divIcon({
-    className: "",
-    html: `<div style="
-      width:24px;height:24px;
-      background:${color};
-      border:2px solid #fff;
-      border-radius:50%;
-      box-shadow:0 2px 6px rgba(0,0,0,0.3);
-    "></div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-  });
-};
-
-const createPinIcon = (
-  color: string,
-  kind: MarkerKind = "nearby",
-  selected = false
-) => {
-  if (kind === "meeting") {
-    return L.divIcon({
-      className: selected ? "medio-marker-bounce" : "",
-      html: `<div style="
-        width:30px;height:30px;
-        background:#F59E0B;
-        border:3px solid #fff;
-        border-radius:50%;
-        display:flex;align-items:center;justify-content:center;
-        font-size:16px;color:white;font-weight:bold;
-        box-shadow:0 2px 8px rgba(0,0,0,0.4);
-      ">&#9733;</div>`,
-      iconSize: [30, 30],
-      iconAnchor: [15, 15],
-    });
-  }
-
-  if (kind === "current") {
-    return L.divIcon({
-      className: "medio-current-location",
-      html: `<div class="medio-current-location__dot" style="background:${color};"></div>`,
-      iconSize: [34, 34],
-      iconAnchor: [17, 17],
-    });
-  }
-
-  return L.divIcon({
-    className: selected ? "medio-marker-bounce" : "",
-    html: `<div style="
-      position:relative;
-      width:28px;height:34px;
-      background:${color};
-      border:3px solid #fff;
-      border-radius:50% 50% 50% 0;
-      transform:rotate(-45deg);
-      box-shadow:0 8px 18px rgba(0,0,0,0.34);
-    "><span style="
-      position:absolute;
-      width:9px;height:9px;
-      left:50%;top:50%;
-      border-radius:50%;
-      background:#fff;
-      transform:translate(-50%,-50%);
-    "></span></div>`,
-    iconSize: [28, 34],
-    iconAnchor: [14, 32],
-  });
 };
 
 const getLegStyle = (mode: string, routeName: string, participantColor?: string) => {
@@ -393,28 +295,23 @@ export const RealMap: React.FC<RealMapProps> = ({
         <BoundsController points={boundsPoints} />
 
         {/* Markers */}
-        {markers.map((marker, idx) => {
-          const hexColor = resolveColor(marker.color);
-          const kind = marker.kind || (marker.color === "yellow" ? "meeting" : "nearby");
-          const icon = hexColor
-            ? createPinIcon(hexColor, kind, marker.selected)
-            : undefined;
-
-          return (
-            <Marker
-              key={idx}
-              position={[marker.lat, marker.lng]}
-              {...(icon ? { icon } : {})}
-            >
-              <Popup>{marker.name}</Popup>
-            </Marker>
-          );
-        })}
+        {markers.map((marker, idx) => (
+          <Marker
+            key={idx}
+            position={[marker.lat, marker.lng]}
+            icon={createMarkerIcon(marker.kind || "nearby", {
+              color: resolveColor(marker.color),
+              selected: marker.selected,
+            })}
+          >
+            <Popup>{marker.name}</Popup>
+          </Marker>
+        ))}
 
         {currentLocation && (
           <Marker
             position={[currentLocation.lat, currentLocation.lng]}
-            icon={createPinIcon("#0ea5e9", "current")}
+            icon={createMarkerIcon("currentLocation")}
           >
             <Popup>Current location</Popup>
           </Marker>
