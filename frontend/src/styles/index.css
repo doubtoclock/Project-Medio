@@ -608,6 +608,64 @@ html.light-mode .medio-page header {
   transform: translateX(1.42rem);
 }
 
+.medio-marker-bounce {
+  animation: medio-marker-bounce 900ms cubic-bezier(0.22, 1, 0.36, 1) infinite alternate;
+}
+
+@keyframes medio-marker-bounce {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-7px);
+  }
+}
+
+.medio-current-location {
+  position: relative;
+}
+
+.medio-current-location::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  border-radius: 9999px;
+  background: rgba(14, 165, 233, 0.22);
+  animation: medio-location-pulse 1.8s ease-out infinite;
+}
+
+.medio-current-location__dot {
+  position: absolute;
+  inset: 10px;
+  border: 3px solid #ffffff;
+  border-radius: 9999px;
+  box-shadow: 0 8px 18px rgba(14, 165, 233, 0.34);
+}
+
+@keyframes medio-location-pulse {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.55);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+.leaflet-container {
+  font-family: Inter, sans-serif;
+}
+
+.leaflet-control-attribution {
+  border-radius: 0.75rem 0 0 0;
+  background: rgba(15, 23, 42, 0.72) !important;
+  color: #cbd5e1 !important;
+  backdrop-filter: blur(12px);
+}
+
 html.light-mode .profile-hero {
   background:
     radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.6), transparent 30%),

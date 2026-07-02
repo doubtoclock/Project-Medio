@@ -32,14 +32,26 @@ type RouteEntry = {
   label?: string;
 };
 
+type MarkerKind = "origin" | "destination" | "meeting" | "nearby" | "current";
+
+type MapMarker = {
+  lat: number;
+  lng: number;
+  name: string;
+  color?: string;
+  kind?: MarkerKind;
+  selected?: boolean;
+};
+
 type RealMapProps = {
   lat?: number;
   lng?: number;
   zoom?: number;
-  markers?: Array<{ lat: number; lng: number; name: string; color?: string }>;
+  markers?: MapMarker[];
   routeData?: OtpRouteResponse | null;
   selectedIndex?: number;
   multiRouteData?: RouteEntry[];
+  currentLocation?: { lat: number; lng: number } | null;
 };
 
 type DecodedLine = {
@@ -65,7 +77,7 @@ const resolveColor = (color?: string) => {
   return MARKER_COLORS[color.toLowerCase()] || color;
 };
 
-const createColoredIcon = (color: string, isMeetingPoint = false) => {
+export const createColoredIcon = (color: string, isMeetingPoint = false) => {
   if (isMeetingPoint) {
     return L.divIcon({
       className: "",
@@ -93,6 +105,60 @@ const createColoredIcon = (color: string, isMeetingPoint = false) => {
     "></div>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
+  });
+};
+
+const createPinIcon = (
+  color: string,
+  kind: MarkerKind = "nearby",
+  selected = false
+) => {
+  if (kind === "meeting") {
+    return L.divIcon({
+      className: selected ? "medio-marker-bounce" : "",
+      html: `<div style="
+        width:30px;height:30px;
+        background:#F59E0B;
+        border:3px solid #fff;
+        border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        font-size:16px;color:white;font-weight:bold;
+        box-shadow:0 2px 8px rgba(0,0,0,0.4);
+      ">&#9733;</div>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+    });
+  }
+
+  if (kind === "current") {
+    return L.divIcon({
+      className: "medio-current-location",
+      html: `<div class="medio-current-location__dot" style="background:${color};"></div>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17],
+    });
+  }
+
+  return L.divIcon({
+    className: selected ? "medio-marker-bounce" : "",
+    html: `<div style="
+      position:relative;
+      width:28px;height:34px;
+      background:${color};
+      border:3px solid #fff;
+      border-radius:50% 50% 50% 0;
+      transform:rotate(-45deg);
+      box-shadow:0 8px 18px rgba(0,0,0,0.34);
+    "><span style="
+      position:absolute;
+      width:9px;height:9px;
+      left:50%;top:50%;
+      border-radius:50%;
+      background:#fff;
+      transform:translate(-50%,-50%);
+    "></span></div>`,
+    iconSize: [28, 34],
+    iconAnchor: [14, 32],
   });
 };
 
@@ -157,7 +223,7 @@ const BoundsController: React.FC<{ points: [number, number][] }> = ({ points }) 
     if (points.length === 0) return;
     const bounds = L.latLngBounds(points);
     if (bounds.isValid()) {
-      map.flyToBounds(bounds, { padding: [60, 60], maxZoom: 16, duration: 1 });
+      map.flyToBounds(bounds, { padding: [76, 76], maxZoom: 16, duration: 1 });
     }
   }, [points, map]);
 
@@ -238,6 +304,7 @@ export const RealMap: React.FC<RealMapProps> = ({
   routeData,
   selectedIndex = 0,
   multiRouteData,
+  currentLocation,
 }) => {
   const allLegs = useMemo(() => {
     const legs: DecodedLine[] = [];
@@ -280,12 +347,12 @@ export const RealMap: React.FC<RealMapProps> = ({
   }, [routeData, selectedIndex, multiRouteData]);
 
   const boundsPoints = useMemo(() => {
-    if (allLegs.length === 0) return [];
     const pts: [number, number][] = [];
     markers.forEach((m) => pts.push([m.lat, m.lng]));
+    if (currentLocation) pts.push([currentLocation.lat, currentLocation.lng]);
     allLegs.forEach((l) => l.positions.forEach((p) => pts.push(p)));
     return pts;
-  }, [markers, allLegs]);
+  }, [markers, currentLocation, allLegs]);
 
   const legendItems = useMemo(() => {
     if (allLegs.length === 0) return [];
@@ -328,9 +395,9 @@ export const RealMap: React.FC<RealMapProps> = ({
         {/* Markers */}
         {markers.map((marker, idx) => {
           const hexColor = resolveColor(marker.color);
-          const isMeetingPoint = marker.color === "yellow";
+          const kind = marker.kind || (marker.color === "yellow" ? "meeting" : "nearby");
           const icon = hexColor
-            ? createColoredIcon(hexColor, isMeetingPoint)
+            ? createPinIcon(hexColor, kind, marker.selected)
             : undefined;
 
           return (
@@ -343,6 +410,15 @@ export const RealMap: React.FC<RealMapProps> = ({
             </Marker>
           );
         })}
+
+        {currentLocation && (
+          <Marker
+            position={[currentLocation.lat, currentLocation.lng]}
+            icon={createPinIcon("#0ea5e9", "current")}
+          >
+            <Popup>Current location</Popup>
+          </Marker>
+        )}
 
         {/* Route lines */}
         {allLegs.map((leg, index) => {
