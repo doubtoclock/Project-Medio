@@ -39,7 +39,7 @@ export const TravelBottomSheet: React.FC<TravelBottomSheetProps> = ({
 
   return (
     <section
-      className={`fixed inset-x-0 bottom-0 z-[650] rounded-t-[2rem] border border-white/12 bg-slate-950/94 text-slate-100 shadow-[0_-24px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all duration-300 ${
+      className={`fixed inset-x-0 bottom-0 z-[650] rounded-t-[2rem] border border-slate-800 bg-background-dark/94 text-slate-100 shadow-[0_-24px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all duration-300 ${
         isFull ? "h-[82vh]" : isHalf ? "h-[54vh]" : "h-[9.5rem]"
       }`}
       aria-label="Route details"

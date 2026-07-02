@@ -102,6 +102,7 @@ export const TravelView = () => {
   const [newAddrSuggestions, setNewAddrSuggestions] = useState<LocationResult[]>([]);
   const [newCoords, setNewCoords] = useState<{ lat: number; lng: number } | null>(null);
 
+  const [searchCollapsed, setSearchCollapsed] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [nearbyCategory, setNearbyCategory] = useState<string | null>(null);
   const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlace[]>([]);
@@ -225,6 +226,7 @@ export const TravelView = () => {
       setSuggestionsB([]);
     }
     setActiveField(type);
+    setSearchCollapsed(false);
     resetRouteState();
   };
 
@@ -239,6 +241,7 @@ export const TravelView = () => {
       setSuggestionsB([]);
     }
     setActiveField(null);
+    setSearchCollapsed(false);
     resetRouteState();
   };
 
@@ -252,11 +255,13 @@ export const TravelView = () => {
 
   const updateTravelMode = (mode: TravelMode) => {
     setTravelMode(mode);
+    setSearchCollapsed(false);
     resetRouteState();
   };
 
   const updateLocalTransport = (mode: LocalTransportMode, checked: boolean) => {
     setLocalTransport((current) => ({ ...current, [mode]: checked }));
+    setSearchCollapsed(false);
     resetRouteState();
   };
 
@@ -297,6 +302,7 @@ export const TravelView = () => {
       }
       setSelectedRoute(0);
       setSheetState("half");
+      setSearchCollapsed(true);
     } catch {
       setRouteNotice("Could not find a route right now.");
     } finally {
@@ -368,10 +374,10 @@ export const TravelView = () => {
   ];
 
   return (
-    <div className="relative h-screen overflow-hidden bg-slate-950 text-slate-100">
+    <div className="relative h-screen overflow-hidden bg-background-dark text-slate-100">
       {loading && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-4 rounded-3xl border border-slate-700 bg-slate-950 px-10 py-8 shadow-2xl">
+          <div className="flex flex-col items-center gap-4 rounded-3xl border border-slate-700 bg-background-dark px-10 py-8 shadow-2xl">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/30 border-t-primary" />
             <p className="text-sm font-semibold text-slate-300">Finding your route...</p>
           </div>
@@ -390,7 +396,7 @@ export const TravelView = () => {
         />
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-[520] h-44 bg-gradient-to-b from-slate-950/88 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[520] h-44 bg-gradient-to-b from-background-dark/88 to-transparent" />
 
       <TravelSearch
         locA={locA}
@@ -415,6 +421,8 @@ export const TravelView = () => {
         onTravelModeChange={updateTravelMode}
         onLocalTransportChange={updateLocalTransport}
         onRoute={handleRoute}
+        collapsed={searchCollapsed}
+        onToggleCollapsed={() => setSearchCollapsed(false)}
       />
 
       <FloatingButtons

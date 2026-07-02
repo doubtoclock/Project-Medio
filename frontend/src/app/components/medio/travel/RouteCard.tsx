@@ -36,8 +36,8 @@ export const RouteCard: React.FC<RouteCardProps> = ({
       aria-pressed={selected}
       className={`w-full rounded-[1.45rem] border p-4 text-left transition-all duration-300 ${
         selected
-          ? "border-primary/70 bg-white text-slate-950 shadow-[0_18px_45px_rgba(13,108,242,0.28)] ring-4 ring-primary/15 dark:bg-slate-50"
-          : "border-white/10 bg-slate-950/82 text-slate-100 shadow-lg hover:border-slate-500/60 hover:bg-slate-900"
+          ? "border-primary/70 bg-primary/10 text-slate-100 shadow-lg ring-4 ring-primary/15"
+          : "border-slate-800 bg-slate-900/80 text-slate-100 shadow-lg hover:border-slate-500/60"
       }`}
     >
       <div className="flex items-start justify-between gap-3">

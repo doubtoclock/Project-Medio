@@ -1,8 +1,10 @@
 import React from "react";
 import {
+  ArrowRight,
   Bike,
   BusFront,
   Car,
+  ChevronDown,
   Footprints,
   MapPin,
   Navigation,
@@ -47,6 +49,8 @@ type TravelSearchProps = {
   onTravelModeChange: (mode: TravelMode) => void;
   onLocalTransportChange: (mode: LocalTransportMode, checked: boolean) => void;
   onRoute: () => void;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 };
 
 const travelModeChoices: Array<{
@@ -101,16 +105,34 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
   onTravelModeChange,
   onLocalTransportChange,
   onRoute,
+  collapsed = false,
+  onToggleCollapsed,
 }) => {
   const hasLocalTransportMode = Object.values(localTransport).some(Boolean);
 
   return (
     <section className="pointer-events-none absolute inset-x-0 top-0 z-[600] px-3 pt-[calc(0.85rem+env(safe-area-inset-top))] sm:px-4">
       <div className="pointer-events-auto mx-auto max-w-xl">
-        <div className="rounded-[1.65rem] border border-white/12 bg-slate-950/86 p-3 text-slate-100 shadow-[0_24px_70px_rgba(0,0,0,0.38)] backdrop-blur-2xl">
+        {collapsed ? (
+          <button
+            type="button"
+            onClick={onToggleCollapsed}
+            className="w-full rounded-2xl border border-slate-800 bg-slate-950/90 p-3 text-slate-100 shadow-2xl backdrop-blur-2xl transition hover:bg-slate-900"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+                <span className="truncate text-emerald-400">{locA || "Origin"}</span>
+                <ArrowRight size={14} className="shrink-0 text-slate-500" />
+                <span className="truncate text-rose-400">{locB || "Destination"}</span>
+              </div>
+              <ChevronDown size={16} className="shrink-0 text-slate-400" />
+            </div>
+          </button>
+        ) : (
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-3 text-slate-100 shadow-2xl backdrop-blur-2xl">
           <div className="mb-3 flex items-center justify-between gap-3 pr-32">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-200/80">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-primary/80">
                 Medio Travel
               </p>
               <h1 className="text-lg font-black tracking-tight">Navigate Mumbai</h1>
@@ -123,9 +145,9 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
                 <button
                   type="button"
                   onClick={() => onSavedPlaceClick(place)}
-                  className="flex min-h-10 items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/90 py-2 pl-3 pr-8 text-xs font-bold text-slate-200 transition hover:border-cyan-400/50"
+                  className="flex min-h-10 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/90 py-2 pl-3 pr-8 text-xs font-bold text-slate-200 transition hover:border-primary/50"
                 >
-                  <MapPin size={14} className="text-emerald-300" />
+                  <MapPin size={14} className="text-primary" />
                   <span className="max-w-28 truncate">{place.label}</span>
                 </button>
                 <button
@@ -141,9 +163,9 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
             <button
               type="button"
               onClick={onAddPlace}
-              className="flex min-h-10 shrink-0 items-center gap-2 rounded-2xl border border-dashed border-slate-600 bg-slate-900/80 px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-emerald-300"
+              className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-dashed border-slate-600 bg-slate-900/80 px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-primary"
             >
-              <Plus size={15} className="text-emerald-300" />
+              <Plus size={15} className="text-primary" />
               Add
             </button>
           </div>
@@ -171,7 +193,7 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
             />
           </div>
 
-          <div className="mt-3 grid grid-cols-4 gap-1 rounded-2xl bg-slate-900/80 p-1">
+          <div className="mt-3 grid grid-cols-4 gap-1 rounded-xl bg-slate-900/80 p-1">
             {travelModeChoices.map(({ id, label, Icon }) => {
               const active = travelMode === id;
               return (
@@ -180,9 +202,9 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
                   type="button"
                   onClick={() => onTravelModeChange(id)}
                   aria-pressed={active}
-                  className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-bold transition ${
+                  className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[11px] font-bold transition ${
                     active
-                      ? "bg-white text-slate-950 shadow"
+                      ? "bg-primary text-white shadow"
                       : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
                   }`}
                 >
@@ -206,7 +228,7 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
                 return (
                   <div
                     key={id}
-                    className={`local-transport-card flex items-center justify-between gap-2 rounded-2xl border px-3 py-2 ${
+                    className={`local-transport-card flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${
                       enabled ? "local-transport-card--active" : "border-slate-800 bg-slate-950/70"
                     }`}
                     style={style}
@@ -234,7 +256,7 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
           )}
 
           {routeNotice && (
-            <p className="mt-3 rounded-2xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-sm text-amber-100">
+            <p className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-sm text-amber-100">
               {routeNotice}
             </p>
           )}
@@ -249,12 +271,13 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
             type="button"
             onClick={onRoute}
             disabled={!canRequestRoute || loading}
-            className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition enabled:hover:bg-primary/90 disabled:opacity-45"
+            className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition enabled:hover:bg-primary/90 disabled:opacity-45"
           >
             <Navigation size={17} />
             {loading ? "Finding route..." : "Find route"}
           </button>
         </div>
+        )}
       </div>
     </section>
   );
