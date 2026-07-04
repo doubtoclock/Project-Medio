@@ -1,109 +1,104 @@
-/* ---------------- GOOGLE FONT ---------------- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap");
+:root {
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
 
-/* ---------------- TAILWIND BASE ---------------- */
+  --bg-color: #090909;
+  --surface-color: #121212;
+  --surface-2-color: #171717;
+  --primary-text: #F5F5F5;
+  --secondary-text: #A1A1A1;
+  --muted-text: #6F6F6F;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --divider-color: rgba(255, 255, 255, 0.05);
+  --accent-color: #FFFFFF;
+  --accent-hover: #F0F0F0;
+  --accent-pressed: #E0E0E0;
+  --danger-color: #D95C5C;
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+  /* Global Layout Tokens */
+  --pad-page-x: 24px;
+  --pad-btn: 18px 32px;
+  --radius-btn: 24px;
+  --radius-card: 14px;
 
-/* ---------------- GLOBAL RESET ---------------- */
+  color-scheme: dark;
+  color: var(--primary-text);
+  background-color: var(--bg-color);
 
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  font-family: "Inter", sans-serif;
-}
-
-/* Smooth text rendering */
-body {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  /* Match Route Planner design system */
-  background-color: #101722;
-  color: #f1f5f9;
-
-  min-height: max(884px, 100dvh);
 }
 
-/* ---------------- DESIGN SYSTEM COLORS ---------------- */
-
-/* These match the colors used in the route planner UI */
-:root {
-  --color-primary: #0d6cf2;
-  --color-background-light: #f5f7f8;
-  --color-background-dark: #101722;
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+  justify-content: center;
 }
 
-/* ---------------- MEDIO UI EFFECTS ---------------- */
-
-/* Topographic background pattern */
-.topo-pattern {
-  background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4Rz1kq0jtYA_Vtb0lYwleiAK845V7K1-xf-Kk3_yAyUFOJPEFL8PEc8BqD757-tJaoMocsj1DKAE2dS1LJ9ygBf58cJ5Wxj5Iiq-S1vyBCZbexxkhe6uahNz0KPVyxdv_qQlLDge9i8HtGbpEnmjMmxiU8gqGbMLBhIl_snYFc0-vYlup0WfXDz4ed9payO2oshuFBQu0Ivoa5Z_FdPTRfEdJ5BXa1ZYjzOant0VhSMSSkFeDST1U3DfXI7gzyHiJuJ6Pp_m21LE");
-  background-size: cover;
-  background-repeat: no-repeat;
-  opacity: 0.1;
+#root {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
 
-/* MEDIO logo glow */
-.glow-effect {
-  text-shadow:
-    0 0 20px rgba(13,108,242,0.6),
-    0 0 40px rgba(13,108,242,0.3);
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-/* Soft ambient light effect */
-.ambient-light {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(120px);
-  opacity: 0.4;
-  pointer-events: none;
+a {
+  text-decoration: none;
+  color: inherit;
 }
 
-/* ---------------- LEAFLET FIXES ---------------- */
+/* =========================================
+   SHARED MICRO-INTERACTIONS
+   ========================================= */
 
-/* Constrain Leaflet to its own stacking context */
-.leaflet-container {
-  z-index: 0 !important;
+
+/* Subtle lift on hover/active for cards */
+.anim-card-lift {
+  transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.anim-card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+.anim-card-lift:active {
+  transform: translateY(0);
 }
 
-/* Force Leaflet layers to remain within container */
-.leaflet-pane {
-  z-index: 1 !important;
+/* Slide up fade for numbers/text */
+@keyframes slideUpFade {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.anim-slide-up-fade {
+  animation: slideUpFade 0.6s cubic-bezier(0.2, 1, 0.3, 1) forwards;
+  opacity: 0; /* initial state */
 }
 
-.leaflet-tile-pane {
-  z-index: 1 !important;
+/* Subtle rotation spring on icon tap */
+.anim-icon-tap {
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.anim-icon-tap:active {
+  transform: rotate(-10deg) scale(0.9);
 }
 
-.leaflet-overlay-pane {
-  z-index: 2 !important;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
-
-.leaflet-marker-pane {
-  z-index: 3 !important;
-}
-
-.leaflet-tooltip-pane {
-  z-index: 4 !important;
-}
-
-.leaflet-popup-pane {
-  z-index: 5 !important;
-}
-
-.leaflet-top,
-.leaflet-bottom,
-.leaflet-control {
-  z-index: 6 !important;
-}
-
-
-

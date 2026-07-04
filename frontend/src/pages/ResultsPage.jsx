@@ -1,0 +1,447 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { LocateFixed, ArrowLeft, Clock } from 'lucide-react';
+import { apiClient } from '../lib/apiClient';
+import './ResultsPage.css';
+
+const CATEGORY_ORDER = [
+  'Cafe', 'Restaurant', 'Food court', 'Mall', 'Park', 'Garden',
+  'Cinema', 'Theatre', 'Museum', 'Gallery', 'Library', 'Bar',
+  'Dessert', 'Quick bite', 'Bookstore', 'Market', 'Arts center',
+  'Community center', 'Bowling', 'Sports', 'Beach', 'Hotel',
+  'Attraction', 'Campus', 'Place',
+];
+
+const getMeetCategory = (place) => place.category || 'Place';
+
+async function fetchRoute(start, end) {
+  try {
+    const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`);
+    const data = await response.json();
+    if (data.routes && data.routes.length > 0) {
+      return data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+    }
+  } catch (error) {
+    console.error("Error fetching route:", error);
+  }
+  return [[start.lat, start.lng], [end.lat, end.lng]];
+}
+
+const getOriginIcon = (phase) => L.divIcon({
+  className: phase >= 1 ? 'leaflet-custom-marker-container' : 'anim-hidden',
+  html: `<div class="marker-origin"></div>`,
+  iconSize: [12, 12],
+  iconAnchor: [6, 6],
+});
+
+const getVenueIcon = (phase, isSelected) => L.divIcon({
+  className: phase >= 4 ? 'leaflet-custom-marker-container' : 'anim-hidden',
+  html: `<div class="marker-venue ${isSelected ? 'marker-venue-selected' : ''} anim-ui-reveal"></div>`,
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+});
+
+const nexusIcon = L.divIcon({
+  className: '',
+  html: `
+    <div class="marker-nexus">
+      <div class="marker-nexus-outer"></div>
+      <div class="marker-nexus-inner"></div>
+    </div>
+  `,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+});
+
+function MapAnimator({ positions, midpoint, phase, transitioningVenue, rescaleTrigger }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (transitioningVenue) {
+      map.flyTo([transitioningVenue.lat, transitioningVenue.lng], 18, {
+        animate: true,
+        duration: 1.8,
+        easeLinearity: 0.2
+      });
+    } else if (phase === 0) {
+      map.setView([midpoint.lat, midpoint.lng], 15, { animate: false });
+    } else if (phase >= 1 && positions.length > 0) {
+      const bounds = L.latLngBounds(positions);
+      map.flyToBounds(bounds, { padding: [100, 100], maxZoom: 14, duration: 1.5 });
+    }
+  }, [map, positions, midpoint, phase, transitioningVenue, rescaleTrigger]);
+
+  return null;
+}
+
+function ResultsPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  const meetResults = useMemo(() => location.state?.meetResults || [], [location.state?.meetResults]);
+  const originA = useMemo(() => location.state?.originA || {
+    lat: parseFloat(searchParams.get('latA')) || 52.5350,
+    lng: parseFloat(searchParams.get('lngA')) || 13.3890,
+    name: location.state?.locA || searchParams.get('nameA') || 'Berlin, Mitte',
+  }, [location.state?.originA?.lat, location.state?.originA?.lng, location.state?.originA?.name, location.state?.locA, searchParams.get('latA'), searchParams.get('lngA'), searchParams.get('nameA')]);
+  const originB = useMemo(() => location.state?.originB || {
+    lat: parseFloat(searchParams.get('latB')) || 52.5050,
+    lng: parseFloat(searchParams.get('lngB')) || 13.4250,
+    name: location.state?.locB || searchParams.get('nameB') || "Friend's Location",
+  }, [location.state?.originB?.lat, location.state?.originB?.lng, location.state?.originB?.name, location.state?.locB, searchParams.get('latB'), searchParams.get('lngB'), searchParams.get('nameB')]);
+
+  const [phase, setPhase] = useState(0);
+  const [rescaleTrigger, setRescaleTrigger] = useState(0);
+  const [routeA, setRouteA] = useState([]);
+  const [routeB, setRouteB] = useState([]);
+  const [transitioningVenue, setTransitioningVenue] = useState(null);
+  const [isFadingOut, setIsFadingOut] = useState(false);
+  const [selectedVenue, setSelectedVenue] = useState(null);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [routeCache, setRouteCache] = useState({});
+
+  const hasResults = meetResults.length > 0;
+
+  const midpoint = useMemo(() => ({
+    lat: (originA.lat + originB.lat) / 2,
+    lng: (originA.lng + originB.lng) / 2,
+  }), [originA.lat, originA.lng, originB.lat, originB.lng]);
+
+  useEffect(() => {
+    async function loadRoutes() {
+      const rA = await fetchRoute(originA, midpoint);
+      const rB = await fetchRoute(originB, midpoint);
+      setRouteA(rA);
+      setRouteB(rB);
+    }
+    loadRoutes();
+  }, [originA.lat, originA.lng, originB.lat, originB.lng, midpoint.lat, midpoint.lng]);
+
+  const allPositions = useMemo(() => {
+    const positions = [
+      [originA.lat, originA.lng],
+      [originB.lat, originB.lng],
+    ];
+    if (selectedVenue) {
+      positions.push([selectedVenue.lat, selectedVenue.lon]);
+    }
+    positions.push(...routeA, ...routeB);
+    return positions;
+  }, [originA, originB, selectedVenue, routeA, routeB]);
+
+  // Cinematic phase sequence
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase(1), 200);
+    const t2 = setTimeout(() => setPhase(2), 1000);
+    const t3 = setTimeout(() => setPhase(3), 1800);
+    const t4 = setTimeout(() => setPhase(4), 2400);
+    return () => {
+      clearTimeout(t1); clearTimeout(t2);
+      clearTimeout(t3); clearTimeout(t4);
+    };
+  }, []);
+
+  // Auto-select first venue
+  useEffect(() => {
+    if (hasResults && !selectedVenue) {
+      setSelectedVenue(meetResults[0]);
+    }
+  }, [hasResults]);
+
+  // Load backend routes when venue is selected
+  useEffect(() => {
+    if (!selectedVenue) return;
+
+    const loadRoute = async (side) => {
+      const from = side === 'A' ? originA : originB;
+      const fromName = side === 'A' ? originA.name : originB.name;
+      const routeKey = `${side}-${selectedVenue.id}`;
+
+      if (routeCache[routeKey]) return;
+
+      try {
+        const data = await apiClient.route.plan({
+          from: { lat: from.lat, lng: from.lng },
+          to: { lat: selectedVenue.lat, lng: selectedVenue.lon },
+          fromName,
+          toName: selectedVenue.name,
+        });
+        setRouteCache((prev) => ({ ...prev, [routeKey]: data }));
+      } catch {
+        // Route fetch failed for this side; will retry on next selection
+      }
+    };
+
+    loadRoute('A');
+    loadRoute('B');
+  }, [selectedVenue]);
+
+  // Category helpers
+  const categoryCounts = useMemo(() => {
+    return meetResults.reduce((counts, place) => {
+      const category = getMeetCategory(place);
+      counts[category] = (counts[category] || 0) + 1;
+      return counts;
+    }, {});
+  }, [meetResults]);
+
+  const availableCategories = useMemo(() => {
+    return Object.keys(categoryCounts).sort((left, right) => {
+      const li = CATEGORY_ORDER.indexOf(left);
+      const ri = CATEGORY_ORDER.indexOf(right);
+      return (li === -1 ? CATEGORY_ORDER.length : li) - (ri === -1 ? CATEGORY_ORDER.length : ri);
+    });
+  }, [categoryCounts]);
+
+  const filteredMeetResults = useMemo(() => {
+    if (selectedCategories.length === 0) return meetResults;
+    const selected = new Set(selectedCategories);
+    return meetResults.filter((place) => selected.has(getMeetCategory(place)));
+  }, [meetResults, selectedCategories]);
+
+  const toggleCategory = (category) => {
+    setSelectedCategories((current) =>
+      current.includes(category)
+        ? current.filter((item) => item !== category)
+        : [...current, category]
+    );
+  };
+
+  const goBack = () => navigate(-1);
+  const handleRescale = () => setRescaleTrigger((prev) => prev + 1);
+
+  const handleVenueSelect = (venue) => {
+    setTransitioningVenue(venue);
+    setIsFadingOut(true);
+    setTimeout(() => {
+      navigate('/detail', { state: { venue, originA, originB, locA: originA.name, locB: originB.name } });
+    }, 1800);
+  };
+
+  return (
+    <div className="results-page">
+      <div className={`results-fade-out ${isFadingOut ? 'active' : ''}`}></div>
+      <div className="results-map-section">
+        <div className="map-top-bar anim-ui-reveal">
+          <button className="results-back-btn" onClick={goBack}>
+            <ArrowLeft size={18} strokeWidth={2.5} />
+          </button>
+          <div className="map-badge anim-slide-up-fade" style={{ flex: 1, animationDelay: '0.2s' }}>
+            <div className="map-badge-bar"></div>
+            <span className="map-badge-text">Nexus Calculated</span>
+          </div>
+        </div>
+
+        <button className="map-rescale-floating anim-ui-reveal" onClick={handleRescale} title="Rescale Map" style={{ animationDelay: '0.4s' }}>
+          <LocateFixed size={20} className="anim-icon-tap" />
+        </button>
+
+        <div className={`results-map-container ${transitioningVenue ? 'cinematic-tilt' : (phase === 1 ? 'cinematic-drone-zoom' : '')}`}>
+          <MapContainer
+            center={[midpoint.lat, midpoint.lng]}
+            zoom={15}
+            scrollWheelZoom={false}
+            zoomControl={false}
+            attributionControl={false}
+            style={{ width: '100%', height: '100%' }}
+          >
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            />
+            <MapAnimator positions={allPositions} midpoint={midpoint} phase={phase} transitioningVenue={transitioningVenue} rescaleTrigger={rescaleTrigger} />
+
+            {/* Routes: origins to midpoint (cinematic) */}
+            {phase >= 2 && !transitioningVenue && (
+              <>
+                {routeA.length > 0 && (
+                  <>
+                    <Polyline positions={routeA} color="#FFFFFF" weight={5} opacity={0.3} className="anim-route-line-a" />
+                    <Polyline positions={routeA} color="#FFFFFF" weight={2} opacity={1.0} className="anim-route-line-a" />
+                  </>
+                )}
+                {routeB.length > 0 && (
+                  <>
+                    <Polyline positions={routeB} color="#D4AF37" weight={5} opacity={0.3} className="anim-route-line-b" />
+                    <Polyline positions={routeB} color="#D4AF37" weight={2} opacity={1.0} className="anim-route-line-b" />
+                  </>
+                )}
+              </>
+            )}
+
+            {/* Origin A */}
+            <Marker position={[originA.lat, originA.lng]} icon={getOriginIcon(phase)}>
+              <Popup className="custom-popup">
+                <strong>Origin A</strong><br />{originA.name}
+              </Popup>
+            </Marker>
+
+            {/* Origin B */}
+            <Marker position={[originB.lat, originB.lng]} icon={getOriginIcon(phase)}>
+              <Popup className="custom-popup">
+                <strong>Origin B</strong><br />{originB.name}
+              </Popup>
+            </Marker>
+
+            {/* Midpoint / Nexus */}
+            {phase >= 3 && (
+              <Marker
+                position={[midpoint.lat, midpoint.lng]}
+                icon={L.divIcon({
+                  className: 'anim-nexus-spring',
+                  html: nexusIcon.options.html,
+                  iconSize: [24, 24],
+                  iconAnchor: [12, 12]
+                })}
+              >
+                <Popup className="custom-popup">
+                  <strong>Optimal Nexus</strong>
+                </Popup>
+              </Marker>
+            )}
+
+            {/* Venue markers */}
+            {phase >= 4 && filteredMeetResults.map((venue) => (
+              <Marker
+                key={venue.id}
+                position={[venue.lat, venue.lon]}
+                icon={getVenueIcon(phase, selectedVenue?.id === venue.id)}
+              >
+                <Popup className="custom-popup">
+                  <strong>{venue.name}</strong><br />
+                  {getMeetCategory(venue)}
+                </Popup>
+              </Marker>
+            ))}
+
+            {/* Selected Venue Marker (during transition) */}
+            {transitioningVenue && (
+              <Marker position={[transitioningVenue.lat, transitioningVenue.lon]} icon={L.divIcon({
+                className: 'anim-origin-pop',
+                html: '<div style="width: 14px; height: 14px; background: var(--accent-color); border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"></div>',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+              })} />
+            )}
+          </MapContainer>
+        </div>
+      </div>
+
+      {/* BOTTOM SECTION */}
+      <div className="results-bottom">
+        <div className="anim-ui-reveal" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <h1 className="results-title">Meeting<br />Points.</h1>
+          <p className="results-subtitle">Found {meetResults.length} matches near {(midpoint.lat).toFixed(4)}° N</p>
+          <div className="results-divider"></div>
+
+          {/* Category filters */}
+          {availableCategories.length > 0 && (
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16,
+            }}>
+              {availableCategories.map((category) => {
+                const checked = selectedCategories.includes(category);
+                return (
+                  <button
+                    key={category}
+                    onClick={() => toggleCategory(category)}
+                    style={{
+                      padding: '6px 14px', borderRadius: 20, fontSize: 11,
+                      fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase',
+                      border: '1px solid',
+                      borderColor: checked ? '#F5F5F5' : 'rgba(255,255,255,0.15)',
+                      backgroundColor: checked ? '#F5F5F5' : 'transparent',
+                      color: checked ? '#0F0F0F' : '#A1A1A1',
+                      cursor: 'pointer', fontFamily: "'Space Mono', monospace",
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {category} ({categoryCounts[category]})
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* No results after filter */}
+          {filteredMeetResults.length === 0 && selectedCategories.length > 0 && (
+            <div style={{
+              padding: 24, textAlign: 'center', borderRadius: 16,
+              backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+              marginBottom: 16,
+            }}>
+              <p style={{ color: '#F5F5F5', fontSize: 14, fontWeight: 600 }}>No matching spots</p>
+              <p style={{ color: '#A1A1A1', fontSize: 12, marginTop: 4 }}>Try selecting different categories</p>
+            </div>
+          )}
+
+          {/* Meeting Point Cards */}
+          {filteredMeetResults.map((point, index) => (
+            <div
+              className="meeting-card"
+              key={point.id}
+              style={{
+                cursor: 'pointer',
+                border: selectedVenue?.id === point.id ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(255,255,255,0.07)',
+                backgroundColor: selectedVenue?.id === point.id ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
+              }}
+              onClick={() => setSelectedVenue(point)}
+            >
+              <div className="meeting-card-info">
+                <span className={`meeting-card-tag ${index === 0 ? '' : 'nearby'}`}>
+                  {getMeetCategory(point)}
+                </span>
+                <span className="meeting-card-name">{point.name}</span>
+                {/* Travel times */}
+                <div style={{
+                  display: 'flex', gap: 12, marginTop: 4,
+                }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    fontSize: 11, color: '#A1A1A1', fontFamily: "'Space Mono', monospace",
+                  }}>
+                    <Clock size={10} />
+                    <span>A: {point.travelTimeA} min</span>
+                  </div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    fontSize: 11, color: '#A1A1A1', fontFamily: "'Space Mono', monospace",
+                  }}>
+                    <Clock size={10} />
+                    <span>B: {point.travelTimeB} min</span>
+                  </div>
+                  <div style={{
+                    fontSize: 11, fontFamily: "'Space Mono', monospace",
+                    color: point.difference <= 5 ? '#4CAF50' : point.difference <= 15 ? '#FF9800' : '#F44336',
+                  }}>
+                    Gap: {point.difference} min
+                  </div>
+                </div>
+                {point.reason && (
+                  <span style={{ fontSize: 11, color: '#A1A1A1', marginTop: 2 }}>{point.reason}</span>
+                )}
+              </div>
+              <button
+                className="meeting-card-select"
+                onClick={(e) => { e.stopPropagation(); handleVenueSelect(point); }}
+              >
+                Select
+              </button>
+            </div>
+          ))}
+
+          {/* Footer */}
+          <div className="results-footer">
+            <span className="results-footer-text">V.4.0 ENGINE</span>
+            <span className="results-footer-text">GRID: 1:25000</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default ResultsPage;

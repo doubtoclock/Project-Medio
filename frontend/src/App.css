@@ -1,0 +1,104 @@
+.app-container {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+  background-color: var(--surface-color);
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  position: relative;
+  height: 100%;
+  padding-left: 0;
+  transition: padding-left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.main-content-inner {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+  border-radius: 0;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-radius 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background-color: var(--bg-color);
+  box-shadow: none;
+}
+
+.main-content.nav-expanded .main-content-inner {
+  transform: scale(0.98) translateX(16px);
+  transform-origin: center right;
+  border-radius: 32px 0 0 32px;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.4);
+}
+
+/* Content Overlay for clicks */
+.content-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 999;
+}
+
+.main-content.nav-expanded .content-overlay {
+  opacity: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Floating Menu Button */
+.floating-menu-btn {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: var(--surface-color);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--primary-text);
+}
+
+.menu-icon-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 18px;
+}
+
+.menu-line {
+  width: 100%;
+  height: 2px;
+  background-color: currentColor;
+  border-radius: 2px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+}
+
+.menu-line.open:first-child {
+  transform: translateY(3px) rotate(45deg);
+}
+
+.menu-line.open:last-child {
+  transform: translateY(-3px) rotate(-45deg);
+}

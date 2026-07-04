@@ -1,0 +1,43 @@
+/* Base Mobile First Styles */
+.phone-frame-wrapper {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background-color: #090909; /* Fallback base */
+}
+
+.phone-container {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Desktop Presentation Styles */
+@media (min-width: 768px) {
+  .phone-frame-wrapper {
+    align-items: center;
+    justify-content: center;
+    /* Soft dark radial workspace */
+    background: radial-gradient(circle at center, #1A1A1A 0%, #090909 100%);
+  }
+
+  .phone-container {
+    width: 390px;
+    height: 100dvh;
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8), 0 16px 32px rgba(0, 0, 0, 0.4);
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: #090909;
+    
+    /* Hardware acceleration for smooth internal scrolling */
+    transform: translateZ(0);
+  }
+}

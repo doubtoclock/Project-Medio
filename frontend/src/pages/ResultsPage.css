@@ -1,0 +1,472 @@
+.results-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  box-sizing: border-box;
+}
+
+.results-page * {
+  box-sizing: border-box;
+}
+
+/* === MAP SECTION === */
+.results-map-section {
+  position: relative;
+  width: 100%;
+  height: 55%;
+  min-height: 320px;
+  flex-shrink: 0;
+}
+
+.results-map-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.results-map-container .leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: var(--surface-2-color);
+  transform: scale(1.15);
+  /* Slightly scaled up to prevent edges showing during rotation */
+  transition: transform 1.8s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.results-map-container.cinematic-drone-zoom .leaflet-container {
+  animation: cinematicDroneZoom 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.results-map-container.cinematic-tilt .leaflet-container {
+  transform: scale(1.25) rotateX(20deg) rotateZ(-5deg);
+}
+
+@keyframes cinematicDroneZoom {
+  0% {
+    transform: scale(1.15) rotateZ(3deg);
+  }
+
+  100% {
+    transform: scale(1.15) rotateZ(0deg);
+  }
+}
+
+.results-fade-out {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-color);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transition: opacity 1.5s ease-in;
+}
+
+.results-fade-out.active {
+  opacity: 1;
+}
+
+/* Hide leaflet attribution for cleaner look */
+.results-map-container .leaflet-control-attribution {
+  display: none;
+}
+
+.results-map-container .leaflet-control-zoom {
+  display: none;
+}
+
+/* Top bar overlay on map */
+.map-top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px var(--pad-page-x) 16px;
+  background: linear-gradient(180deg, rgba(17, 17, 19, 0.85) 0%, transparent 100%);
+}
+
+.map-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.map-badge-bar {
+  width: 3px;
+  height: 16px;
+  background-color: var(--primary-text);
+  border-radius: 2px;
+}
+
+.map-badge-text {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: var(--secondary-text);
+  text-transform: uppercase;
+}
+
+.map-rescale-floating {
+  position: absolute;
+  bottom: 24px;
+  right: var(--pad-page-x);
+  z-index: 1000;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: var(--surface-color);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-text);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.map-rescale-floating:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.results-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--primary-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-right: 16px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.results-back-btn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Venue marker */
+.marker-venue {
+  width: 16px;
+  height: 16px;
+  background-color: var(--accent-color);
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.5);
+  transition: all 0.3s ease;
+}
+
+.marker-venue-selected {
+  background-color: #FFFFFF;
+  border-color: #FFFFFF;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.8);
+  transform: scale(1.2);
+}
+
+/* Custom map markers */
+.marker-origin {
+  width: 12px;
+  height: 12px;
+  background-color: var(--secondary-text);
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 10px var(--border-color);
+}
+
+.marker-nexus {
+  width: 24px;
+  height: 24px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.marker-nexus-outer {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+}
+
+.marker-nexus-inner {
+  width: 10px;
+  height: 10px;
+  background-color: var(--primary-text);
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--secondary-text);
+  z-index: 1;
+}
+
+.marker-label {
+  position: absolute;
+  white-space: nowrap;
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.marker-label-origin-a {
+  top: -6px;
+  left: 20px;
+}
+
+.marker-label-origin-b {
+  top: -6px;
+  left: 20px;
+}
+
+.marker-label-nexus {
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: var(--secondary-text);
+}
+
+/* === BOTTOM SECTION === */
+.results-bottom {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 28px var(--pad-page-x) 16px;
+  overflow-y: auto;
+  background: linear-gradient(180deg, var(--bg-color) 0%, #0d0d0f 100%);
+}
+
+.results-title {
+  font-size: 38px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -1.5px;
+  color: var(--primary-text);
+  margin-bottom: 12px;
+}
+
+.results-subtitle {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.3);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.results-divider {
+  width: 100%;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.08);
+  margin-bottom: 20px;
+}
+
+/* Meeting point cards */
+.meeting-card {
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-card);
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.2s;
+}
+
+.meeting-card:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.meeting-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meeting-card-tag {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--primary-text);
+  margin-bottom: 2px;
+}
+
+.meeting-card-tag.nearby {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.meeting-card-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary-text);
+  letter-spacing: -0.3px;
+}
+
+.meeting-card-distance {
+  font-size: 13px;
+  color: var(--secondary-text);
+  margin-top: 2px;
+}
+
+.meeting-card-select {
+  background-color: #F5F5F5;
+  color: #0F0F0F;
+  border: none;
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  flex-shrink: 0;
+}
+
+.meeting-card-select:hover {
+  background-color: #FFFFFF;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.meeting-card-select:active {
+  transform: scale(0.97);
+  background-color: #E0E0E0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer */
+.results-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  margin-top: auto;
+}
+
+.results-footer-text {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  color: var(--border-color);
+}
+
+/* =========================================
+   ANIMATIONS (Signature Midpoint Sequence)
+   ========================================= */
+
+.anim-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.anim-origin-pop {
+  animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.anim-route-line-a {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawRoute 1.2s ease-out forwards;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
+}
+
+.anim-route-line-b {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawRoute 1.2s ease-out forwards;
+  filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.6));
+}
+
+
+.anim-nexus-spring {
+  animation: springUp 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.anim-ui-reveal {
+  animation: fadeUpReveal 0.8s ease-out forwards;
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes drawRoute {
+  0% {
+    stroke-dashoffset: 1000;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+
+@keyframes springUp {
+  0% {
+    transform: translateY(20px) scale(0);
+    opacity: 0;
+  }
+
+  50% {
+    transform: translateY(-10px) scale(1.1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeUpReveal {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
