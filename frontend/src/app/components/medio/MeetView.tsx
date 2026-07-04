@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { MapPin, X, Crosshair, Navigation } from "lucide-react";
+import { MapPin, X, Crosshair, Navigation, ArrowRight } from "lucide-react";
 import { RealMap } from "./Map";
 import { BottomNav } from "./BottomNav";
 import { apiClient } from "../../lib/apiClient";
@@ -393,39 +393,74 @@ export const MeetView: React.FC = () => {
   ), [selectedMeet, routeDataA, routeDataB, selectedRouteIndex]);
 
   return (
-    <div
-      className="relative flex h-dvh flex-col overflow-hidden"
-      style={{ backgroundColor: "var(--ds-bg-primary)" }}
+    <div className="meet-page relative flex h-dvh flex-col overflow-hidden"
+      style={{ backgroundColor: '#090909' }}
     >
       <style>{`
-        @keyframes meet-fade-up {
-          from { opacity: 0; transform: translateY(12px); }
+        .meet-bg .leaflet-container {
+          transform: scale(1.15);
+          animation: cinematicIdlePan 40s linear infinite alternate;
+        }
+        @keyframes cinematicIdlePan {
+          0% { transform: scale(1.15) rotateZ(-2deg) translate(-10px, -10px); }
+          50% { transform: scale(1.18) rotateZ(1deg) translate(10px, 5px); }
+          100% { transform: scale(1.15) rotateZ(2deg) translate(-5px, 15px); }
+        }
+        @keyframes meetFadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes meetFadeInUp {
+          from { opacity: 0; transform: translateY(20px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes meet-slide-up {
-          from { transform: translateY(100%); }
-          to   { transform: translateY(0); }
+        @keyframes meetFadeInDown {
+          from { opacity: 0; transform: translateY(-14px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes meet-scale-in {
           from { opacity: 0; transform: scale(0.92); }
           to   { opacity: 1; transform: scale(1); }
         }
-        .meet-enter {
-          animation: meet-fade-up 0.5s var(--ds-ease-out) both;
-        }
-        .meet-enter-d1 { animation-delay: 0.05s; }
-        .meet-enter-d2 { animation-delay: 0.1s; }
-        .meet-enter-d3 { animation-delay: 0.15s; }
-        .meet-enter-d4 { animation-delay: 0.2s; }
         .meet-card-enter {
           animation: meet-scale-in 0.35s var(--ds-ease-out) both;
         }
-        .meet-results-enter {
-          animation: meet-slide-up 0.4s var(--ds-ease-out) both;
+        .meet-input:focus {
+          border-bottom-color: #F5F5F5 !important;
+          transform: translateY(-1px);
+        }
+        .meet-input::placeholder {
+          color: rgba(255, 255, 255, 0.25);
+          font-weight: 500;
+        }
+        .meet-cta-button:hover {
+          background-color: #FFFFFF !important;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+        }
+        .meet-cta-button:active {
+          transform: scale(0.97) !important;
+          background-color: #E0E0E0 !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
         }
       `}</style>
 
-      {/* ===== Loading Sequence ===== */}
+      {/* Ambient Map Background */}
+      <div className="meet-bg absolute inset-0 z-0 overflow-hidden">
+        <RealMap
+          markers={markers}
+          multiRouteData={multiRouteData}
+        />
+        <div
+          className="meet-bg-overlay absolute inset-0 pointer-events-none"
+          style={{
+            zIndex: 1000,
+            background: 'linear-gradient(180deg, rgba(15,15,15,0.85) 0%, rgba(15,15,15,0.65) 35%, rgba(15,15,15,0.85) 70%, rgba(10,10,10,0.98) 100%)',
+          }}
+        />
+      </div>
+
+      {/* Loading overlays */}
       {loadingMeet && <LoadingSequence stage={loadingStage} />}
 
       {loadingRouteKey !== null && !loadingMeet && (
@@ -459,80 +494,121 @@ export const MeetView: React.FC = () => {
         </div>
       )}
 
-      {/* ===== Map (full-height background) ===== */}
-      <div className="absolute inset-0 z-0">
-        <RealMap
-          markers={markers}
-          multiRouteData={multiRouteData}
-        />
-      </div>
-
-      {/* ===== Ambient map gradient overlay ===== */}
-      <div
-        className="absolute inset-x-0 top-0 z-[1] h-64 pointer-events-none"
-        style={{
-          background: "linear-gradient(180deg, var(--ds-bg-primary) 0%, var(--ds-bg-primary) 30%, transparent 100%)",
-        }}
-      />
-      <div
-        className="absolute inset-x-0 bottom-0 z-[1] h-48 pointer-events-none"
-        style={{
-          background: "linear-gradient(0deg, var(--ds-bg-primary) 0%, var(--ds-bg-primary) 20%, transparent 100%)",
-        }}
-      />
-
-      {/* ===== Top Search Panel ===== */}
-      <div className="relative z-10 flex flex-col gap-3 px-4 pt-3 pb-3 meet-enter meet-enter-d1">
-        <div
-          className="ds-glass-strong rounded-[var(--ds-radius-2xl)] p-4 sm:p-5 flex flex-col gap-3"
-          style={{ boxShadow: "var(--ds-shadow-lg)" }}
+      {/* ===== ENTRY MODE (initial state, no results) ===== */}
+      {!hasResults && (
+        <div className="meet-content relative z-10 flex flex-col h-full overflow-y-auto"
+          style={{ padding: '36px var(--meet-pad-x, 24px) 20px' }}
         >
-          {/* Header */}
-          <div className="flex items-center gap-2.5">
+          {/* Coordinate Badge */}
+          <div
+            className="meet-coord-badge flex items-center gap-[10px] mb-6"
+            style={{ animation: 'meetFadeInDown 0.6s ease-out' }}
+          >
             <div
-              className="size-8 rounded-[var(--ds-radius-lg)] flex items-center justify-center"
-              style={{ backgroundColor: "var(--ds-accent-soft)" }}
-            >
-              <Crosshair
-                size={16}
-                style={{ color: "var(--ds-accent)" }}
-              />
-            </div>
-            <h1
-              className="text-base font-[var(--ds-weight-semibold)]"
-              style={{ color: "var(--ds-text-primary)" }}
-            >
-              Meet
-            </h1>
-          </div>
-
-          {/* Location A */}
-          <div className="relative">
-            <div
-              className="flex items-center gap-2.5 h-11 px-3.5 rounded-[var(--ds-radius-lg)] transition-all duration-[var(--ds-duration-fast)]"
+              className="meet-coord-bar"
               style={{
-                backgroundColor: "var(--ds-bg-tertiary)",
-                border: "1px solid",
-                borderColor:
-                  activeField === "A"
-                    ? "var(--ds-accent)"
-                    : "var(--ds-border-primary)",
+                width: 3,
+                height: 18,
+                backgroundColor: '#F5F5F5',
+                borderRadius: 2,
+              }}
+            />
+            <span
+              className="meet-coord-text"
+              style={{
+                fontFamily: "'Space Mono', monospace",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: 3,
+                color: '#A1A1A1',
+                textTransform: 'uppercase',
               }}
             >
-              <MapPin
-                size={16}
-                className="shrink-0"
-                style={{ color: "var(--ds-accent)" }}
-              />
+              Coordinate System Active
+            </span>
+          </div>
+
+          {/* Spacer */}
+          <div style={{ flex: 1 }} />
+
+          {/* Hero */}
+          <h1
+            className="meet-hero-title"
+            style={{
+              fontSize: 52,
+              fontWeight: 900,
+              lineHeight: 1.0,
+              letterSpacing: -2,
+              color: '#F5F5F5',
+              textShadow: '0 4px 12px #090909',
+              marginBottom: 16,
+              animation: 'meetFadeInUp 0.7s ease-out 0.15s both',
+            }}
+          >
+            Meet<br />Medio.
+          </h1>
+          <p
+            className="meet-hero-subtitle"
+            style={{
+              fontSize: 17,
+              fontWeight: 700,
+              lineHeight: 1.5,
+              color: '#A1A1A1',
+              textShadow: '0 2px 8px #090909',
+              maxWidth: 280,
+              marginBottom: 8,
+              animation: 'meetFadeInUp 0.7s ease-out 0.3s both',
+            }}
+          >
+            Define two origins to calculate the optimal nexus.
+          </p>
+
+          {/* Origin A */}
+          <div
+            className="origin-section"
+            style={{
+              marginTop: 64,
+              marginBottom: 8,
+              animation: 'meetFadeInUp 0.7s ease-out 0.45s both',
+            }}
+          >
+            <label
+              className="origin-label"
+              style={{
+                fontFamily: "'Space Mono', monospace",
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: 2.5,
+                color: 'rgba(255,255,255,0.35)',
+                textTransform: 'uppercase',
+                marginBottom: 10,
+                display: 'block',
+              }}
+            >
+              Origin A / Your Location
+            </label>
+            <div className="relative flex items-center gap-2.5">
+              <MapPin size={16} style={{ color: '#F5F5F5', flexShrink: 0 }} />
               <input
                 value={locA}
                 onChange={(e) => handleLocationInputChange(e.target.value, "A")}
                 onFocus={() => setActiveField("A")}
                 onBlur={() => handleFieldBlur("A")}
-                placeholder="Your location (A)"
-                className="flex-1 bg-transparent text-sm outline-none border-none"
+                placeholder="Enter your address..."
+                className="meet-input"
                 style={{
-                  color: "var(--ds-text-primary)",
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: '1px solid rgba(255,255,255,0.25)',
+                  outline: 'none',
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 20,
+                  fontWeight: 700,
+                  color: '#F5F5F5',
+                  textShadow: '0 2px 4px rgba(0,0,0,0.6)',
+                  padding: '4px 0 14px',
+                  transition: 'border-color 0.3s, box-shadow 0.3s, transform 0.3s',
                 }}
               />
               {locA && (
@@ -540,10 +616,16 @@ export const MeetView: React.FC = () => {
                   type="button"
                   aria-label="Clear location A"
                   onClick={() => clearLocation("A")}
-                  className="shrink-0 flex items-center justify-center size-6 rounded-full transition-colors"
-                  style={{ color: "var(--ds-text-tertiary)" }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--ds-bg-hover)"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                  className="shrink-0 flex items-center justify-center"
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    color: 'rgba(255,255,255,0.25)',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                  }}
                 >
                   <X size={14} />
                 </button>
@@ -552,27 +634,24 @@ export const MeetView: React.FC = () => {
 
             {activeField === "A" && suggestionsA.length > 0 && (
               <div
-                className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-[var(--ds-radius-lg)]"
+                className="mt-1.5 overflow-hidden rounded-lg"
                 style={{
-                  backgroundColor: "var(--ds-bg-secondary)",
-                  border: "1px solid var(--ds-border-primary)",
-                  boxShadow: "var(--ds-shadow-lg)",
+                  backgroundColor: '#171717',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                 }}
               >
                 {suggestionsA.map((s) => (
                   <button
                     key={s.name}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleSelectLocation(s, "A");
-                    }}
+                    onMouseDown={(e) => { e.preventDefault(); handleSelectLocation(s, "A"); }}
                     onClick={() => handleSelectLocation(s, "A")}
                     className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-left transition-colors"
-                    style={{ color: "var(--ds-text-primary)" }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--ds-bg-hover)"}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                    style={{ color: '#F5F5F5', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
-                    <MapPin size={14} style={{ color: "var(--ds-text-tertiary)" }} />
+                    <MapPin size={14} style={{ color: '#A1A1A1' }} />
                     <span className="truncate">{s.name}</span>
                   </button>
                 ))}
@@ -580,33 +659,51 @@ export const MeetView: React.FC = () => {
             )}
           </div>
 
-          {/* Location B */}
-          <div className="relative">
-            <div
-              className="flex items-center gap-2.5 h-11 px-3.5 rounded-[var(--ds-radius-lg)] transition-all duration-[var(--ds-duration-fast)]"
+          {/* Origin B */}
+          <div
+            className="origin-section"
+            style={{
+              marginBottom: 24,
+              animation: 'meetFadeInUp 0.7s ease-out 0.55s both',
+            }}
+          >
+            <label
+              className="origin-label"
               style={{
-                backgroundColor: "var(--ds-bg-tertiary)",
-                border: "1px solid",
-                borderColor:
-                  activeField === "B"
-                    ? "var(--ds-accent)"
-                    : "var(--ds-border-primary)",
+                fontFamily: "'Space Mono', monospace",
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: 2.5,
+                color: 'rgba(255,255,255,0.35)',
+                textTransform: 'uppercase',
+                marginBottom: 10,
+                display: 'block',
               }}
             >
-              <Navigation
-                size={16}
-                className="shrink-0"
-                style={{ color: "var(--ds-accent)" }}
-              />
+              Origin B / Friend's Location
+            </label>
+            <div className="relative flex items-center gap-2.5">
+              <Navigation size={16} style={{ color: '#F5F5F5', flexShrink: 0 }} />
               <input
                 value={locB}
                 onChange={(e) => handleLocationInputChange(e.target.value, "B")}
                 onFocus={() => setActiveField("B")}
                 onBlur={() => handleFieldBlur("B")}
-                placeholder="Their location (B)"
-                className="flex-1 bg-transparent text-sm outline-none border-none"
+                placeholder="Enter friend's address..."
+                className="meet-input"
                 style={{
-                  color: "var(--ds-text-primary)",
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: '1px solid rgba(255,255,255,0.25)',
+                  outline: 'none',
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 20,
+                  fontWeight: 700,
+                  color: '#F5F5F5',
+                  textShadow: '0 2px 4px rgba(0,0,0,0.6)',
+                  padding: '4px 0 14px',
+                  transition: 'border-color 0.3s, box-shadow 0.3s, transform 0.3s',
                 }}
               />
               {locB && (
@@ -614,10 +711,16 @@ export const MeetView: React.FC = () => {
                   type="button"
                   aria-label="Clear location B"
                   onClick={() => clearLocation("B")}
-                  className="shrink-0 flex items-center justify-center size-6 rounded-full transition-colors"
-                  style={{ color: "var(--ds-text-tertiary)" }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--ds-bg-hover)"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                  className="shrink-0 flex items-center justify-center"
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    color: 'rgba(255,255,255,0.25)',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                  }}
                 >
                   <X size={14} />
                 </button>
@@ -626,27 +729,24 @@ export const MeetView: React.FC = () => {
 
             {activeField === "B" && suggestionsB.length > 0 && (
               <div
-                className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-[var(--ds-radius-lg)]"
+                className="mt-1.5 overflow-hidden rounded-lg"
                 style={{
-                  backgroundColor: "var(--ds-bg-secondary)",
-                  border: "1px solid var(--ds-border-primary)",
-                  boxShadow: "var(--ds-shadow-lg)",
+                  backgroundColor: '#171717',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                 }}
               >
                 {suggestionsB.map((s) => (
                   <button
                     key={s.name}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleSelectLocation(s, "B");
-                    }}
+                    onMouseDown={(e) => { e.preventDefault(); handleSelectLocation(s, "B"); }}
                     onClick={() => handleSelectLocation(s, "B")}
                     className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-left transition-colors"
-                    style={{ color: "var(--ds-text-primary)" }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--ds-bg-hover)"}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                    style={{ color: '#F5F5F5', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
-                    <Navigation size={14} style={{ color: "var(--ds-text-tertiary)" }} />
+                    <Navigation size={14} style={{ color: '#A1A1A1' }} />
                     <span className="truncate">{s.name}</span>
                   </button>
                 ))}
@@ -654,264 +754,566 @@ export const MeetView: React.FC = () => {
             )}
           </div>
 
-          {/* Find button */}
-          {coordsA && coordsB && (
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth
-              loading={loadingMeet}
-              onClick={handleFindMeetingPoint}
-              className="meet-enter meet-enter-d2"
+          {/* Bottom section */}
+          <div
+            className="meet-spacer-bottom"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+          >
+            <p
+              className="analysis-text"
+              style={{
+                fontFamily: "'Space Mono', monospace",
+                fontSize: 11,
+                letterSpacing: 2.5,
+                color: 'rgba(255,255,255,0.25)',
+                textAlign: 'center',
+                marginBottom: 16,
+                animation: 'meetFadeIn 0.7s ease-out 0.7s both',
+              }}
             >
-              <Crosshair size={16} />
-              Find Meeting Point
-            </Button>
+              ANALYSIS ENGINE V.4.0
+            </p>
+
+            {coordsA && coordsB && (
+              <button
+                onClick={handleFindMeetingPoint}
+                disabled={loadingMeet}
+                className="meet-cta-button"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  width: '100%',
+                  padding: '18px 32px',
+                  backgroundColor: '#F5F5F5',
+                  color: '#0F0F0F',
+                  border: 'none',
+                  borderRadius: 24,
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 16,
+                  fontWeight: 800,
+                  letterSpacing: 0.5,
+                  textTransform: 'uppercase',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                  transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  animation: 'meetFadeInUp 0.7s ease-out 0.9s both',
+                  boxSizing: 'border-box',
+                }}
+              >
+                {loadingMeet ? "Searching..." : "Find Midpoint"}
+                {!loadingMeet && <ArrowRight size={20} strokeWidth={2.5} />}
+              </button>
+            )}
+          </div>
+
+          {/* Notice */}
+          {meetNotice && (
+            <div
+              className="mt-4 p-4 text-center"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.03)',
+                borderRadius: 16,
+                border: '1px solid rgba(255,255,255,0.06)',
+              }}
+            >
+              <p style={{ fontSize: 13, color: '#A1A1A1', fontFamily: "'Inter', sans-serif" }}>
+                {meetNotice}
+              </p>
+              <button
+                onClick={handleFindMeetingPoint}
+                style={{
+                  marginTop: 12,
+                  padding: '8px 20px',
+                  borderRadius: 20,
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  background: 'transparent',
+                  color: '#F5F5F5',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: "'Inter', sans-serif",
+                }}
+              >
+                Try again
+              </button>
+            </div>
           )}
 
-        </div>
-      </div>
-
-      {/* ===== Results Panel ===== */}
-      <div
-        ref={resultsRef}
-        className="relative z-10 flex-1 overflow-y-auto px-4 pb-4"
-        style={{
-          scrollbarWidth: "thin",
-          scrollbarColor: "var(--ds-border-primary) transparent",
-        }}
-      >
-        {hasResults && (
-          <div className="flex flex-col gap-3 meet-results-enter">
-            {/* Route toggle */}
-            <div
-              className="ds-glass-strong rounded-[var(--ds-radius-xl)] p-1.5 flex gap-1"
-              style={{ boxShadow: "var(--ds-shadow-md)" }}
+          {/* Footer */}
+          <div
+            className="meet-footer"
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: 16,
+              paddingBottom: 4,
+              animation: 'meetFadeIn 0.7s ease-out 1.1s both',
+            }}
+          >
+            <span
+              className="meet-footer-text"
+              style={{
+                fontFamily: "'Space Mono', monospace",
+                fontSize: 10,
+                letterSpacing: 1.2,
+                color: 'rgba(255,255,255,0.25)',
+              }}
             >
-              {(["A", "B"] as RouteSide[]).map((side) => (
-                <button
-                  key={side}
-                  onClick={() => setRouteSide(side)}
-                  className="flex-1 h-9 rounded-[var(--ds-radius-lg)] text-sm font-[var(--ds-weight-semibold)] transition-all duration-[var(--ds-duration-fast)]"
-                  style={{
-                    backgroundColor:
-                      routeSide === side ? "var(--ds-accent)" : "transparent",
-                    color:
-                      routeSide === side
-                        ? "var(--ds-accent-text)"
-                        : "var(--ds-text-secondary)",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (routeSide !== side) {
-                      e.currentTarget.style.backgroundColor = "var(--ds-bg-hover)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (routeSide !== side) {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }
-                  }}
-                >
-                  Route from User {side}
-                </button>
-              ))}
-            </div>
+              52.5200° N, 13.4050° E
+            </span>
+            <span
+              className="meet-footer-text"
+              style={{
+                fontFamily: "'Space Mono', monospace",
+                fontSize: 10,
+                letterSpacing: 1.2,
+                color: 'rgba(255,255,255,0.25)',
+              }}
+            >
+              S-01 ACTIVE
+            </span>
+          </div>
+        </div>
+      )}
 
-            {/* Category filters */}
-            {availableCategories.length > 0 && (
-              <div
-                className="ds-glass-strong rounded-[var(--ds-radius-xl)] p-3.5 flex flex-col gap-2.5"
-                style={{ boxShadow: "var(--ds-shadow-md)" }}
+      {/* ===== RESULTS MODE ===== */}
+      {hasResults && (
+        <div
+          className="relative z-10 flex flex-col flex-1 overflow-y-auto"
+          style={{ padding: '16px 24px 0' }}
+        >
+          {/* Compact coordinate badge */}
+          <div
+            className="meet-coord-badge flex items-center gap-[10px] mb-4"
+            style={{ animation: 'meetFadeInDown 0.5s ease-out' }}
+          >
+            <div
+              className="meet-coord-bar"
+              style={{
+                width: 3,
+                height: 14,
+                backgroundColor: '#F5F5F5',
+                borderRadius: 2,
+              }}
+            />
+            <span
+              className="meet-coord-text"
+              style={{
+                fontFamily: "'Space Mono', monospace",
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: 2.5,
+                color: '#A1A1A1',
+                textTransform: 'uppercase',
+              }}
+            >
+              Coordinate System Active
+            </span>
+          </div>
+
+          {/* Compact inputs */}
+          <div
+            className="ds-glass-strong rounded-[var(--ds-radius-2xl)] p-4 flex flex-col gap-3"
+            style={{
+              boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+              backdropFilter: 'blur(16px)',
+              backgroundColor: 'rgba(18,18,18,0.85)',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            {/* Origin A */}
+            <div className="relative">
+              <div className="flex items-center gap-2.5 h-11 px-3.5 rounded-[var(--ds-radius-lg)]"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  border: '1px solid',
+                  borderColor: activeField === "A" ? '#F5F5F5' : 'rgba(255,255,255,0.08)',
+                  transition: 'border-color 0.2s',
+                }}
               >
-                <div className="flex items-center justify-between">
-                  <span
-                    className="text-xs font-[var(--ds-weight-semibold)] uppercase tracking-[var(--ds-tracking-wider)]"
-                    style={{ color: "var(--ds-text-tertiary)" }}
+                <MapPin size={16} className="shrink-0" style={{ color: '#F5F5F5' }} />
+                <input
+                  value={locA}
+                  onChange={(e) => handleLocationInputChange(e.target.value, "A")}
+                  onFocus={() => setActiveField("A")}
+                  onBlur={() => handleFieldBlur("A")}
+                  placeholder="Your location (A)"
+                  className="flex-1 bg-transparent text-sm outline-none border-none"
+                  style={{ color: '#F5F5F5', fontFamily: "'Inter', sans-serif" }}
+                />
+                {locA && (
+                  <button
+                    type="button"
+                    aria-label="Clear location A"
+                    onClick={() => clearLocation("A")}
+                    className="shrink-0 flex items-center justify-center size-6 rounded-full transition-colors"
+                    style={{ color: 'rgba(255,255,255,0.3)', border: 'none', background: 'transparent', cursor: 'pointer' }}
                   >
-                    Categories
-                  </span>
-                  {selectedCategories.length > 0 && (
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {activeField === "A" && suggestionsA.length > 0 && (
+                <div className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-[var(--ds-radius-lg)]"
+                  style={{
+                    backgroundColor: '#171717',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                  }}
+                >
+                  {suggestionsA.map((s) => (
                     <button
-                      onClick={() => setSelectedCategories([])}
-                      className="text-xs font-[var(--ds-weight-medium)] transition-colors"
-                      style={{ color: "var(--ds-accent)" }}
+                      key={s.name}
+                      onMouseDown={(e) => { e.preventDefault(); handleSelectLocation(s, "A"); }}
+                      onClick={() => handleSelectLocation(s, "A")}
+                      className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-left transition-colors"
+                      style={{ color: '#F5F5F5', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      Show all
+                      <MapPin size={14} style={{ color: '#A1A1A1' }} />
+                      <span className="truncate">{s.name}</span>
                     </button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {availableCategories.map((category) => {
-                    const checked = selectedCategories.includes(category);
-                    return (
-                      <Chip
-                        key={category}
-                        variant={checked ? "accent" : "default"}
-                        onClick={() => toggleCategory(category)}
-                        className="cursor-pointer"
-                      >
-                        {category}
-                        <span className="ml-1 text-[10px] opacity-60">
-                          {categoryCounts[category]}
-                        </span>
-                      </Chip>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* No results after filter */}
-            {filteredMeetResults.length === 0 && selectedCategories.length > 0 && (
-              <div
-                className="ds-glass-strong rounded-[var(--ds-radius-xl)] p-5 text-center flex flex-col items-center gap-2"
-                style={{ boxShadow: "var(--ds-shadow-md)" }}
-              >
-                <p
-                  className="text-sm font-[var(--ds-weight-medium)]"
-                  style={{ color: "var(--ds-text-primary)" }}
-                >
-                  No matching spots
-                </p>
-                <p
-                  className="text-xs"
-                  style={{ color: "var(--ds-text-tertiary)" }}
-                >
-                  Try selecting different categories
-                </p>
-              </div>
-            )}
-
-            {/* Result cards */}
-            <div className="flex flex-col gap-2.5 pb-20">
-              {filteredMeetResults.map((place, index) => (
-                <div
-                  key={place.id}
-                  className="meet-card-enter"
-                  style={{ animationDelay: `${index * 0.04}s` }}
-                >
-                  <ResultCard
-                    place={place}
-                    index={index}
-                    isSelected={selectedMeet?.id === place.id}
-                    onClick={() => setSelectedMeet(place)}
-                  />
-                </div>
-              ))}
-
-              {/* Route details for selected meet */}
-              {selectedMeet && (
-                <div
-                  className="meet-card-enter"
-                  style={{ animationDelay: `${filteredMeetResults.length * 0.04}s` }}
-                >
-                  <RouteDetail
-                    selectedMeet={selectedMeet}
-                    routeSide={routeSide}
-                    itineraries={itineraries}
-                    selectedRouteIndex={selectedRouteIndex}
-                    setSelectedRouteIndex={setSelectedRouteIndex}
-                    routeSteps={routeSteps}
-                    routeError={routeError}
-                    loadingRouteKey={loadingRouteKey}
-                    getRouteKey={getRouteKey}
-                  />
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      fullWidth
-                      onClick={() => setShowDetail(true)}
-                    >
-                      View Details
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      fullWidth
-                      onClick={() => setShowShare(true)}
-                    >
-                      Share
-                    </Button>
-                  </div>
+                  ))}
                 </div>
               )}
             </div>
-          </div>
-        )}
 
-        {/* Empty state */}
-        {!hasResults && !loadingMeet && !meetNotice && (
-          <div
-            className="ds-glass-strong rounded-[var(--ds-radius-2xl)] p-8 mt-8 flex flex-col items-center gap-4 text-center"
-            style={{ boxShadow: "var(--ds-shadow-lg)" }}
-          >
-            <div
-              className="size-14 rounded-[var(--ds-radius-xl)] flex items-center justify-center"
-              style={{ backgroundColor: "var(--ds-accent-soft)" }}
-            >
-              <Crosshair
-                size={28}
-                style={{ color: "var(--ds-accent)" }}
-              />
-            </div>
-            <div className="flex flex-col gap-1 max-w-[240px]">
-              <p
-                className="text-base font-[var(--ds-weight-semibold)]"
-                style={{ color: "var(--ds-text-primary)" }}
+            {/* Origin B */}
+            <div className="relative">
+              <div className="flex items-center gap-2.5 h-11 px-3.5 rounded-[var(--ds-radius-lg)]"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  border: '1px solid',
+                  borderColor: activeField === "B" ? '#F5F5F5' : 'rgba(255,255,255,0.08)',
+                  transition: 'border-color 0.2s',
+                }}
               >
-                Find a meeting point
-              </p>
-              <p
-                className="text-sm"
-                style={{ color: "var(--ds-text-tertiary)" }}
-              >
-                Enter two locations and we'll find the best spot for you both
-              </p>
-            </div>
-          </div>
-        )}
+                <Navigation size={16} className="shrink-0" style={{ color: '#F5F5F5' }} />
+                <input
+                  value={locB}
+                  onChange={(e) => handleLocationInputChange(e.target.value, "B")}
+                  onFocus={() => setActiveField("B")}
+                  onBlur={() => handleFieldBlur("B")}
+                  placeholder="Their location (B)"
+                  className="flex-1 bg-transparent text-sm outline-none border-none"
+                  style={{ color: '#F5F5F5', fontFamily: "'Inter', sans-serif" }}
+                />
+                {locB && (
+                  <button
+                    type="button"
+                    aria-label="Clear location B"
+                    onClick={() => clearLocation("B")}
+                    className="shrink-0 flex items-center justify-center size-6 rounded-full transition-colors"
+                    style={{ color: 'rgba(255,255,255,0.3)', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
 
-        {/* Notice/error in empty state */}
-        {!hasResults && !loadingMeet && meetNotice && (
-          <div
-            className="ds-glass-strong rounded-[var(--ds-radius-2xl)] p-6 mt-4 flex flex-col items-center gap-4 text-center"
-            style={{ boxShadow: "var(--ds-shadow-lg)" }}
-          >
-            <div
-              className="size-12 rounded-[var(--ds-radius-xl)] flex items-center justify-center"
-              style={{ backgroundColor: "var(--ds-warning-soft)" }}
-            >
-              <span className="text-lg" style={{ color: "var(--ds-warning)" }}>
-                !
-              </span>
+              {activeField === "B" && suggestionsB.length > 0 && (
+                <div className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-[var(--ds-radius-lg)]"
+                  style={{
+                    backgroundColor: '#171717',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                  }}
+                >
+                  {suggestionsB.map((s) => (
+                    <button
+                      key={s.name}
+                      onMouseDown={(e) => { e.preventDefault(); handleSelectLocation(s, "B"); }}
+                      onClick={() => handleSelectLocation(s, "B")}
+                      className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-left transition-colors"
+                      style={{ color: '#F5F5F5', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <Navigation size={14} style={{ color: '#A1A1A1' }} />
+                      <span className="truncate">{s.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="flex flex-col gap-1 max-w-[260px]">
-              <p
-                className="text-sm font-[var(--ds-weight-semibold)]"
-                style={{ color: "var(--ds-text-primary)" }}
+
+            {coordsA && coordsB && (
+              <button
+                onClick={handleFindMeetingPoint}
+                disabled={loadingMeet}
+                className="meet-cta-button"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  width: '100%',
+                  padding: '14px 32px',
+                  backgroundColor: '#F5F5F5',
+                  color: '#0F0F0F',
+                  border: 'none',
+                  borderRadius: 24,
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  letterSpacing: 0.5,
+                  textTransform: 'uppercase',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                  transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  boxSizing: 'border-box',
+                }}
               >
-                No spots found
-              </p>
-              <p
-                className="text-xs"
-                style={{ color: "var(--ds-text-tertiary)" }}
-              >
-                {meetNotice}
-              </p>
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleFindMeetingPoint}
-            >
-              Try again
-            </Button>
+                {loadingMeet ? "Searching..." : "Find Midpoint"}
+                {!loadingMeet && <ArrowRight size={18} strokeWidth={2.5} />}
+              </button>
+            )}
           </div>
-        )}
+
+          {/* Results panel */}
+          <div
+            ref={resultsRef}
+            className="flex-1 overflow-y-auto pt-4 pb-4"
+            style={{
+              scrollbarWidth: "thin",
+              scrollbarColor: "rgba(255,255,255,0.08) transparent",
+            }}
+          >
+            {hasResults && (
+              <div className="flex flex-col gap-3">
+                {/* Route toggle */}
+                <div
+                  className="rounded-[var(--ds-radius-xl)] p-1.5 flex gap-1"
+                  style={{
+                    backgroundColor: 'rgba(18,18,18,0.9)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                  }}
+                >
+                  {(["A", "B"] as RouteSide[]).map((side) => (
+                    <button
+                      key={side}
+                      onClick={() => setRouteSide(side)}
+                      className="flex-1 h-9 rounded-[var(--ds-radius-lg)] text-sm font-[var(--ds-weight-semibold)] transition-all duration-[var(--ds-duration-fast)]"
+                      style={{
+                        backgroundColor:
+                          routeSide === side ? '#F5F5F5' : 'transparent',
+                        color:
+                          routeSide === side
+                            ? '#0F0F0F'
+                            : '#A1A1A1',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (routeSide !== side) {
+                          e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (routeSide !== side) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                    >
+                      Route from User {side}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Category filters */}
+                {availableCategories.length > 0 && (
+                  <div
+                    className="rounded-[var(--ds-radius-xl)] p-3.5 flex flex-col gap-2.5"
+                    style={{
+                      backgroundColor: 'rgba(18,18,18,0.9)',
+                      backdropFilter: 'blur(16px)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="text-xs font-[var(--ds-weight-semibold)] uppercase tracking-[var(--ds-tracking-wider)]"
+                        style={{ color: '#A1A1A1' }}
+                      >
+                        Categories
+                      </span>
+                      {selectedCategories.length > 0 && (
+                        <button
+                          onClick={() => setSelectedCategories([])}
+                          className="text-xs font-[var(--ds-weight-medium)] transition-colors"
+                          style={{ color: '#F5F5F5', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                        >
+                          Show all
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {availableCategories.map((category) => {
+                        const checked = selectedCategories.includes(category);
+                        return (
+                          <Chip
+                            key={category}
+                            variant={checked ? "accent" : "default"}
+                            onClick={() => toggleCategory(category)}
+                            className="cursor-pointer"
+                          >
+                            {category}
+                            <span className="ml-1 text-[10px] opacity-60">
+                              {categoryCounts[category]}
+                            </span>
+                          </Chip>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* No results after filter */}
+                {filteredMeetResults.length === 0 && selectedCategories.length > 0 && (
+                  <div
+                    className="rounded-[var(--ds-radius-xl)] p-5 text-center flex flex-col items-center gap-2"
+                    style={{
+                      backgroundColor: 'rgba(18,18,18,0.9)',
+                      backdropFilter: 'blur(16px)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                    }}
+                  >
+                    <p
+                      className="text-sm font-[var(--ds-weight-medium)]"
+                      style={{ color: '#F5F5F5' }}
+                    >
+                      No matching spots
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: '#A1A1A1' }}
+                    >
+                      Try selecting different categories
+                    </p>
+                  </div>
+                )}
+
+                {/* Result cards */}
+                <div className="flex flex-col gap-2.5 pb-4">
+                  {filteredMeetResults.map((place, index) => (
+                    <div
+                      key={place.id}
+                      className="meet-card-enter"
+                      style={{ animationDelay: `${index * 0.04}s` }}
+                    >
+                      <ResultCard
+                        place={place}
+                        index={index}
+                        isSelected={selectedMeet?.id === place.id}
+                        onClick={() => setSelectedMeet(place)}
+                      />
+                    </div>
+                  ))}
+
+                  {/* Route details for selected meet */}
+                  {selectedMeet && (
+                    <div
+                      className="meet-card-enter"
+                      style={{ animationDelay: `${filteredMeetResults.length * 0.04}s` }}
+                    >
+                      <RouteDetail
+                        selectedMeet={selectedMeet}
+                        routeSide={routeSide}
+                        itineraries={itineraries}
+                        selectedRouteIndex={selectedRouteIndex}
+                        setSelectedRouteIndex={setSelectedRouteIndex}
+                        routeSteps={routeSteps}
+                        routeError={routeError}
+                        loadingRouteKey={loadingRouteKey}
+                        getRouteKey={getRouteKey}
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          fullWidth
+                          onClick={() => setShowDetail(true)}
+                        >
+                          View Details
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          fullWidth
+                          onClick={() => setShowShare(true)}
+                        >
+                          Share
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Notice in results mode */}
+            {meetNotice && (
+              <div
+                className="rounded-[var(--ds-radius-2xl)] p-6 mt-4 flex flex-col items-center gap-4 text-center"
+                style={{
+                  backgroundColor: 'rgba(18,18,18,0.9)',
+                  backdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                }}
+              >
+                <div
+                  className="size-12 rounded-[var(--ds-radius-xl)] flex items-center justify-center"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}
+                >
+                  <span className="text-lg" style={{ color: '#A1A1A1' }}>!</span>
+                </div>
+                <div className="flex flex-col gap-1 max-w-[260px]">
+                  <p
+                    className="text-sm font-[var(--ds-weight-semibold)]"
+                    style={{ color: '#F5F5F5' }}
+                  >
+                    No spots found
+                  </p>
+                  <p
+                    className="text-xs"
+                    style={{ color: '#A1A1A1' }}
+                  >
+                    {meetNotice}
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleFindMeetingPoint}
+                >
+                  Try again
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Navigation */}
+      <div className="relative z-10 shrink-0">
+        <BottomNav active="meet" />
       </div>
 
-      {/* ===== Detail View ===== */}
+      {/* Detail View */}
       {showDetail && selectedMeet && (
         <DetailView
           place={selectedMeet}
@@ -924,7 +1326,7 @@ export const MeetView: React.FC = () => {
         />
       )}
 
-      {/* ===== Share View ===== */}
+      {/* Share View */}
       {selectedMeet && (
         <ShareView
           open={showShare}
@@ -932,11 +1334,6 @@ export const MeetView: React.FC = () => {
           onClose={() => setShowShare(false)}
         />
       )}
-
-      {/* ===== Bottom Navigation ===== */}
-      <div className="relative z-10">
-        <BottomNav active="meet" />
-      </div>
     </div>
   );
 };
