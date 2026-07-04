@@ -644,3 +644,91 @@
   transform: scale(0.95);
   background-color: #D70015;
 }
+
+/* ==================================================
+   LOCATION SEARCH SUGGESTIONS
+   ================================================== */
+
+.location-field {
+  position: relative;
+}
+
+.location-clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.location-clear-btn:hover {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.location-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 26px;
+  right: 0;
+  background-color: #171717;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  z-index: 50;
+}
+
+.location-suggestion-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  text-align: left;
+  color: var(--primary-text);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+}
+
+.location-suggestion-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.suggestion-icon {
+  flex-shrink: 0;
+  color: #A1A1A1;
+}
+
+.suggestion-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Loading spinner for transport cards */
+.transport-loading-spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.summary-val-unit {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0px;
+}
