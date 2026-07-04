@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiFetch } from "../../lib/api";
+import { useAuth } from "../../lib/auth/AuthContext";
 
 const SPLASH_DURATION_MS = 10000;
 
@@ -45,23 +45,17 @@ const getProgressValue = (elapsed: number) => {
 
 const SplashScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [progress, setProgress] = useState(0);
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const destinationRef = useRef("/login");
 
   useEffect(() => {
-    const startTime = performance.now();
-    let isMounted = true;
+    destinationRef.current = isAuthenticated ? "/meet" : "/login";
+  }, [isAuthenticated]);
 
-    apiFetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => {
-        if (!isMounted) return;
-        destinationRef.current = data?.authenticated ? "/meet" : "/login";
-      })
-      .catch(() => {
-        destinationRef.current = "/login";
-      });
+  useEffect(() => {
+    const startTime = performance.now();
 
     const frame = window.setInterval(() => {
       const elapsed = performance.now() - startTime;
@@ -83,7 +77,6 @@ const SplashScreen: React.FC = () => {
     }, 50);
 
     return () => {
-      isMounted = false;
       window.clearInterval(frame);
     };
   }, [navigate]);
@@ -91,83 +84,243 @@ const SplashScreen: React.FC = () => {
   const currentStage = loadingStages[currentStageIndex];
 
   return (
-    <div className="min-h-screen overflow-hidden bg-background-light font-display text-slate-900 antialiased dark:bg-background-dark dark:text-slate-100">
-      <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background-light px-4 py-6 dark:bg-background-dark sm:px-6 sm:py-10">
-        <div className="absolute inset-0 topo-pattern pointer-events-none"></div>
-        <div className="absolute -left-32 top-0 h-80 w-80 rounded-full bg-primary/10 blur-[120px]"></div>
-        <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-cyan-400/10 blur-[140px]"></div>
+    <div
+      className="relative min-h-screen overflow-hidden flex items-center justify-center p-4 sm:p-6"
+      style={{
+        backgroundColor: "var(--ds-bg-primary)",
+        fontFamily: "var(--ds-font-display)",
+      }}
+    >
+      <style>{`
+        @keyframes ds-fade-in {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes ds-fade-up {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes ds-pulse-glow {
+          0%, 100% { opacity: 0.3; transform: scale(1); }
+          50%      { opacity: 0.6; transform: scale(1.05); }
+        }
+        @keyframes ds-progress-glow {
+          0%   { box-shadow: 0 0 6px rgba(59,130,246,0.3); }
+          50%  { box-shadow: 0 0 20px rgba(59,130,246,0.6); }
+          100% { box-shadow: 0 0 6px rgba(59,130,246,0.3); }
+        }
+        @keyframes ds-float {
+          0%, 100% { transform: translateY(0); }
+          50%      { transform: translateY(-12px); }
+        }
+        .splash-enter {
+          animation: ds-fade-up 0.7s var(--ds-ease-out) both;
+        }
+        .splash-enter-d1 { animation-delay: 0.1s; }
+        .splash-enter-d2 { animation-delay: 0.25s; }
+        .splash-enter-d3 { animation-delay: 0.4s; }
+        .splash-enter-d4 { animation-delay: 0.55s; }
+        .splash-stage-enter {
+          animation: ds-fade-in 0.35s var(--ds-ease-out) both;
+        }
+      `}</style>
 
-        <div className="relative z-10 w-full max-w-md space-y-4">
+      {/* Ambient background glow orbs */}
+      <div
+        className="absolute top-[-15%] left-[-10%] w-[50%] aspect-square rounded-full pointer-events-none"
+        style={{
+          background: "radial-gradient(circle, rgba(59,130,246,0.12), transparent 70%)",
+          animation: "ds-float 8s var(--ds-ease-smooth) infinite",
+        }}
+      />
+      <div
+        className="absolute bottom-[-10%] right-[-10%] w-[45%] aspect-square rounded-full pointer-events-none"
+        style={{
+          background: "radial-gradient(circle, rgba(139,92,246,0.08), transparent 70%)",
+          animation: "ds-float 10s var(--ds-ease-smooth) infinite reverse",
+        }}
+      />
+      <div
+        className="absolute top-[40%] right-[5%] w-[20%] aspect-square rounded-full pointer-events-none"
+        style={{
+          background: "radial-gradient(circle, rgba(6,182,212,0.06), transparent 60%)",
+          animation: "ds-pulse-glow 6s var(--ds-ease-smooth) infinite",
+        }}
+      />
+
+      {/* Grid pattern overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.03]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
+        }}
+      />
+
+      {/* Main content */}
+      <div className="relative z-10 w-full max-w-md flex flex-col gap-4">
+
+        {/* Hero card */}
+        <div
+          className="relative overflow-hidden rounded-[var(--ds-radius-3xl)] splash-enter splash-enter-d1"
+          style={{
+            background: "linear-gradient(135deg, var(--ds-bg-secondary), var(--ds-bg-tertiary))",
+            border: "1px solid var(--ds-border-primary)",
+            boxShadow: "var(--ds-shadow-2xl)",
+          }}
+        >
+          {/* Inner glow overlay */}
           <div
-            className="relative min-h-[300px] overflow-hidden rounded-[28px] border border-slate-800/50 bg-background-dark/60 bg-cover bg-center shadow-2xl"
+            className="absolute inset-0 pointer-events-none"
             style={{
-              backgroundImage:
-                'url("https://lh3.googleusercontent.com/aida-public/AB6AXuD8PURMlKKo0au4r1BWDXBuqjSV7Gx-i_Ye4hzikb6m9VlmOSliLxXyxRyXrjA3zgBRWxdROlmTPnVb3ceLsPVPa2bk_hJQ54FxRXbNglMsj0xCQ3f36GYK5LtlTPi9l1Rwbl3Hdb1dSOcIWuTcBq6QLe-lRXQ-A00WWLuietoSsqWgfIBeiOpFqepJjGisZIm9sVKC35fUxg7nu9zHT7LHC_Zk5xV1wx8XIC2ZryfTj_e10UVEn-50gxx8BThvWYjA4RLnK0Ise4Q")',
+              background: "radial-gradient(ellipse at 30% 20%, rgba(59,130,246,0.08), transparent 60%)",
             }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-950/20 via-slate-950/35 to-slate-950/90"></div>
-            <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent"></div>
+          />
 
-            <div className="relative flex min-h-[300px] flex-col justify-end p-5 sm:p-7">
-              <div className="mb-4 inline-flex w-fit items-center rounded-full border border-cyan-400/20 bg-slate-950/60 px-3 py-1 text-[10px] uppercase tracking-[0.32em] text-cyan-200 sm:text-[11px]">
+          <div className="relative px-6 pt-8 pb-7 sm:px-8 sm:pt-10 sm:pb-8 flex flex-col gap-5">
+            {/* Badge */}
+            <div
+              className="inline-flex items-center gap-2 w-fit px-3 py-1 rounded-[var(--ds-radius-full)]"
+              style={{
+                backgroundColor: "var(--ds-accent-soft)",
+                border: "1px solid rgba(59,130,246,0.2)",
+              }}
+            >
+              <span
+                className="size-1.5 rounded-full"
+                style={{ backgroundColor: "var(--ds-accent)" }}
+              />
+              <span
+                className="text-[10px] uppercase tracking-[var(--ds-tracking-widest)] font-[var(--ds-weight-semibold)]"
+                style={{ color: "var(--ds-accent)" }}
+              >
                 Live Route Bootstrap
-              </div>
+              </span>
+            </div>
 
-              <div className="max-w-sm">
-                <p className="mb-2 text-[11px] uppercase tracking-[0.3em] text-slate-400 sm:text-xs sm:tracking-[0.35em]">
-                  Smart Meeting Point Finder
-                </p>
-                <h1 className="glow-effect text-[40px] font-bold tracking-[0.18em] text-white sm:text-5xl sm:tracking-[0.22em]">
-                  MEDIO
-                </h1>
-              </div>
+            {/* Tagline */}
+            <p
+              className="text-[11px] uppercase tracking-[var(--ds-tracking-wider)] sm:text-xs"
+              style={{ color: "var(--ds-text-tertiary)" }}
+            >
+              Smart Meeting Point Finder
+            </p>
+
+            {/* Brand */}
+            <h1
+              className="text-[40px] font-[var(--ds-weight-bold)] tracking-[var(--ds-tracking-widest)] sm:text-5xl"
+              style={{ color: "var(--ds-text-primary)" }}
+            >
+              MEDIO
+            </h1>
+          </div>
+        </div>
+
+        {/* Progress card */}
+        <div
+          className="ds-glass rounded-[var(--ds-radius-2xl)] p-5 sm:p-6 splash-enter splash-enter-d2"
+          style={{
+            boxShadow: "var(--ds-shadow-lg)",
+          }}
+        >
+          {/* Header row */}
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex flex-col gap-0.5">
+              <p
+                className="text-[10px] uppercase tracking-[var(--ds-tracking-wider)]"
+                style={{ color: "var(--ds-accent)" }}
+              >
+                System Startup
+              </p>
+              <h2
+                className="text-lg font-[var(--ds-weight-semibold)] sm:text-xl"
+                style={{ color: "var(--ds-text-primary)" }}
+              >
+                Preparing your travel workspace
+              </h2>
+            </div>
+
+            <div
+              className="shrink-0 rounded-[var(--ds-radius-xl)] px-3 py-2 text-right"
+              style={{
+                backgroundColor: "var(--ds-accent-soft)",
+                border: "1px solid rgba(59,130,246,0.15)",
+              }}
+            >
+              <p
+                className="text-[10px] uppercase tracking-[var(--ds-tracking-wider)]"
+                style={{ color: "var(--ds-text-tertiary)" }}
+              >
+                Progress
+              </p>
+              <p
+                className="text-xl font-[var(--ds-weight-semibold)] sm:text-2xl"
+                style={{ color: "var(--ds-accent)" }}
+              >
+                {Math.round(progress)}%
+              </p>
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-slate-950/78 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:p-6">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <div>
-                <p className="mb-1 text-[10px] uppercase tracking-[0.28em] text-primary/80">
-                  System Startup
-                </p>
-                <h2 className="text-lg font-semibold tracking-tight text-white sm:text-xl">
-                  Preparing your travel workspace
-                </h2>
-              </div>
+          {/* Stage label */}
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <span
+              key={currentStageIndex}
+              className="splash-stage-enter truncate max-w-[70%] text-[10px] uppercase tracking-[var(--ds-tracking-wider)] sm:text-xs"
+              style={{ color: "var(--ds-text-secondary)" }}
+            >
+              {currentStage.label}
+            </span>
+            <span
+              className="text-[10px] uppercase tracking-[var(--ds-tracking-wider)] shrink-0"
+              style={{ color: "var(--ds-text-tertiary)" }}
+            >
+              Node active
+            </span>
+          </div>
 
-              <div className="rounded-2xl border border-primary/20 bg-primary/10 px-3 py-2 text-right">
-                <p className="text-[10px] uppercase tracking-[0.24em] text-slate-300">
-                  Progress
-                </p>
-                <p className="text-xl font-semibold text-primary sm:text-2xl">
-                  {Math.round(progress)}%
-                </p>
-              </div>
-            </div>
+          {/* Progress bar */}
+          <div
+            className="relative h-2 overflow-hidden rounded-full mb-3"
+            style={{ backgroundColor: "var(--ds-bg-tertiary)" }}
+          >
+            <div
+              className="absolute inset-0"
+              style={{
+                background: "linear-gradient(90deg, rgba(59,130,246,0.08), rgba(59,130,246,0.18), rgba(59,130,246,0.08))",
+              }}
+            />
+            <div
+              className="relative h-full rounded-full transition-all duration-200 ease-out"
+              style={{
+                width: `${progress}%`,
+                background: "linear-gradient(90deg, var(--ds-accent) 0%, #60a5fa 100%)",
+                boxShadow: "0 0 20px rgba(59,130,246,0.5)",
+                animation: "ds-progress-glow 2s var(--ds-ease-smooth) infinite",
+              }}
+            />
+          </div>
 
-            <div className="mb-3 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.22em] text-slate-400 sm:text-xs sm:tracking-[0.28em]">
-              <span className="max-w-[70%] truncate">{currentStage.label}</span>
-              <span>Node active</span>
-            </div>
+          {/* Stage detail */}
+          <p
+            key={currentStageIndex + "-detail"}
+            className="splash-stage-enter text-sm"
+            style={{ color: "var(--ds-text-tertiary)" }}
+          >
+            {currentStage.detail}
+          </p>
 
-            <div className="relative mb-3 h-2.5 overflow-hidden rounded-full bg-slate-800/80">
-              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(13,108,242,0.08),rgba(34,211,238,0.18),rgba(13,108,242,0.08))]"></div>
-              <div
-                className="relative h-full rounded-full bg-[linear-gradient(90deg,#0d6cf2_0%,#2dd4bf_55%,#7dd3fc_100%)] shadow-[0_0_24px_rgba(13,108,242,0.65)] transition-[width] duration-200 ease-out"
-                style={{ width: `${progress}%` }}
-              >
-                <span className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 translate-x-1/3 rounded-full bg-cyan-200/90 blur-[2px]"></span>
-              </div>
-            </div>
-
-            <p className="text-sm text-slate-400">
-              {currentStage.detail}
-            </p>
-
-            <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4 text-[10px] uppercase tracking-[0.26em] text-slate-500 sm:text-[11px] sm:tracking-[0.3em]">
-              <span>Global network node</span>
-              <span>v2.4.0</span>
-            </div>
+          {/* Footer */}
+          <div
+            className="mt-5 flex items-center justify-between pt-4 text-[10px] uppercase tracking-[var(--ds-tracking-wider)] sm:text-[11px]"
+            style={{
+              borderTop: "1px solid var(--ds-border-primary)",
+              color: "var(--ds-text-tertiary)",
+            }}
+          >
+            <span>Global network node</span>
+            <span>v2.4.0</span>
           </div>
         </div>
       </div>

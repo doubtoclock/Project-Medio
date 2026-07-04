@@ -14,7 +14,7 @@ export const FloatingButtons: React.FC<FloatingButtonsProps> = ({
   onLocate,
   onToggleSheet,
 }) => (
-  <div className="pointer-events-none fixed right-3 top-[42vh] z-[610] flex flex-col gap-2 sm:right-4">
+  <div className="pointer-events-none fixed right-3 top-[42vh] z-[var(--ds-z-popover)] flex flex-col gap-2 sm:right-4">
     <MapButton label="Use current location" onClick={onLocate}>
       <LocateFixed size={18} />
     </MapButton>
@@ -43,11 +43,12 @@ const MapButton = ({
     aria-label={label}
     title={label}
     onClick={onClick}
-    className={`pointer-events-auto grid size-11 place-items-center rounded-full border shadow-xl backdrop-blur-xl transition ${
-      active
-        ? "border-cyan-200 bg-cyan-300 text-slate-950"
-        : "border-white/15 bg-slate-950/86 text-slate-100 hover:bg-slate-900"
-    }`}
+    className="pointer-events-auto grid size-11 place-items-center rounded-full shadow-xl backdrop-blur-xl transition-all duration-[var(--ds-duration-fast)]"
+    style={{
+      backgroundColor: active ? "var(--ds-info)" : "var(--ds-bg-secondary)",
+      border: active ? "1px solid transparent" : "1px solid var(--ds-border-primary)",
+      color: active ? "var(--ds-text-inverse)" : "var(--ds-text-secondary)",
+    }}
   >
     {children}
   </button>

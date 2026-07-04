@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { X, Navigation } from "lucide-react";
 import { RealMap } from "./Map";
 import { BottomNav } from "./BottomNav";
-import { apiFetch } from "../../lib/api";
+import { apiClient } from "../../lib/apiClient";
 import {
   fetchLocationSuggestions,
   type LocationResult,
 } from "../../lib/locationSearch";
 import type { OtpItinerary, OtpRouteResponse } from "./otpTypes";
+import { Button } from "../design/Button";
+import { Input } from "../design/Input";
+import { Loading } from "../design/Loading";
 import { FloatingButtons } from "./travel/FloatingButtons";
 import {
   NearbyPanel,
@@ -32,9 +35,7 @@ const defaultLocalTransport: Record<LocalTransportMode, boolean> = {
 
 const fetchSavedPlaces = async (): Promise<SavedPlace[]> => {
   try {
-    const res = await apiFetch("/api/places", { credentials: "include" });
-    if (!res.ok) return [];
-    const data = await res.json();
+    const data = await apiClient.places.list();
     return data.places || [];
   } catch {
     return [];
@@ -48,14 +49,7 @@ const savePlaceToBackend = async (place: {
   lng?: number;
 }) => {
   try {
-    const res = await apiFetch("/api/places", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(place),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
+    const data = await apiClient.places.create(place);
     return data.place as SavedPlace;
   } catch {
     return null;
@@ -64,11 +58,8 @@ const savePlaceToBackend = async (place: {
 
 const deletePlaceFromBackend = async (id: string) => {
   try {
-    const res = await apiFetch(`/api/places/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    return res.ok;
+    await apiClient.places.delete(id);
+    return true;
   } catch {
     return false;
   }
@@ -272,28 +263,19 @@ export const TravelView = () => {
     setSelectedRoute(null);
 
     try {
-      const res = await apiFetch("/api/otp/route", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: { lat: coordsA.lat, lng: coordsA.lng },
-          to: { lat: coordsB.lat, lng: coordsB.lng },
-          fromName: locA,
-          toName: locB,
-          travelMode,
-          localTransport: {
-            bus: localTransport.bus,
-            rail: localTransport.rail,
-            subway: localTransport.subway,
-          },
-        }),
+      const result = await apiClient.route.plan({
+        from: { lat: coordsA.lat, lng: coordsA.lng },
+        to: { lat: coordsB.lat, lng: coordsB.lng },
+        fromName: locA,
+        toName: locB,
+        travelMode,
+        localTransport: {
+          bus: localTransport.bus,
+          rail: localTransport.rail,
+          subway: localTransport.subway,
+        },
       });
-      const data = (await res.json()) as OtpRouteResponse & { message?: string };
-      if (!res.ok) {
-        setRouteNotice(data?.message || "Could not find a route right now.");
-        return;
-      }
+      const data = result as OtpRouteResponse & { message?: string };
       const nextItineraries = data?.data?.plan?.itineraries || [];
       setRouteData(data);
       if (nextItineraries.length === 0) {
@@ -313,11 +295,11 @@ export const TravelView = () => {
   const handleSavedPlaceClick = (place: SavedPlace) => {
     setLocB(place.address);
     setCoordsB(
-      place.lat && place.lng
+      place.lat != null && place.lng != null
         ? { name: place.address, lat: place.lat, lng: place.lng }
         : null
     );
-    setActiveField(place.lat && place.lng ? null : "B");
+    setActiveField(place.lat != null && place.lng != null ? null : "B");
     setSuggestionsB([]);
     resetRouteState();
   };
@@ -357,7 +339,7 @@ export const TravelView = () => {
     setNearbyPlaces(places);
   }, []);
 
-  const mapMarkers = [
+  const mapMarkers = useMemo(() => [
     ...(coordsA
       ? [{ lat: coordsA.lat, lng: coordsA.lng, name: locA || "Origin", color: "green", kind: "origin" as const }]
       : []),
@@ -371,15 +353,50 @@ export const TravelView = () => {
       color: "#64748b",
       kind: "nearby" as const,
     })),
-  ];
+  ], [coordsA, coordsB, locA, locB, nearbyPlaces]);
 
   return (
-    <div className="relative h-screen overflow-hidden bg-background-dark text-slate-100">
+    <div
+      className="relative h-dvh overflow-hidden"
+      style={{ backgroundColor: "var(--ds-bg-primary)" }}
+    >
+      <style>{`
+        @keyframes travel-fade-up {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .travel-enter {
+          animation: travel-fade-up 0.4s var(--ds-ease-out) both;
+        }
+      `}</style>
+
       {loading && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-4 rounded-3xl border border-slate-700 bg-background-dark px-10 py-8 shadow-2xl">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/30 border-t-primary" />
-            <p className="text-sm font-semibold text-slate-300">Finding your route...</p>
+        <div
+          className="fixed inset-0 z-[var(--ds-z-modal)] flex items-center justify-center"
+          style={{
+            backgroundColor: "var(--ds-overlay)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div
+            className="ds-glass-strong flex flex-col items-center gap-5 px-10 py-9 rounded-[var(--ds-radius-2xl)]"
+            style={{ boxShadow: "var(--ds-shadow-2xl)" }}
+          >
+            <Loading size="lg" />
+            <div className="flex flex-col items-center gap-1">
+              <p
+                className="text-sm font-[var(--ds-weight-medium)]"
+                style={{ color: "var(--ds-text-primary)" }}
+              >
+                Finding your route...
+              </p>
+              <p
+                className="text-xs"
+                style={{ color: "var(--ds-text-tertiary)" }}
+              >
+                Calculating directions and travel times
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -396,7 +413,12 @@ export const TravelView = () => {
         />
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-[520] h-44 bg-gradient-to-b from-background-dark/88 to-transparent" />
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-44"
+        style={{
+          background: "linear-gradient(180deg, var(--ds-bg-primary) 0%, var(--ds-bg-primary) 40%, transparent 100%)",
+        }}
+      />
 
       <TravelSearch
         locA={locA}
@@ -455,68 +477,114 @@ export const TravelView = () => {
       />
 
       {showAddModal && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-950 p-5 shadow-2xl">
-            <button
-              type="button"
-              aria-label="Close save place dialog"
-              onClick={() => {
-                setShowAddModal(false);
-                setNewLabel("");
-                setNewAddress("");
-                setNewCoords(null);
-                setNewAddrSuggestions([]);
+        <div
+          className="fixed inset-0 z-[var(--ds-z-modal)] flex items-center justify-center p-4"
+          style={{ backgroundColor: "var(--ds-overlay)", backdropFilter: "blur(8px)" }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Save a place"
+        >
+          <div
+            className="travel-enter relative w-full max-w-sm rounded-[var(--ds-radius-2xl)] overflow-hidden"
+            style={{
+              backgroundColor: "var(--ds-bg-secondary)",
+              border: "1px solid var(--ds-border-primary)",
+              boxShadow: "var(--ds-shadow-2xl)",
+            }}
+          >
+            <div
+              className="absolute inset-x-0 top-0 h-24 opacity-[0.06] pointer-events-none"
+              style={{
+                background: "radial-gradient(ellipse at 50% 0%, var(--ds-accent) 0%, transparent 70%)",
               }}
-              className="absolute right-3 top-3 grid size-9 place-items-center rounded-full text-slate-500 transition hover:bg-slate-900 hover:text-white"
-            >
-              <X size={18} />
-            </button>
-            <h3 className="text-lg font-black">Save a place</h3>
-            <div className="mt-4 grid gap-3">
-              <input
-                value={newLabel}
-                onChange={(event) => setNewLabel(event.target.value)}
-                placeholder="Label"
-                className="min-h-12 rounded-2xl border border-slate-800 bg-slate-900 px-4 text-sm font-semibold text-white outline-none placeholder:text-slate-500 focus:border-cyan-300"
-              />
-              <div className="relative">
-                <input
-                  value={newAddress}
-                  onChange={(event) => {
-                    setNewAddress(event.target.value);
+            />
+
+            <div className="relative z-10 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3
+                  className="text-lg font-[var(--ds-weight-bold)]"
+                  style={{ color: "var(--ds-text-primary)" }}
+                >
+                  Save a place
+                </h3>
+                <button
+                  type="button"
+                  aria-label="Close"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setNewLabel("");
+                    setNewAddress("");
                     setNewCoords(null);
                     setNewAddrSuggestions([]);
                   }}
-                  placeholder="Search address"
-                  className="min-h-12 w-full rounded-2xl border border-slate-800 bg-slate-900 px-4 text-sm font-semibold text-white outline-none placeholder:text-slate-500 focus:border-cyan-300"
-                />
-                {newAddrSuggestions.length > 0 && (
-                  <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-48 overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
-                    {newAddrSuggestions.map((suggestion) => (
-                      <button
-                        key={`${suggestion.name}-${suggestion.lat}`}
-                        type="button"
-                        onClick={() => {
-                          setNewAddress(suggestion.name);
-                          setNewCoords({ lat: suggestion.lat, lng: suggestion.lng });
-                          setNewAddrSuggestions([]);
-                        }}
-                        className="block w-full px-4 py-3 text-left text-sm font-semibold text-slate-100 transition hover:bg-slate-800"
-                      >
-                        {suggestion.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                  className="size-9 rounded-[var(--ds-radius-lg)] flex items-center justify-center transition-colors"
+                  style={{ color: "var(--ds-text-tertiary)" }}
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleAddPlace}
-                disabled={!newLabel || !newAddress}
-                className="min-h-12 rounded-2xl bg-primary px-4 py-3 text-sm font-black text-white transition hover:bg-primary/90 disabled:opacity-45"
-              >
-                Save place
-              </button>
+
+              <div className="flex flex-col gap-3">
+                <Input
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  placeholder="Label (e.g. Home, Office)"
+                  label="Label"
+                />
+
+                <div className="relative">
+                  <Input
+                    value={newAddress}
+                    onChange={(e) => {
+                      setNewAddress(e.target.value);
+                      setNewCoords(null);
+                      setNewAddrSuggestions([]);
+                    }}
+                    placeholder="Search address"
+                    label="Address"
+                  />
+                  {newAddrSuggestions.length > 0 && (
+                    <div
+                      className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-[var(--ds-radius-lg)]"
+                      style={{
+                        backgroundColor: "var(--ds-bg-secondary)",
+                        border: "1px solid var(--ds-border-primary)",
+                        boxShadow: "var(--ds-shadow-lg)",
+                      }}
+                    >
+                      {newAddrSuggestions.map((suggestion) => (
+                        <button
+                          key={`${suggestion.name}-${suggestion.lat}`}
+                          type="button"
+                          onClick={() => {
+                            setNewAddress(suggestion.name);
+                            setNewCoords({ lat: suggestion.lat, lng: suggestion.lng });
+                            setNewAddrSuggestions([]);
+                          }}
+                          className="block w-full px-4 py-2.5 text-left text-sm transition-colors"
+                          style={{ color: "var(--ds-text-primary)" }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--ds-bg-hover)"}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                        >
+                          {suggestion.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  onClick={handleAddPlace}
+                  disabled={!newLabel || !newAddress}
+                  className="mt-1"
+                >
+                  <Navigation size={16} />
+                  Save place
+                </Button>
+              </div>
             </div>
           </div>
         </div>

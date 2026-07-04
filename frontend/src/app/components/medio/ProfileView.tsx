@@ -1,7 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft, ChevronDown, ChevronUp, LogOut, MapPin, Settings, Star, Trash2 } from "lucide-react";
 import { BottomNav } from "./BottomNav";
-import { apiFetch, clearAuthToken } from "../../lib/api";
+import { apiClient } from "../../lib/apiClient";
+import { useAuth } from "../../lib/auth/AuthContext";
+import { Button } from "../design/Button";
+import { Card, CardBody, CardHeader } from "../design/Card";
+import { Badge } from "../design/Badge";
+import { Input } from "../design/Input";
+import { LoadingPage } from "../design/Loading";
 
 type SavedPlace = {
   _id: string;
@@ -62,10 +69,9 @@ const getInitials = (name: string) =>
 
 const getMemberTier = (tripsCount: number, savedPlacesCount: number) => {
   const score = tripsCount * 2 + savedPlacesCount;
-
-  if (score >= 20) return "Gold Member";
-  if (score >= 8) return "Silver Member";
-  return "Explorer";
+  if (score >= 20) return { label: "Gold Member", variant: "warning" as const };
+  if (score >= 8) return { label: "Silver Member", variant: "accent" as const };
+  return { label: "Explorer", variant: "info" as const };
 };
 
 const getActivityLabel = (action: string) => {
@@ -87,6 +93,7 @@ const getActivityLabel = (action: string) => {
 
 export const ProfileView: React.FC = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -109,15 +116,7 @@ export const ProfileView: React.FC = () => {
     setError("");
 
     try {
-      const res = await apiFetch("/api/auth/profile", {
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to load profile");
-      }
-
-      const data = (await res.json()) as ProfilePayload;
+      const data = await apiClient.auth.profile();
       syncProfileState(data);
     } catch {
       setError("Failed to load profile");
@@ -132,7 +131,6 @@ export const ProfileView: React.FC = () => {
 
   const hasUnsavedProfileChanges = useMemo(() => {
     if (!profile) return false;
-
     return (
       editedName.trim() !== profile.user.name ||
       editedAvatarUrl.trim() !== (profile.user.avatarUrl || "")
@@ -145,21 +143,7 @@ export const ProfileView: React.FC = () => {
     setSuccessMessage("");
 
     try {
-      const res = await apiFetch("/api/auth/profile", {
-        method: "PATCH",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(patch),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message || "Failed to update profile");
-      }
-
-      const data = (await res.json()) as ProfilePayload & { message?: string };
+      const data = await apiClient.auth.updateProfile(patch);
       syncProfileState(data);
       setSuccessMessage(data.message || "Profile updated successfully");
     } catch (err) {
@@ -185,15 +169,7 @@ export const ProfileView: React.FC = () => {
 
   const handleDeletePlace = async (placeId: string) => {
     try {
-      const res = await apiFetch(`/api/places/${placeId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to delete place");
-      }
-
+      await apiClient.places.delete(placeId);
       await loadProfile();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete place");
@@ -201,29 +177,46 @@ export const ProfileView: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    try {
-      await apiFetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-    } finally {
-      clearAuthToken();
-      navigate("/login", { replace: true });
-    }
+    await logout();
+    navigate("/login", { replace: true });
   };
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background-light text-slate-500 dark:bg-background-dark dark:text-slate-300">
-        Loading profile...
+      <div
+        className="min-h-screen flex flex-col"
+        style={{ backgroundColor: "var(--ds-bg-primary)" }}
+      >
+        <LoadingPage label="Loading profile..." />
+        <BottomNav active="profile" />
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background-light px-6 text-center text-slate-500 dark:bg-background-dark dark:text-slate-300">
-        {error || "Unable to load profile right now."}
+      <div
+        className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center"
+        style={{ backgroundColor: "var(--ds-bg-primary)", color: "var(--ds-text-tertiary)" }}
+      >
+        <div
+          className="size-14 rounded-[var(--ds-radius-xl)] flex items-center justify-center"
+          style={{ backgroundColor: "var(--ds-error-soft)" }}
+        >
+          <Settings size={24} style={{ color: "var(--ds-error)" }} />
+        </div>
+        <div>
+          <p className="text-base font-[var(--ds-weight-semibold)]" style={{ color: "var(--ds-text-primary)" }}>
+            {error || "Unable to load profile"}
+          </p>
+          <p className="text-sm mt-1" style={{ color: "var(--ds-text-tertiary)" }}>
+            Please try again later.
+          </p>
+        </div>
+        <Button variant="secondary" size="md" onClick={() => { void loadProfile(); }}>
+          Retry
+        </Button>
+        <BottomNav active="profile" />
       </div>
     );
   }
@@ -234,192 +227,289 @@ export const ProfileView: React.FC = () => {
   );
 
   return (
-    <div className="medio-page min-h-screen bg-background-light font-display text-slate-900 dark:bg-background-dark dark:text-slate-100">
-      <div className="medio-page-shell flex min-h-screen w-full flex-col pb-28">
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-background-light/90 px-4 py-4 pr-36 backdrop-blur-md dark:border-slate-800 dark:bg-background-dark/90">
-          <div className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex size-10 items-center justify-center rounded-full bg-slate-200 text-slate-700 transition hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
-            >
-              <span className="material-symbols-outlined">arrow_back</span>
-            </button>
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: "var(--ds-bg-primary)" }}
+    >
+      <style>{`
+        @keyframes profile-fade-up {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes profile-scale-in {
+          from { opacity: 0; transform: scale(0.92); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        .profile-enter { animation: profile-fade-up 0.45s var(--ds-ease-out) both; }
+        .profile-enter-d1 { animation-delay: 0.05s; }
+        .profile-enter-d2 { animation-delay: 0.1s; }
+        .profile-enter-d3 { animation-delay: 0.15s; }
+        .profile-enter-d4 { animation-delay: 0.2s; }
+        .profile-card-enter { animation: profile-scale-in 0.35s var(--ds-ease-out) both; }
+      `}</style>
 
-            <h1 className="min-w-0 truncate text-lg font-bold">Profile</h1>
-          </div>
-        </header>
+      {/* Header */}
+      <header
+        className="sticky top-0 z-[var(--ds-z-sticky)]"
+        style={{
+          backgroundColor: "var(--ds-bg-primary)",
+          borderBottom: "1px solid var(--ds-border-primary)",
+        }}
+      >
+        <div className="flex items-center gap-3 px-4 py-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="size-10 rounded-[var(--ds-radius-lg)] flex items-center justify-center transition-colors"
+            style={{ backgroundColor: "var(--ds-bg-tertiary)", color: "var(--ds-text-secondary)" }}
+            aria-label="Go back"
+          >
+            <ArrowLeft size={18} aria-hidden="true" />
+          </button>
+          <h1 className="text-lg font-[var(--ds-weight-bold)]" style={{ color: "var(--ds-text-primary)" }}>
+            Profile
+          </h1>
+        </div>
+      </header>
 
-        <main className="grid flex-1 grid-cols-1 gap-5 px-4 py-5 sm:px-6 lg:grid-cols-2 lg:px-8">
-          <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-2">
-            <div className="profile-hero px-6 py-8">
-              <div className="flex flex-col items-center text-center">
-                <div className="mb-4 flex size-28 items-center justify-center overflow-hidden rounded-full border-4 border-white/20 bg-slate-950/50 text-3xl font-bold text-white">
-                  {profile.user.avatarUrl ? (
-                    <img
-                      src={profile.user.avatarUrl}
-                      alt={profile.user.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span>{getInitials(profile.user.name)}</span>
-                  )}
-                </div>
-
-                <h2 className="text-2xl font-bold text-white">
-                  {profile.user.name}
-                </h2>
-                <p className="mt-1 text-sm text-slate-200">
-                  {profile.user.email}
-                </p>
-
-                <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-100">
-                  <span className="material-symbols-outlined text-sm">
-                    verified
+      {/* Content */}
+      <div className="px-4 py-5 space-y-5 pb-28 sm:px-6 lg:px-8 max-w-2xl mx-auto">
+        {/* Profile hero */}
+        <div
+          className="profile-enter relative overflow-hidden rounded-[var(--ds-radius-3xl)]"
+          style={{
+            backgroundColor: "var(--ds-bg-secondary)",
+            border: "1px solid var(--ds-border-primary)",
+          }}
+        >
+          <div
+            className="absolute inset-0 opacity-[0.08]"
+            style={{
+              background: "radial-gradient(ellipse at 30% 20%, var(--ds-accent) 0%, transparent 60%)",
+            }}
+          />
+          <div className="relative z-10 px-6 py-8">
+            <div className="flex flex-col items-center text-center">
+              <div
+                className="mb-4 flex size-28 items-center justify-center overflow-hidden rounded-full"
+                style={{
+                  border: "3px solid var(--ds-accent-soft)",
+                  backgroundColor: "var(--ds-bg-tertiary)",
+                }}
+              >
+                {profile.user.avatarUrl ? (
+                  <img
+                    src={profile.user.avatarUrl}
+                    alt={profile.user.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-3xl font-[var(--ds-weight-bold)]" style={{ color: "var(--ds-text-secondary)" }}>
+                    {getInitials(profile.user.name)}
                   </span>
-                  {memberTier}
-                </div>
+                )}
+              </div>
 
-                <p className="mt-3 text-xs uppercase tracking-[0.22em] text-slate-300">
-                  Joined {formatJoinedDate(profile.user.createdAt)}
+              <h2 className="text-2xl font-[var(--ds-weight-bold)]" style={{ color: "var(--ds-text-primary)" }}>
+                {profile.user.name}
+              </h2>
+              <p className="mt-1 text-sm" style={{ color: "var(--ds-text-secondary)" }}>
+                {profile.user.email}
+              </p>
+
+              <div className="mt-4">
+                <Badge variant={memberTier.variant} dot>
+                  <Star size={10} />
+                  {memberTier.label}
+                </Badge>
+              </div>
+
+              <p className="mt-3 text-xs uppercase tracking-[var(--ds-tracking-widest)]" style={{ color: "var(--ds-text-tertiary)" }}>
+                Joined {formatJoinedDate(profile.user.createdAt)}
+              </p>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div
+            className="grid grid-cols-3 gap-3 px-4 py-4"
+            style={{ borderTop: "1px solid var(--ds-border-primary)" }}
+          >
+            <StatCard label="Trips" value={profile.stats.tripsCount} />
+            <StatCard label="Saved" value={profile.stats.savedPlacesCount} />
+            <StatCard label="Activity" value={profile.stats.activityCount} />
+          </div>
+        </div>
+
+        {/* Messages */}
+        {(error || successMessage) && (
+          <div
+            className={`profile-enter rounded-[var(--ds-radius-xl)] px-4 py-3 text-sm ${
+              error ? "error" : "success"
+            }`}
+            style={{
+              backgroundColor: error ? "var(--ds-error-soft)" : "var(--ds-success-soft)",
+              color: error ? "var(--ds-error-text)" : "var(--ds-success-text)",
+              border: error ? "1px solid var(--ds-error)20" : "1px solid var(--ds-success)20",
+            }}
+          >
+            {error || successMessage}
+          </div>
+        )}
+
+        {/* Edit profile */}
+        <div className="profile-enter profile-enter-d1">
+          <Card>
+            <CardHeader>
+              <div>
+                <p className="text-xs font-[var(--ds-weight-bold)] uppercase tracking-[var(--ds-tracking-widest)]" style={{ color: "var(--ds-accent)" }}>
+                  Account
+                </p>
+                <h3 className="text-lg font-[var(--ds-weight-semibold)] mt-1" style={{ color: "var(--ds-text-primary)" }}>
+                  Edit Profile
+                </h3>
+                <p className="text-sm mt-0.5" style={{ color: "var(--ds-text-tertiary)" }}>
+                  Update your display details and keep your profile current.
                 </p>
               </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 px-4 py-4">
-              <StatCard label="Trips" value={profile.stats.tripsCount} />
-              <StatCard label="Saved" value={profile.stats.savedPlacesCount} />
-              <StatCard label="Activity" value={profile.stats.activityCount} />
-            </div>
-          </section>
-
-          {(error || successMessage) && (
-            <div
-              className={`rounded-2xl border px-4 py-3 text-sm lg:col-span-2 ${
-                error
-                  ? "border-red-500/30 bg-red-500/10 text-red-200"
-                  : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-              }`}
-            >
-              {error || successMessage}
-            </div>
-          )}
-
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <SectionTitle
-              eyebrow="Account"
-              title="Edit Profile"
-              description="Update your display details and keep your profile current."
-            />
-
-            <div className="mt-5 space-y-4">
-              <label className="block space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  Display Name
-                </span>
-                <input
-                  value={editedName}
-                  onChange={(e) => setEditedName(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-primary dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  placeholder="Your name"
-                />
-              </label>
-
-              <label className="block space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  Avatar URL
-                </span>
-                <input
-                  value={editedAvatarUrl}
-                  onChange={(e) => setEditedAvatarUrl(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-primary dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  placeholder="https://..."
-                />
-              </label>
-
-              <button
+            </CardHeader>
+            <CardBody className="flex flex-col gap-4">
+              <Input
+                label="Display Name"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                placeholder="Your name"
+              />
+              <Input
+                label="Avatar URL"
+                value={editedAvatarUrl}
+                onChange={(e) => setEditedAvatarUrl(e.target.value)}
+                placeholder="https://..."
+              />
+              <Button
+                variant="primary"
+                size="md"
+                fullWidth
+                loading={saving}
+                disabled={!hasUnsavedProfileChanges}
                 onClick={handleSaveProfile}
-                disabled={!hasUnsavedProfileChanges || saving}
-                className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-1"
               >
-                {saving ? "Saving" : "Save Profile"}
-              </button>
-            </div>
-          </section>
+                Save Profile
+              </Button>
+            </CardBody>
+          </Card>
+        </div>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <SectionTitle
-              eyebrow="Saved Places"
-              title="Your Shortcuts"
-              description="Manage the places you have saved for quicker planning."
-            />
-
-            <div className="mt-5 space-y-3">
+        {/* Saved places */}
+        <div className="profile-enter profile-enter-d2">
+          <Card>
+            <CardHeader>
+              <div>
+                <p className="text-xs font-[var(--ds-weight-bold)] uppercase tracking-[var(--ds-tracking-widest)]" style={{ color: "var(--ds-accent)" }}>
+                  Saved Places
+                </p>
+                <h3 className="text-lg font-[var(--ds-weight-semibold)] mt-1" style={{ color: "var(--ds-text-primary)" }}>
+                  Your Shortcuts
+                </h3>
+                <p className="text-sm mt-0.5" style={{ color: "var(--ds-text-tertiary)" }}>
+                  Manage the places you have saved for quicker planning.
+                </p>
+              </div>
+            </CardHeader>
+            <CardBody>
               {profile.savedPlaces.length === 0 ? (
                 <EmptyState
                   title="No saved places yet"
                   description="Save places from the travel page and they will show up here."
                 />
               ) : (
-                profile.savedPlaces.map((place) => (
-                  <div
-                    key={place._id}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/60"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-slate-900 dark:text-white">
-                          {place.label}
-                        </p>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                <div className="flex flex-col gap-3">
+                  {profile.savedPlaces.map((place) => (
+                    <div
+                      key={place._id}
+                      className="rounded-[var(--ds-radius-lg)] px-4 py-3 flex items-start justify-between gap-3"
+                      style={{ backgroundColor: "var(--ds-bg-tertiary)" }}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <MapPin size={14} style={{ color: "var(--ds-accent)" }} />
+                          <p className="font-[var(--ds-weight-semibold)] truncate text-sm" style={{ color: "var(--ds-text-primary)" }}>
+                            {place.label}
+                          </p>
+                        </div>
+                        <p className="mt-0.5 text-xs ml-6" style={{ color: "var(--ds-text-tertiary)" }}>
                           {place.address}
                         </p>
-                        <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-400">
+                        <p className="mt-1 text-[10px] ml-6 uppercase tracking-[var(--ds-tracking-wider)]" style={{ color: "var(--ds-text-placeholder)" }}>
                           Saved {formatActivityDate(place.createdAt)}
                         </p>
                       </div>
-
                       <button
                         onClick={() => void handleDeletePlace(place._id)}
-                        className="rounded-full border border-red-500/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-red-300 transition hover:bg-red-500/10"
+                        className="shrink-0 size-8 rounded-[var(--ds-radius-md)] flex items-center justify-center transition-colors"
+                        style={{ color: "var(--ds-text-tertiary)" }}
+                        aria-label={`Delete ${place.label}`}
                       >
-                        Delete
+                        <Trash2 size={14} />
                       </button>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
-            </div>
-          </section>
+            </CardBody>
+          </Card>
+        </div>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <SectionTitle
-              eyebrow="Trips"
-              title="Recent Planning"
-              description="The latest route and meet searches from your account."
-            />
-
-            <div className="mt-5 space-y-3">
+        {/* Recent trips */}
+        <div className="profile-enter profile-enter-d3">
+          <Card>
+            <CardHeader>
+              <div>
+                <p className="text-xs font-[var(--ds-weight-bold)] uppercase tracking-[var(--ds-tracking-widest)]" style={{ color: "var(--ds-accent)" }}>
+                  Trips
+                </p>
+                <h3 className="text-lg font-[var(--ds-weight-semibold)] mt-1" style={{ color: "var(--ds-text-primary)" }}>
+                  Recent Planning
+                </h3>
+                <p className="text-sm mt-0.5" style={{ color: "var(--ds-text-tertiary)" }}>
+                  The latest route and meet searches from your account.
+                </p>
+              </div>
+            </CardHeader>
+            <CardBody>
               {profile.recentTrips.length === 0 ? (
                 <EmptyState
                   title="No trips yet"
                   description="Plan a route or search a meeting point and it will appear here."
                 />
               ) : (
-                profile.recentTrips.map((trip) => (
-                  <ActivityCard key={trip._id} item={trip} />
-                ))
+                <div className="flex flex-col gap-2">
+                  {profile.recentTrips.map((trip) => (
+                    <ActivityCard key={trip._id} item={trip} />
+                  ))}
+                </div>
               )}
-            </div>
-          </section>
+            </CardBody>
+          </Card>
+        </div>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <SectionTitle
-              eyebrow="Preferences"
-              title="App Settings"
-              description="Control how MEDIO handles alerts and profile visibility."
-            />
-
-            <div className="mt-5 space-y-3">
+        {/* Preferences */}
+        <div className="profile-enter profile-enter-d4">
+          <Card>
+            <CardHeader>
+              <div>
+                <p className="text-xs font-[var(--ds-weight-bold)] uppercase tracking-[var(--ds-tracking-widest)]" style={{ color: "var(--ds-accent)" }}>
+                  Preferences
+                </p>
+                <h3 className="text-lg font-[var(--ds-weight-semibold)] mt-1" style={{ color: "var(--ds-text-primary)" }}>
+                  App Settings
+                </h3>
+                <p className="text-sm mt-0.5" style={{ color: "var(--ds-text-tertiary)" }}>
+                  Control how MEDIO handles alerts and profile visibility.
+                </p>
+              </div>
+            </CardHeader>
+            <CardBody className="flex flex-col gap-3">
               <PreferenceRow
                 title="Notifications"
                 description="Keep travel reminders and route updates enabled."
@@ -436,39 +526,50 @@ export const ProfileView: React.FC = () => {
                   void handleTogglePreference("privacyMode", value)
                 }
               />
-            </div>
-          </section>
+            </CardBody>
+          </Card>
+        </div>
 
-          <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-2">
+        {/* Recent activity */}
+        <div className="profile-enter profile-enter-d4">
+          <Card>
             <button
               onClick={() => setIsRecentChangesOpen((current) => !current)}
-              className="flex w-full items-center justify-between px-5 py-5 text-left transition hover:bg-slate-50 dark:hover:bg-slate-800/40"
+              className="flex w-full items-center justify-between px-5 py-5 text-left transition-colors"
+              style={{ color: "var(--ds-text-primary)" }}
+              aria-expanded={isRecentChangesOpen}
+              aria-controls="recent-changes-panel"
             >
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary/80">
+                <p className="text-xs font-[var(--ds-weight-bold)] uppercase tracking-[var(--ds-tracking-widest)]" style={{ color: "var(--ds-accent)" }}>
                   Activity
                 </p>
-                <h3 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
+                <h3 className="text-lg font-[var(--ds-weight-semibold)] mt-1" style={{ color: "var(--ds-text-primary)" }}>
                   Recent Changes
                 </h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm mt-0.5" style={{ color: "var(--ds-text-tertiary)" }}>
                   A quick log of what has happened on your account.
                 </p>
               </div>
-
-              <div className="ml-4 flex shrink-0 items-center gap-3">
-                <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
+              <div className="flex shrink-0 items-center gap-3 ml-4">
+                <Badge variant="accent">
                   {profile.recentActivity.length}
-                </span>
-                <span className="material-symbols-outlined text-slate-400">
-                  {isRecentChangesOpen ? "expand_less" : "expand_more"}
-                </span>
+                </Badge>
+                {isRecentChangesOpen ? (
+                  <ChevronUp size={16} style={{ color: "var(--ds-text-tertiary)" }} />
+                ) : (
+                  <ChevronDown size={16} style={{ color: "var(--ds-text-tertiary)" }} />
+                )}
               </div>
             </button>
 
             {isRecentChangesOpen && (
-              <div className="border-t border-slate-200 px-5 py-5 dark:border-slate-800">
-                <div className="space-y-3">
+              <div
+                id="recent-changes-panel"
+                className="px-5 py-5"
+                style={{ borderTop: "1px solid var(--ds-border-primary)" }}
+              >
+                <div className="flex flex-col gap-2">
                   {profile.recentActivity.length === 0 ? (
                     <EmptyState
                       title="No activity yet"
@@ -482,49 +583,38 @@ export const ProfileView: React.FC = () => {
                 </div>
               </div>
             )}
-          </section>
+          </Card>
+        </div>
 
-          <button
+        {/* Logout */}
+        <div className="profile-enter profile-enter-d4">
+          <Button
+            variant="danger"
+            size="lg"
+            fullWidth
             onClick={() => void handleLogout()}
-            className="w-full rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-red-200 transition hover:bg-red-500/20 lg:col-span-2"
           >
+            <LogOut size={16} />
             Log Out
-          </button>
-        </main>
-
-        <BottomNav active="profile" />
+          </Button>
+        </div>
       </div>
+
+      <BottomNav active="profile" />
     </div>
   );
 };
 
 const StatCard = ({ label, value }: { label: string; value: number }) => (
-  <div className="rounded-2xl bg-slate-50 px-3 py-4 text-center dark:bg-slate-800">
-    <p className="text-xl font-bold text-slate-900 dark:text-white">{value}</p>
-    <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-400">
+  <div
+    className="rounded-[var(--ds-radius-lg)] px-3 py-4 text-center"
+    style={{ backgroundColor: "var(--ds-bg-tertiary)" }}
+  >
+    <p className="text-2xl font-[var(--ds-weight-bold)]" style={{ color: "var(--ds-text-primary)" }}>
+      {value}
+    </p>
+    <p className="mt-1 text-[11px] uppercase tracking-[var(--ds-tracking-wider)]" style={{ color: "var(--ds-text-tertiary)" }}>
       {label}
-    </p>
-  </div>
-);
-
-const SectionTitle = ({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-}) => (
-  <div>
-    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary/80">
-      {eyebrow}
-    </p>
-    <h3 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
-      {title}
-    </h3>
-    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-      {description}
     </p>
   </div>
 );
@@ -540,49 +630,60 @@ const PreferenceRow = ({
   checked: boolean;
   onToggle: (value: boolean) => void;
 }) => (
-  <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/60">
-    <div>
-      <p className="font-medium text-slate-900 dark:text-white">{title}</p>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+  <div
+    className="flex items-center justify-between gap-4 rounded-[var(--ds-radius-lg)] px-4 py-3"
+    style={{ backgroundColor: "var(--ds-bg-tertiary)" }}
+  >
+    <div className="min-w-0">
+      <p className="text-sm font-[var(--ds-weight-medium)]" style={{ color: "var(--ds-text-primary)" }}>
+        {title}
+      </p>
+      <p className="text-xs mt-0.5" style={{ color: "var(--ds-text-tertiary)" }}>
         {description}
       </p>
     </div>
-
     <button
       type="button"
       aria-label={`Toggle ${title}`}
-      aria-pressed={checked}
+      role="switch"
+      aria-checked={checked}
       onClick={() => onToggle(!checked)}
-      className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition ${
-        checked ? "bg-primary" : "bg-slate-300 dark:bg-slate-700"
-      }`}
+      className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition-all duration-[var(--ds-duration-normal)]`}
+      style={{
+        backgroundColor: checked ? "var(--ds-accent)" : "var(--ds-bg-elevated)",
+        border: checked ? "none" : "1px solid var(--ds-border-primary)",
+      }}
     >
       <span
-        className={`absolute top-1 size-5 rounded-full bg-white transition ${
-          checked ? "left-6" : "left-1"
-        }`}
+        className={`absolute top-1 size-5 rounded-full transition-all duration-[var(--ds-duration-normal)]`}
+        style={{
+          backgroundColor: checked ? "var(--ds-white)" : "var(--ds-text-tertiary)",
+          left: checked ? "calc(100% - 24px)" : "4px",
+        }}
       />
     </button>
   </div>
 );
 
 const ActivityCard = ({ item }: { item: ActivityItem }) => (
-  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/60">
+  <div
+    className="rounded-[var(--ds-radius-lg)] px-4 py-3"
+    style={{ backgroundColor: "var(--ds-bg-tertiary)" }}
+  >
     <div className="flex items-start justify-between gap-3">
-      <div>
-        <p className="font-semibold text-slate-900 dark:text-white">
+      <div className="min-w-0">
+        <p className="text-sm font-[var(--ds-weight-medium)]" style={{ color: "var(--ds-text-primary)" }}>
           {getActivityLabel(item.action)}
         </p>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-0.5 text-xs" style={{ color: "var(--ds-text-tertiary)" }}>
           {item.value}
         </p>
       </div>
-      <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
+      <Badge variant="accent">
         {item.action.replaceAll("_", " ")}
-      </span>
+      </Badge>
     </div>
-
-    <p className="mt-3 text-xs uppercase tracking-[0.18em] text-slate-400">
+    <p className="mt-2 text-[10px] uppercase tracking-[var(--ds-tracking-wider)]" style={{ color: "var(--ds-text-placeholder)" }}>
       {formatActivityDate(item.createdAt)}
     </p>
   </div>
@@ -595,9 +696,17 @@ const EmptyState = ({
   title: string;
   description: string;
 }) => (
-  <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center dark:border-slate-700">
-    <p className="font-semibold text-slate-900 dark:text-white">{title}</p>
-    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+  <div
+    className="rounded-[var(--ds-radius-lg)] px-4 py-6 text-center"
+    style={{
+      border: "1px dashed var(--ds-border-secondary)",
+      backgroundColor: "var(--ds-bg-tertiary)",
+    }}
+  >
+    <p className="text-sm font-[var(--ds-weight-semibold)]" style={{ color: "var(--ds-text-primary)" }}>
+      {title}
+    </p>
+    <p className="mt-1 text-xs" style={{ color: "var(--ds-text-tertiary)" }}>
       {description}
     </p>
   </div>

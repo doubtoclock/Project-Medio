@@ -1,19 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
-import { apiFetch } from "../../lib/api";
+import { apiClient } from "../../lib/apiClient";
 
 type NotificationItem = {
   _id: string;
   action: string;
   value: string;
   createdAt: string;
-};
-
-type NotificationPayload = {
-  user: {
-    notificationsEnabled: boolean;
-  };
-  recentActivity: NotificationItem[];
 };
 
 const getNotificationTitle = (action: string) => {
@@ -54,13 +47,7 @@ export const NotificationBell: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await apiFetch("/api/auth/profile", {
-        credentials: "include",
-      });
-
-      if (!res.ok) return;
-
-      const data = (await res.json()) as NotificationPayload;
+      const data = await apiClient.auth.profile();
       setNotificationsEnabled(Boolean(data.user.notificationsEnabled));
       setItems((data.recentActivity || []).slice(0, 5));
     } catch {
@@ -86,8 +73,18 @@ export const NotificationBell: React.FC = () => {
       }
     };
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
     document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [open]);
 
   return (
@@ -96,6 +93,7 @@ export const NotificationBell: React.FC = () => {
         type="button"
         aria-label="Open notifications"
         aria-expanded={open}
+        aria-haspopup="true"
         onClick={() => {
           setOpen((current) => !current);
           if (!open) void loadNotifications();
@@ -111,7 +109,7 @@ export const NotificationBell: React.FC = () => {
       </button>
 
       {open && (
-        <div className="medio-notification__panel" role="status">
+        <div className="medio-notification__panel" role="dialog" aria-label="Notifications">
           <div className="medio-notification__header">
             <div>
               <p className="medio-notification__eyebrow">Notifications</p>

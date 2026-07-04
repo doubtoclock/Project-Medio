@@ -1,6 +1,7 @@
-@import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+@import '../app/design/tokens.css';
+@import '../app/design/utilities.css';
 html, body {
   margin: 0;
   padding: 0;

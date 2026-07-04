@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Building2, Coffee, Dumbbell, Fuel, Hospital, Landmark, ParkingCircle, ShoppingBasket, Utensils } from "lucide-react";
+import { getBackendUrl } from "../../../lib/backend";
 
 export type NearbyPlace = {
   id: number;
@@ -69,10 +70,10 @@ export const NearbyPanel: React.FC<NearbyPanelProps> = ({
       out center 18;
     `;
 
-    fetch("https://overpass-api.de/api/interpreter", {
+    fetch(`${getBackendUrl()}/api/overpass/interpreter`, {
       method: "POST",
-      body: query,
-      headers: { "Content-Type": "text/plain" },
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
       signal: controller.signal,
     })
       .then((response) => (response.ok ? response.json() : Promise.reject()))
@@ -106,17 +107,23 @@ export const NearbyPanel: React.FC<NearbyPanelProps> = ({
   }, [activeCategory, center, onPlacesChange]);
 
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-950/72 p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
+    <div
+      className="rounded-[var(--ds-radius-2xl)] p-4"
+      style={{
+        backgroundColor: "var(--ds-bg-tertiary)",
+        border: "1px solid var(--ds-border-primary)",
+      }}
+    >
+      <div className="flex items-center justify-between gap-3 mb-3">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+          <p className="text-xs font-[var(--ds-weight-black)] uppercase tracking-[var(--ds-tracking-wider)]" style={{ color: "var(--ds-text-tertiary)" }}>
             Explore nearby
           </p>
-          <h3 className="text-sm font-black text-slate-100">
+          <h3 className="text-sm font-[var(--ds-weight-black)]" style={{ color: "var(--ds-text-primary)" }}>
             Places around this route
           </h3>
         </div>
-        <Building2 size={18} className="text-cyan-200" />
+        <Building2 size={18} style={{ color: "var(--ds-info)" }} />
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1">
@@ -128,11 +135,12 @@ export const NearbyPanel: React.FC<NearbyPanelProps> = ({
               type="button"
               onClick={() => onCategoryChange(active ? null : id)}
               aria-pressed={active}
-              className={`flex min-h-10 shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-bold transition ${
-                active
-                  ? "bg-cyan-300 text-slate-950"
-                  : "bg-slate-900 text-slate-300 hover:bg-slate-800"
-              }`}
+              className="flex min-h-10 shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-[var(--ds-weight-bold)] transition-all duration-[var(--ds-duration-fast)]"
+              style={{
+                backgroundColor: active ? "var(--ds-info)" : "var(--ds-bg-secondary)",
+                color: active ? "var(--ds-text-inverse)" : "var(--ds-text-secondary)",
+                border: active ? "none" : "1px solid var(--ds-border-primary)",
+              }}
             >
               <Icon size={14} />
               {label}
@@ -141,15 +149,31 @@ export const NearbyPanel: React.FC<NearbyPanelProps> = ({
         })}
       </div>
 
-      {loading && <p className="mt-3 text-sm text-slate-400">Finding nearby places...</p>}
-      {notice && <p className="mt-3 text-sm text-slate-400">{notice}</p>}
+      {loading && (
+        <p className="mt-3 text-sm" style={{ color: "var(--ds-text-tertiary)" }}>
+          Finding nearby places...
+        </p>
+      )}
+      {notice && (
+        <p className="mt-3 text-sm" style={{ color: "var(--ds-text-tertiary)" }}>
+          {notice}
+        </p>
+      )}
 
       {places.length > 0 && (
-        <div className="mt-3 grid gap-2">
+        <div className="mt-3 flex flex-col gap-2">
           {places.slice(0, 5).map((place) => (
-            <div key={place.id} className="rounded-2xl bg-slate-900/82 px-3 py-2">
-              <p className="truncate text-sm font-bold text-slate-100">{place.name}</p>
-              <p className="text-xs text-slate-500">{place.category}</p>
+            <div
+              key={place.id}
+              className="rounded-[var(--ds-radius-lg)] px-3 py-2"
+              style={{ backgroundColor: "var(--ds-bg-secondary)" }}
+            >
+              <p className="truncate text-sm font-[var(--ds-weight-bold)]" style={{ color: "var(--ds-text-primary)" }}>
+                {place.name}
+              </p>
+              <p className="text-xs" style={{ color: "var(--ds-text-tertiary)" }}>
+                {place.category}
+              </p>
             </div>
           ))}
         </div>

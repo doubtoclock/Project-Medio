@@ -1,0 +1,209 @@
+/* ============================================================
+   DS — Design System Tokens
+   Dark-first: root is dark theme; .ds-light overrides for light
+   ============================================================ */
+
+:root {
+  /* ---- Typography ---- */
+  --ds-font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ds-font-display: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  --ds-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --ds-text-xs:   0.625rem;   /* 10px */
+  --ds-text-sm:   0.75rem;    /* 12px */
+  --ds-text-base: 0.875rem;   /* 14px */
+  --ds-text-md:   1rem;       /* 16px */
+  --ds-text-lg:   1.125rem;   /* 18px */
+  --ds-text-xl:   1.25rem;    /* 20px */
+  --ds-text-2xl:  1.5rem;     /* 24px */
+  --ds-text-3xl:  1.875rem;   /* 30px */
+  --ds-text-4xl:  2.25rem;    /* 36px */
+  --ds-text-5xl:  3rem;       /* 48px */
+  --ds-text-6xl:  3.75rem;    /* 60px */
+  --ds-text-7xl:  4.5rem;     /* 72px */
+
+  --ds-weight-light:    300;
+  --ds-weight-regular:  400;
+  --ds-weight-medium:   500;
+  --ds-weight-semibold: 600;
+  --ds-weight-bold:     700;
+  --ds-weight-black:    800;
+
+  --ds-leading-tight:   1.15;
+  --ds-leading-normal:  1.5;
+  --ds-leading-relaxed: 1.65;
+
+  --ds-tracking-tight:  -0.025em;
+  --ds-tracking-normal:  0;
+  --ds-tracking-wide:    0.05em;
+  --ds-tracking-wider:   0.1em;
+  --ds-tracking-widest:  0.2em;
+
+  /* ---- Spacing ---- */
+  --ds-space-0:   0;
+  --ds-space-1:   0.25rem;
+  --ds-space-2:   0.5rem;
+  --ds-space-3:   0.75rem;
+  --ds-space-4:   1rem;
+  --ds-space-5:   1.25rem;
+  --ds-space-6:   1.5rem;
+  --ds-space-7:   1.75rem;
+  --ds-space-8:   2rem;
+  --ds-space-9:   2.25rem;
+  --ds-space-10:  2.5rem;
+  --ds-space-11:  2.75rem;
+  --ds-space-12:  3rem;
+  --ds-space-14:  3.5rem;
+  --ds-space-16:  4rem;
+  --ds-space-20:  5rem;
+  --ds-space-24:  6rem;
+  --ds-space-28:  7rem;
+  --ds-space-32:  8rem;
+  --ds-space-36:  9rem;
+  --ds-space-40:  10rem;
+
+  /* ---- Border Radius ---- */
+  --ds-radius-none:  0;
+  --ds-radius-xs:    0.25rem;
+  --ds-radius-sm:    0.375rem;
+  --ds-radius-md:    0.5rem;
+  --ds-radius-lg:    0.75rem;
+  --ds-radius-xl:    1rem;
+  --ds-radius-2xl:   1.5rem;
+  --ds-radius-3xl:   2rem;
+  --ds-radius-full:  9999px;
+
+  /* ---- Shadows ---- */
+  --ds-shadow-xs:      0 1px 2px rgba(0,0,0,0.3);
+  --ds-shadow-sm:      0 1px 3px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.25);
+  --ds-shadow-md:      0 4px 8px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);
+  --ds-shadow-lg:      0 8px 24px rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.2);
+  --ds-shadow-xl:      0 12px 40px rgba(0,0,0,0.45), 0 6px 12px rgba(0,0,0,0.2);
+  --ds-shadow-2xl:     0 24px 64px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.25);
+  --ds-shadow-inner:   inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.3);
+  --ds-shadow-glow:    0 0 24px rgba(13,108,242,0.4);
+  --ds-shadow-glow-sm: 0 0 12px rgba(13,108,242,0.25);
+
+  /* ---- Z-Index ---- */
+  --ds-z-base:      0;
+  --ds-z-dropdown:  100;
+  --ds-z-sticky:    200;
+  --ds-z-fixed:     300;
+  --ds-z-nav:       400;
+  --ds-z-modal:     500;
+  --ds-z-popover:   600;
+  --ds-z-tooltip:   700;
+  --ds-z-toast:     800;
+
+  /* ---- Animation ---- */
+  --ds-duration-fast:    120ms;
+  --ds-duration-normal:  220ms;
+  --ds-duration-slow:    350ms;
+  --ds-duration-slower:  500ms;
+  --ds-duration-slowest: 700ms;
+
+  --ds-ease-in:       cubic-bezier(0.4, 0, 1, 1);
+  --ds-ease-out:      cubic-bezier(0, 0, 0.2, 1);
+  --ds-ease-in-out:   cubic-bezier(0.4, 0, 0.2, 1);
+  --ds-ease-spring:   cubic-bezier(0.22, 1, 0.36, 1);
+  --ds-ease-bounce:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ds-ease-smooth:   cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ============================================================
+     Colors — Dark theme (default)
+     ============================================================ */
+
+  /* Surface */
+  --ds-bg-primary:       #0b0e14;
+  --ds-bg-secondary:     #11151e;
+  --ds-bg-tertiary:      #181e2a;
+  --ds-bg-elevated:      #1a2230;
+  --ds-bg-inset:         #06080c;
+
+  /* Interactive */
+  --ds-bg-hover:         rgba(255,255,255,0.05);
+  --ds-bg-active:        rgba(255,255,255,0.08);
+
+  /* Text */
+  --ds-text-primary:     #f0f2f5;
+  --ds-text-secondary:   #a0a8b7;
+  --ds-text-tertiary:    #6b7485;
+  --ds-text-placeholder: #4a5263;
+  --ds-text-inverse:     #0b0e14;
+
+  /* Border */
+  --ds-border-primary:   rgba(255,255,255,0.08);
+  --ds-border-secondary: rgba(255,255,255,0.12);
+  --ds-border-strong:    rgba(255,255,255,0.18);
+
+  /* Accent / Brand */
+  --ds-accent:           #3b82f6;
+  --ds-accent-hover:     #60a5fa;
+  --ds-accent-soft:      rgba(59,130,246,0.15);
+  --ds-accent-text:      #ffffff;
+
+  /* Semantic */
+  --ds-success:          #22c55e;
+  --ds-success-soft:     rgba(34,197,94,0.12);
+  --ds-success-text:     #86efac;
+
+  --ds-warning:          #f59e0b;
+  --ds-warning-soft:     rgba(245,158,11,0.12);
+  --ds-warning-text:     #fcd34d;
+
+  --ds-error:            #ef4444;
+  --ds-error-soft:       rgba(239,68,68,0.12);
+  --ds-error-text:       #fca5a5;
+
+  --ds-info:             #06b6d4;
+  --ds-info-soft:        rgba(6,182,212,0.12);
+  --ds-info-text:        #67e8f9;
+
+  /* Misc */
+  --ds-overlay:          rgba(0,0,0,0.6);
+  --ds-focus-ring:       rgba(59,130,246,0.5);
+  --ds-white:            #ffffff;
+  --ds-black:            #000000;
+}
+
+/* ============================================================
+   Light theme overrides
+   ============================================================ */
+.ds-light {
+  --ds-bg-primary:       #f8fafc;
+  --ds-bg-secondary:     #f1f5f9;
+  --ds-bg-tertiary:      #e2e8f0;
+  --ds-bg-elevated:      #ffffff;
+  --ds-bg-inset:         #ffffff;
+
+  --ds-bg-hover:         rgba(0,0,0,0.04);
+  --ds-bg-active:        rgba(0,0,0,0.06);
+
+  --ds-text-primary:     #0f172a;
+  --ds-text-secondary:   #475569;
+  --ds-text-tertiary:    #94a3b8;
+  --ds-text-placeholder: #cbd5e1;
+  --ds-text-inverse:     #ffffff;
+
+  --ds-border-primary:   rgba(0,0,0,0.06);
+  --ds-border-secondary: rgba(0,0,0,0.1);
+  --ds-border-strong:    rgba(0,0,0,0.16);
+
+  --ds-accent:           #2563eb;
+  --ds-accent-hover:     #3b82f6;
+  --ds-accent-soft:      rgba(37,99,235,0.1);
+  --ds-accent-text:      #ffffff;
+
+  --ds-overlay:          rgba(0,0,0,0.35);
+  --ds-focus-ring:       rgba(37,99,235,0.4);
+
+  --ds-shadow-xs:      0 1px 2px rgba(0,0,0,0.05);
+  --ds-shadow-sm:      0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --ds-shadow-md:      0 4px 8px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --ds-shadow-lg:      0 8px 24px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.04);
+  --ds-shadow-xl:      0 12px 40px rgba(0,0,0,0.12), 0 6px 12px rgba(0,0,0,0.06);
+  --ds-shadow-2xl:     0 24px 64px rgba(0,0,0,0.14), 0 8px 24px rgba(0,0,0,0.06);
+  --ds-shadow-inner:   inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.06);
+  --ds-shadow-glow:    0 0 24px rgba(37,99,235,0.3);
+  --ds-shadow-glow-sm: 0 0 12px rgba(37,99,235,0.15);
+}

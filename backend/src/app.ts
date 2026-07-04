@@ -20,6 +20,7 @@ import meetRoutes from "./routes/meet.routes";
 import placeRoutes from "./routes/place.routes";
 import routeRoutes from "./routes/route.routes";
 import searchRoutes from "./routes/search.routes";
+import overpassRoutes from "./routes/overpass.routes";
 
 const app = express();
 
@@ -65,6 +66,7 @@ app.use("/api/meet", meetRoutes);
 app.use("/api/places", placeRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/otp", routeRoutes);
+app.use("/api/overpass", overpassRoutes);
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   logger.error("Unhandled request error", {

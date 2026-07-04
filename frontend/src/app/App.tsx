@@ -1,16 +1,25 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Moon, Sun } from "lucide-react";
+import { AuthProvider } from "./lib/auth/AuthContext";
 import { MeetView } from "./components/medio/MeetView";
-import { TravelView } from "./components/medio/TravelView";
-import { UserGuideView } from "./components/medio/UserGuideView";
-import { ProfileView } from "./components/medio/ProfileView";
 import { NotificationBell } from "./components/medio/NotificationBell";
-
 import { LoginPage } from "./components/medio/auth/Login";
 import { ProtectedRoute } from "./components/medio/auth/ProtectedRoute";
+import { LoadingPage } from "./components/design/Loading";
+import { ErrorBoundary } from "./components/design/ErrorBoundary";
 
 import SplashScreen from "./components/medio/SplashScreen";
+
+const TravelView = React.lazy(() =>
+  import("./components/medio/TravelView").then((m) => ({ default: m.TravelView })),
+);
+const UserGuideView = React.lazy(() =>
+  import("./components/medio/UserGuideView").then((m) => ({ default: m.UserGuideView })),
+);
+const ProfileView = React.lazy(() =>
+  import("./components/medio/ProfileView").then((m) => ({ default: m.ProfileView })),
+);
 
 type ThemeMode = "dark" | "light";
 
@@ -85,66 +94,76 @@ export default function App() {
         ))}
       />
 
-      <Routes>
+      <AuthProvider>
+        <ErrorBoundary>
+        <Routes>
 
-        {/* Splash */}
-        <Route path="/" element={<SplashScreen />} />
+          {/* Splash */}
+          <Route path="/" element={<SplashScreen />} />
 
-        {/* Login */}
-        <Route path="/login" element={<LoginPage />} />
+          {/* Login */}
+          <Route path="/login" element={<LoginPage />} />
 
-        {/* Meet page (full screen layout handled inside MeetView) */}
-        <Route
-          path="/meet"
-          element={
-            <ProtectedRoute>
-              <ProtectedLayout>
-                <MeetView />
-              </ProtectedLayout>
-            </ProtectedRoute>
-          }
-        />
+          {/* Meet page (full screen layout handled inside MeetView) */}
+          <Route
+            path="/meet"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <MeetView />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Travel */}
-        <Route
-          path="/travel"
-          element={
-            <ProtectedRoute>
-              <ProtectedLayout>
-                <TravelView />
-              </ProtectedLayout>
-            </ProtectedRoute>
-          }
-        />
+          {/* Travel */}
+          <Route
+            path="/travel"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <Suspense fallback={<LoadingPage />}>
+                    <TravelView />
+                  </Suspense>
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Guide */}
-        <Route
-          path="/guide"
-          element={
-            <ProtectedRoute>
-              <ProtectedLayout>
-                <UserGuideView />
-              </ProtectedLayout>
-            </ProtectedRoute>
-          }
-        />
+          {/* Guide */}
+          <Route
+            path="/guide"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <Suspense fallback={<LoadingPage />}>
+                    <UserGuideView />
+                  </Suspense>
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Profile */}
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <ProtectedLayout>
-                <ProfileView />
-              </ProtectedLayout>
-            </ProtectedRoute>
-          }
-        />
+          {/* Profile */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <Suspense fallback={<LoadingPage />}>
+                    <ProfileView />
+                  </Suspense>
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
 
-      </Routes>
+        </Routes>
+        </ErrorBoundary>
+      </AuthProvider>
     </>
   );
 }

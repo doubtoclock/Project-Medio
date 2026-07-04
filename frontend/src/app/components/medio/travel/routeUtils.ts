@@ -19,17 +19,6 @@ export const modeLabels: Record<string, string> = {
   FERRY: "Ferry",
 };
 
-export const modeGlyphs: Record<string, string> = {
-  WALK: "Walk",
-  CAR: "Car",
-  BICYCLE: "Bike",
-  BUS: "Bus",
-  SUBWAY: "Metro",
-  RAIL: "Train",
-  TRAM: "Tram",
-  FERRY: "Ferry",
-};
-
 export const normalizeMode = (mode = "") => mode.toUpperCase();
 
 export const formatDuration = (seconds = 0) => {

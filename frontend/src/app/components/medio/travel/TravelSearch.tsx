@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { Switch } from "../../ui/switch";
+import { Button } from "../../design/Button";
 import type { LocationResult } from "../../../lib/locationSearch";
 
 export type SavedPlace = {
@@ -56,7 +57,7 @@ type TravelSearchProps = {
 const travelModeChoices: Array<{
   id: TravelMode;
   label: string;
-  Icon: React.ComponentType<{ size?: number; className?: string }>;
+  Icon: React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>;
 }> = [
   { id: "local", label: "Transit", Icon: TrainFront },
   { id: "car", label: "Car", Icon: Car },
@@ -69,7 +70,7 @@ const localTransportChoices: Array<{
   label: string;
   detail: string;
   color: string;
-  Icon: React.ComponentType<{ size?: number; className?: string }>;
+  Icon: React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>;
 }> = [
   { id: "bus", label: "Bus", detail: "BEST routes", color: "#e53935", Icon: BusFront },
   { id: "rail", label: "Local", detail: "Suburban rail", color: "#6a1b9a", Icon: TrainFront },
@@ -111,70 +112,106 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
   const hasLocalTransportMode = Object.values(localTransport).some(Boolean);
 
   return (
-    <section className="pointer-events-none absolute inset-x-0 top-0 z-[600] px-3 pt-[calc(0.85rem+env(safe-area-inset-top))] sm:px-4">
+    <section className="pointer-events-none absolute inset-x-0 top-0 z-[var(--ds-z-fixed)] px-3 pt-[calc(0.85rem+env(safe-area-inset-top))] sm:px-4">
       <div className="pointer-events-auto mx-auto max-w-xl">
         {collapsed ? (
           <button
             type="button"
             onClick={onToggleCollapsed}
-            className="w-full rounded-2xl border border-slate-800 bg-slate-950/90 p-3 text-slate-100 shadow-2xl backdrop-blur-2xl transition hover:bg-slate-900"
+            className="ds-glass-strong w-full rounded-[var(--ds-radius-xl)] p-3 transition-all duration-[var(--ds-duration-normal)]"
+            style={{ boxShadow: "var(--ds-shadow-lg)" }}
           >
             <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2 text-sm font-semibold">
-                <span className="truncate text-emerald-400">{locA || "Origin"}</span>
-                <ArrowRight size={14} className="shrink-0 text-slate-500" />
-                <span className="truncate text-rose-400">{locB || "Destination"}</span>
+              <div className="flex min-w-0 items-center gap-2 text-sm font-[var(--ds-weight-semibold)]" style={{ color: "var(--ds-text-primary)" }}>
+                <span style={{ color: "var(--ds-success)" }} className="truncate">
+                  {locA || "Origin"}
+                </span>
+                <ArrowRight size={14} style={{ color: "var(--ds-text-tertiary)" }} />
+                <span style={{ color: "var(--ds-error)" }} className="truncate">
+                  {locB || "Destination"}
+                </span>
               </div>
-              <ChevronDown size={16} className="shrink-0 text-slate-400" />
+              <ChevronDown size={16} style={{ color: "var(--ds-text-tertiary)" }} />
             </div>
           </button>
         ) : (
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-3 text-slate-100 shadow-2xl backdrop-blur-2xl">
-          <div className="mb-3 flex items-center justify-between gap-3 pr-32">
+        <div
+          className="ds-glass-strong rounded-[var(--ds-radius-2xl)] p-4"
+          style={{ boxShadow: "var(--ds-shadow-xl)" }}
+        >
+          <div className="flex items-center justify-between gap-3 mb-3 pr-32">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-primary/80">
+              <p className="text-xs font-[var(--ds-weight-bold)] uppercase tracking-[var(--ds-tracking-widest)]" style={{ color: "var(--ds-accent)" }}>
                 Medio Travel
               </p>
-              <h1 className="text-lg font-black tracking-tight">Navigate Mumbai</h1>
+              <h1 className="text-lg font-[var(--ds-weight-black)] tracking-tight" style={{ color: "var(--ds-text-primary)" }}>
+                Navigate Mumbai
+              </h1>
             </div>
           </div>
 
-          <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-            {savedPlaces.map((place) => (
-              <div key={place._id} className="relative shrink-0">
-                <button
-                  type="button"
-                  onClick={() => onSavedPlaceClick(place)}
-                  className="flex min-h-10 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/90 py-2 pl-3 pr-8 text-xs font-bold text-slate-200 transition hover:border-primary/50"
-                >
-                  <MapPin size={14} className="text-primary" />
-                  <span className="max-w-28 truncate">{place.label}</span>
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Delete saved place ${place.label}`}
-                  onClick={(event) => onDeleteSavedPlace(place._id, event)}
-                  className="absolute right-2 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-full text-slate-500 transition hover:bg-red-400/15 hover:text-red-200"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={onAddPlace}
-              className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-dashed border-slate-600 bg-slate-900/80 px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-primary"
-            >
-              <Plus size={15} className="text-primary" />
-              Add
-            </button>
-          </div>
+          {/* Saved places */}
+          {savedPlaces.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1 mb-3">
+              {savedPlaces.map((place) => (
+                <div key={place._id} className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onSavedPlaceClick(place)}
+                    className="flex min-h-10 items-center gap-2 rounded-[var(--ds-radius-lg)] px-3 py-2 text-xs font-[var(--ds-weight-bold)] transition-all duration-[var(--ds-duration-fast)]"
+                    style={{
+                      backgroundColor: "var(--ds-bg-tertiary)",
+                      border: "1px solid var(--ds-border-primary)",
+                      color: "var(--ds-text-primary)",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "var(--ds-accent)"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "var(--ds-border-primary)"}
+                  >
+                    <MapPin size={14} style={{ color: "var(--ds-accent)" }} />
+                    <span className="max-w-28 truncate">{place.label}</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Delete saved place ${place.label}`}
+                    onClick={(event) => onDeleteSavedPlace(place._id, event)}
+                    className="absolute -right-1 -top-1 size-5 rounded-full flex items-center justify-center transition-colors"
+                    style={{ backgroundColor: "var(--ds-bg-secondary)", color: "var(--ds-text-tertiary)" }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = "var(--ds-error-text)"}
+                    onMouseLeave={(e) => e.currentTarget.style.color = "var(--ds-text-tertiary)"}
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={onAddPlace}
+                className="flex min-h-10 shrink-0 items-center gap-2 rounded-[var(--ds-radius-lg)] border border-dashed px-3 py-2 text-xs font-[var(--ds-weight-bold)] transition-all duration-[var(--ds-duration-fast)]"
+                style={{
+                  borderColor: "var(--ds-border-secondary)",
+                  color: "var(--ds-text-secondary)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "var(--ds-accent)";
+                  e.currentTarget.style.color = "var(--ds-accent)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--ds-border-secondary)";
+                  e.currentTarget.style.color = "var(--ds-text-secondary)";
+                }}
+              >
+                <Plus size={15} style={{ color: "var(--ds-accent)" }} />
+                Add
+              </button>
+            </div>
+          )}
 
-          <div className="grid gap-2">
+          {/* Location inputs */}
+          <div className="flex flex-col gap-2 mb-3">
             <LocationInput
               value={locA}
               selected={Boolean(coordsA)}
-              color="bg-emerald-400"
+              color="var(--ds-success)"
               placeholder="From"
               suggestions={activeField === "A" ? suggestionsA : []}
               onChange={(value) => onInputChange(value, "A")}
@@ -184,7 +221,7 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
             <LocationInput
               value={locB}
               selected={Boolean(coordsB)}
-              color="bg-rose-500"
+              color="var(--ds-error)"
               placeholder="To"
               suggestions={activeField === "B" ? suggestionsB : []}
               onChange={(value) => onInputChange(value, "B")}
@@ -193,7 +230,11 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
             />
           </div>
 
-          <div className="mt-3 grid grid-cols-4 gap-1 rounded-xl bg-slate-900/80 p-1">
+          {/* Travel mode selector */}
+          <div
+            className="grid grid-cols-4 gap-1 rounded-[var(--ds-radius-lg)] p-1 mb-3"
+            style={{ backgroundColor: "var(--ds-bg-tertiary)" }}
+          >
             {travelModeChoices.map(({ id, label, Icon }) => {
               const active = travelMode === id;
               return (
@@ -202,11 +243,17 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
                   type="button"
                   onClick={() => onTravelModeChange(id)}
                   aria-pressed={active}
-                  className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[11px] font-bold transition ${
-                    active
-                      ? "bg-primary text-white shadow"
-                      : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-                  }`}
+                  className="flex min-h-12 flex-col items-center justify-center gap-1 rounded-[var(--ds-radius-md)] px-1 text-[11px] font-[var(--ds-weight-bold)] transition-all duration-[var(--ds-duration-fast)]"
+                  style={{
+                    backgroundColor: active ? "var(--ds-accent)" : "transparent",
+                    color: active ? "var(--ds-accent-text)" : "var(--ds-text-secondary)",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!active) e.currentTarget.style.backgroundColor = "var(--ds-bg-hover)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!active) e.currentTarget.style.backgroundColor = "transparent";
+                  }}
                 >
                   <Icon size={17} />
                   <span className="truncate">{label}</span>
@@ -215,8 +262,9 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
             })}
           </div>
 
+          {/* Local transport toggles */}
           {travelMode === "local" && (
-            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <div className="flex flex-col gap-2 mb-3">
               {localTransportChoices.map(({ id, label, detail, color, Icon }) => {
                 const enabled = localTransport[id];
                 const style: LocalTransportStyle = {
@@ -228,18 +276,26 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
                 return (
                   <div
                     key={id}
-                    className={`local-transport-card flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${
-                      enabled ? "local-transport-card--active" : "border-slate-800 bg-slate-950/70"
+                    className={`local-transport-card flex items-center justify-between gap-2 rounded-[var(--ds-radius-lg)] px-3 py-2 ${
+                      enabled ? "local-transport-card--active" : ""
                     }`}
-                    style={style}
+                    style={{
+                      ...style,
+                      border: enabled ? `1px solid ${color}40` : "1px solid var(--ds-border-primary)",
+                      backgroundColor: enabled ? `${color}14` : "var(--ds-bg-tertiary)",
+                    }}
                   >
                     <div className="flex min-w-0 items-center gap-2">
-                      <span className="grid size-8 shrink-0 place-items-center rounded-full text-white" style={{ backgroundColor: color }}>
-                        <Icon size={15} />
+                      <span className="grid size-8 shrink-0 place-items-center rounded-full" style={{ backgroundColor: color }}>
+                        <Icon size={15} style={{ color: "#fff" }} />
                       </span>
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-black text-slate-100">{label}</p>
-                        <p className="truncate text-[11px] text-slate-500">{detail}</p>
+                        <p className="truncate text-xs font-[var(--ds-weight-black)]" style={{ color: "var(--ds-text-primary)" }}>
+                          {label}
+                        </p>
+                        <p className="truncate text-[11px]" style={{ color: "var(--ds-text-tertiary)" }}>
+                          {detail}
+                        </p>
                       </div>
                     </div>
                     <Switch
@@ -255,27 +311,38 @@ export const TravelSearch: React.FC<TravelSearchProps> = ({
             </div>
           )}
 
+          {/* Route notice */}
           {routeNotice && (
-            <p className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-sm text-amber-100">
+            <div
+              className="rounded-[var(--ds-radius-lg)] px-3 py-2.5 text-sm mb-3"
+              style={{
+                backgroundColor: "var(--ds-warning-soft)",
+                color: "var(--ds-warning-text)",
+                border: "1px solid var(--ds-warning)20",
+              }}
+            >
               {routeNotice}
-            </p>
+            </div>
           )}
 
           {!hasLocalTransportMode && travelMode === "local" && (
-            <p className="mt-2 text-xs font-semibold text-amber-200">
+            <p className="text-xs font-[var(--ds-weight-semibold)] mb-3" style={{ color: "var(--ds-warning-text)" }}>
               Select at least one local transport mode.
             </p>
           )}
 
-          <button
-            type="button"
+          {/* Find route button */}
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            loading={loading}
+            disabled={!canRequestRoute}
             onClick={onRoute}
-            disabled={!canRequestRoute || loading}
-            className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition enabled:hover:bg-primary/90 disabled:opacity-45"
           >
             <Navigation size={17} />
             {loading ? "Finding route..." : "Find route"}
-          </button>
+          </Button>
         </div>
         )}
       </div>
@@ -303,27 +370,48 @@ const LocationInput = ({
   onSelect: (location: LocationResult) => void;
 }) => (
   <div className="relative">
-    <div className="flex min-h-12 items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/90 px-3 transition focus-within:border-cyan-300/60">
-      <span className={`size-2.5 shrink-0 rounded-full ${color}`} />
+    <div
+      className="flex min-h-12 items-center gap-3 rounded-[var(--ds-radius-lg)] px-3 transition-all duration-[var(--ds-duration-fast)]"
+      style={{
+        backgroundColor: "var(--ds-bg-tertiary)",
+        border: "1px solid var(--ds-border-primary)",
+      }}
+    >
+      <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onBlur={onBlur}
         placeholder={placeholder}
-        className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
+        className="min-w-0 flex-1 bg-transparent text-sm font-[var(--ds-weight-semibold)] outline-none border-none"
+        style={{ color: "var(--ds-text-primary)" }}
       />
-      {selected && <span className="text-[11px] font-bold text-emerald-300">Set</span>}
+      {selected && (
+        <span className="text-[11px] font-[var(--ds-weight-bold)]" style={{ color: "var(--ds-success-text)" }}>
+          Set
+        </span>
+      )}
     </div>
 
     {suggestions.length > 0 && (
-      <div className="absolute left-0 right-0 top-full z-[900] mt-2 overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
+      <div
+        className="absolute left-0 right-0 top-full z-[var(--ds-z-dropdown)] mt-1.5 overflow-hidden rounded-[var(--ds-radius-lg)]"
+        style={{
+          backgroundColor: "var(--ds-bg-secondary)",
+          border: "1px solid var(--ds-border-primary)",
+          boxShadow: "var(--ds-shadow-lg)",
+        }}
+      >
         {suggestions.map((suggestion) => (
           <button
             key={`${suggestion.name}-${suggestion.lat}-${suggestion.lng}`}
             type="button"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => onSelect(suggestion)}
-            className="block w-full px-4 py-3 text-left text-sm font-semibold text-slate-100 transition hover:bg-slate-800"
+            className="block w-full px-4 py-2.5 text-left text-sm transition-colors"
+            style={{ color: "var(--ds-text-primary)" }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--ds-bg-hover)"}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
           >
             {suggestion.name}
           </button>
