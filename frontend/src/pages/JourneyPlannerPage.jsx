@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   ArrowLeft, ArrowUpDown, MapPin, Navigation2,
   Train, Bus, Car, Bike, Footprints,
-  Clock, Cloud, AlertTriangle, Zap, ShieldCheck, Route,
-  CornerUpRight, X, Loader
+  Clock, AlertTriangle, Zap, Route,
+  CornerUpRight, X, Loader, Crosshair
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { apiClient } from '../lib/apiClient';
 import { fetchLocationSuggestions } from '../lib/locationSearch';
 import {
@@ -13,6 +16,7 @@ import {
   formatDistance,
   getRouteMetrics,
   MODE_TO_API_PARAMS,
+  decodePolyline,
 } from '../lib/routeUtils';
 import './JourneyPlannerPage.css';
 
@@ -21,88 +25,103 @@ const TRANSPORT_OPTIONS = [
     id: 'metro',
     name: 'Metro',
     icon: Train,
-    duration: '28 min',
-    cost: '₹40',
-    distance: '8.4 km',
-    label: 'Fastest during rush hour',
-    tag: 'Fastest',
-    color: '#F5F5F5',
-    insights: [
-      { icon: Route, text: '2 line changes required' },
-      { icon: Footprints, text: '6 min walk to station' },
-      { icon: Zap, text: 'Saves 18 minutes today' }
-    ],
     path: 'M20,80 Q40,40 80,20',
   },
   {
     id: 'bus',
     name: 'Bus',
     icon: Bus,
-    duration: '42 min',
-    cost: '₹15',
-    distance: '9.2 km',
-    label: 'Lowest cost',
-    tag: 'Cheapest',
-    color: '#E0E0E0',
-    insights: [
-      { icon: Clock, text: 'Bus arrives in 4 mins' },
-      { icon: Route, text: '14 stops to destination' },
-      { icon: ShieldCheck, text: 'Air conditioned route' }
-    ],
     path: 'M20,80 Q30,60 50,50 T80,20',
   },
   {
     id: 'car',
     name: 'Car',
     icon: Car,
-    duration: '35 min',
-    cost: '₹220',
-    distance: '10.5 km',
-    label: 'Heavy traffic today',
-    tag: 'Comfort',
-    color: '#D4D4D4',
-    insights: [
-      { icon: AlertTriangle, text: 'Heavy congestion expected' },
-      { icon: MapPin, text: 'Parking is limited near destination' },
-      { icon: Zap, text: '₹220 estimated fuel + toll' }
-    ],
     path: 'M20,80 C20,60 60,60 80,20',
   },
   {
     id: 'bike',
     name: 'Bike',
     icon: Bike,
-    duration: '24 min',
-    cost: '₹60',
-    distance: '10.1 km',
-    label: 'Weaving through traffic',
-    tag: 'Agile',
-    color: '#A1A1A1',
-    insights: [
-      { icon: Zap, text: 'Fastest option overall' },
-      { icon: AlertTriangle, text: 'Moderate traffic conditions' },
-      { icon: MapPin, text: 'Easy parking available' }
-    ],
     path: 'M20,80 C30,70 50,30 80,20',
   },
   {
     id: 'walking',
     name: 'Walking',
     icon: Footprints,
-    duration: '1h 58m',
-    cost: 'Free',
-    distance: '7.8 km',
-    label: 'Healthy option',
-    tag: 'Eco',
-    color: '#8A8A8A',
-    insights: [
-      { icon: Zap, text: 'Burns approximately 320 calories' },
-      { icon: Cloud, text: 'Pleasant weather for walking' },
-      { icon: ShieldCheck, text: 'Mostly flat terrain' }
-    ],
     path: 'M20,80 L30,60 L50,60 L60,40 L80,20',
   }
 ];
+
+const currentLocationIcon = L.divIcon({
+  className: '',
+  html: '<div class="planner-marker-current" />',
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+});
+
+const originMarkerIcon = L.divIcon({
+  className: '',
+  html: '<div class="planner-marker-origin" />',
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+});
+
+const destinationMarkerIcon = L.divIcon({
+  className: '',
+  html: '<div class="planner-marker-dest" />',
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+});
+
+function MapBoundsAdjuster({ coordsA, coordsB, currentPosition, userMovedMap, setUserMovedMap }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const handler = () => setUserMovedMap(true);
+    map.on('moveend', handler);
+    return () => map.off('moveend', handler);
+  }, [map, setUserMovedMap]);
+
+  useEffect(() => {
+    if (userMovedMap) return;
+    const points = [];
+    if (coordsA) points.push([coordsA.lat, coordsA.lng]);
+    if (coordsB) points.push([coordsB.lat, coordsB.lng]);
+    if (!coordsA && currentPosition) points.push([currentPosition.lat, currentPosition.lng]);
+    if (!coordsB && !coordsA && !currentPosition) return;
+    if (points.length === 1) {
+      map.setView(points[0], 13);
+      return;
+    }
+    const bounds = L.latLngBounds(points);
+    map.fitBounds(bounds, { padding: [60, 60], maxZoom: 15 });
+  }, [coordsA, coordsB, currentPosition, userMovedMap, map]);
+
+  return null;
+}
+
+function RoutePolyline({ legs }) {
+  const points = useMemo(() => {
+    const allPoints = [];
+    (legs || []).forEach((leg) => {
+      if (leg.legGeometry?.points) {
+        const decoded = decodePolyline(leg.legGeometry.points);
+        allPoints.push(...decoded);
+      }
+    });
+    return allPoints;
+  }, [legs]);
+
+  if (points.length === 0) return null;
+
+  return (
+    <Polyline
+      positions={points}
+      pathOptions={{ color: '#F5F5F5', weight: 3, opacity: 0.8 }}
+    />
+  );
+}
 
 function buildInsights(metrics) {
   const result = [];
@@ -124,6 +143,12 @@ function buildInsights(metrics) {
       text: `Estimated fare ₹${metrics.fare}`,
     });
   }
+  if (metrics.stops > 0) {
+    result.push({
+      icon: Clock,
+      text: `${metrics.stops} stop${metrics.stops > 1 ? 's' : ''}`,
+    });
+  }
   return result;
 }
 
@@ -131,8 +156,8 @@ export default function JourneyPlannerPage() {
   const navigate = useNavigate();
 
   // Location search state
-  const [locA, setLocA] = useState('Current Location');
-  const [locB, setLocB] = useState('Nexus Mall, Koramangala');
+  const [locA, setLocA] = useState('');
+  const [locB, setLocB] = useState('');
   const [debouncedA, setDebouncedA] = useState('');
   const [debouncedB, setDebouncedB] = useState('');
   const [coordsA, setCoordsA] = useState(null);
@@ -150,12 +175,15 @@ export default function JourneyPlannerPage() {
   const [routeError, setRouteError] = useState(null);
   const routeAbortRef = useRef(null);
 
+  // Geolocation state
+  const [currentPosition, setCurrentPosition] = useState(null);
+  const [geoStatus, setGeoStatus] = useState('idle');
+  const [userMovedMap, setUserMovedMap] = useState(false);
+
   // Navigation overlay
   const [isNavigating, setIsNavigating] = useState(false);
 
-  // Derive selected transport
   const selectedTransport = TRANSPORT_OPTIONS.find(t => t.id === selectedId) || TRANSPORT_OPTIONS[0];
-  // Derive route data for selected transport
   const selectedRouteData = routeCache[selectedId] || null;
 
   // Debounce A
@@ -173,92 +201,78 @@ export default function JourneyPlannerPage() {
   // Fetch suggestions for A
   useEffect(() => {
     const query = debouncedA.trim();
-    if (query.length < 3) {
-      setSuggestionsA([]);
-      return;
-    }
-
+    if (query.length < 3) { setSuggestionsA([]); return; }
     const controller = new AbortController();
     let cancelled = false;
-
     fetchLocationSuggestions(query, controller.signal)
-      .then((suggestions) => {
-        if (!cancelled) setSuggestionsA(suggestions);
-      })
-      .catch(() => {
-        if (!cancelled && !controller.signal.aborted) setSuggestionsA([]);
-      });
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
+      .then((suggestions) => { if (!cancelled) setSuggestionsA(suggestions); })
+      .catch(() => { if (!cancelled && !controller.signal.aborted) setSuggestionsA([]); });
+    return () => { cancelled = true; controller.abort(); };
   }, [debouncedA]);
 
   // Fetch suggestions for B
   useEffect(() => {
     const query = debouncedB.trim();
-    if (query.length < 3) {
-      setSuggestionsB([]);
-      return;
-    }
-
+    if (query.length < 3) { setSuggestionsB([]); return; }
     const controller = new AbortController();
     let cancelled = false;
-
     fetchLocationSuggestions(query, controller.signal)
-      .then((suggestions) => {
-        if (!cancelled) setSuggestionsB(suggestions);
-      })
-      .catch(() => {
-        if (!cancelled && !controller.signal.aborted) setSuggestionsB([]);
-      });
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
+      .then((suggestions) => { if (!cancelled) setSuggestionsB(suggestions); })
+      .catch(() => { if (!cancelled && !controller.signal.aborted) setSuggestionsB([]); });
+    return () => { cancelled = true; controller.abort(); };
   }, [debouncedB]);
 
-  const handleInputChange = (value, field) => {
-    if (field === 'A') {
-      setLocA(value);
-      setCoordsA(null);
-    } else {
-      setLocB(value);
-      setCoordsB(null);
+  // Browser geolocation
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setGeoStatus('unavailable');
+      return;
     }
+    setGeoStatus('loading');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setCurrentPosition({ lat: latitude, lng: longitude });
+        setLocA('Current Location');
+        setCoordsA({ lat: latitude, lng: longitude });
+        setGeoStatus('success');
+      },
+      (error) => {
+        if (error.code === error.PERMISSION_DENIED) {
+          setGeoStatus('denied');
+        } else if (error.code === error.TIMEOUT) {
+          setGeoStatus('unavailable');
+        } else {
+          setGeoStatus('unavailable');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }, []);
+
+  const handleInputChange = (value, field) => {
+    if (field === 'A') { setLocA(value); setCoordsA(null); }
+    else { setLocB(value); setCoordsB(null); }
     setActiveField(field);
     setRouteCache({});
     setRouteError(null);
   };
 
   const handleSelectLocation = (location, field) => {
-    if (field === 'A') {
-      setLocA(location.name);
-      setCoordsA(location);
-      setSuggestionsA([]);
-    } else {
-      setLocB(location.name);
-      setCoordsB(location);
-      setSuggestionsB([]);
-    }
+    if (field === 'A') { setLocA(location.name); setCoordsA(location); setSuggestionsA([]); }
+    else { setLocB(location.name); setCoordsB(location); setSuggestionsB([]); }
     setActiveField(null);
     setRouteCache({});
+    setRouteError(null);
+    setUserMovedMap(false);
   };
 
   const handleClearLocation = (field) => {
-    if (field === 'A') {
-      setLocA('');
-      setCoordsA(null);
-      setSuggestionsA([]);
-    } else {
-      setLocB('');
-      setCoordsB(null);
-      setSuggestionsB([]);
-    }
+    if (field === 'A') { setLocA(''); setCoordsA(null); setSuggestionsA([]); }
+    else { setLocB(''); setCoordsB(null); setSuggestionsB([]); }
     setActiveField(null);
     setRouteCache({});
+    setRouteError(null);
   };
 
   const handleFieldBlur = (field) => {
@@ -272,6 +286,18 @@ export default function JourneyPlannerPage() {
     setCoordsA(coordsB);
     setRouteCache({});
     setRouteError(null);
+    setUserMovedMap(false);
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!currentPosition) return;
+    setLocA('Current Location');
+    setCoordsA(currentPosition);
+    setSuggestionsA([]);
+    setActiveField(null);
+    setRouteCache({});
+    setRouteError(null);
+    setUserMovedMap(false);
   };
 
   const fetchRouteForMode = async (modeId) => {
@@ -279,9 +305,7 @@ export default function JourneyPlannerPage() {
     if (routeCache[modeId]) return;
     if (routeLoading === modeId) return;
 
-    if (routeAbortRef.current) {
-      routeAbortRef.current.abort();
-    }
+    if (routeAbortRef.current) routeAbortRef.current.abort();
     const controller = new AbortController();
     routeAbortRef.current = controller;
 
@@ -313,15 +337,17 @@ export default function JourneyPlannerPage() {
           [modeId]: { itinerary, metrics },
         }));
       } else {
-        setRouteError('No route found for this mode.');
+        setRouteError('Routing is currently available only within the regions included in the current map dataset.');
       }
     } catch (err) {
       if (controller.signal.aborted) return;
-      setRouteError('Could not fetch route data.');
-    } finally {
-      if (!controller.signal.aborted) {
-        setRouteLoading(null);
+      if (err.message === 'Failed to fetch') {
+        setRouteError('Unable to connect to the server. Check your internet connection.');
+      } else {
+        setRouteError('Could not fetch route data. Please try again.');
       }
+    } finally {
+      if (!controller.signal.aborted) setRouteLoading(null);
     }
   };
 
@@ -331,24 +357,22 @@ export default function JourneyPlannerPage() {
     fetchRouteForMode(id);
   };
 
-  // Derive display data for a transport option
   const getTransportDisplay = (opt) => {
     const cached = routeCache[opt.id];
     if (!cached) {
       return {
-        duration: opt.duration,
-        cost: opt.cost,
-        distance: opt.distance,
-        label: opt.label,
-        tag: opt.tag,
-        insights: opt.insights,
+        duration: '—',
+        cost: '—',
+        distance: '—',
+        label: coordsA && coordsB ? 'Select to route' : 'Enter locations',
+        tag: '',
+        insights: [],
       };
     }
 
     const { itinerary, metrics } = cached;
     const totalDistance = (itinerary.legs || []).reduce(
-      (sum, leg) => sum + (leg.distance || 0),
-      0
+      (sum, leg) => sum + (leg.distance || 0), 0
     );
 
     return {
@@ -356,7 +380,7 @@ export default function JourneyPlannerPage() {
       cost: metrics.fare > 0 ? `₹${metrics.fare}` : 'Free',
       distance: formatDistance(totalDistance),
       label: `${metrics.transfers} transfer${metrics.transfers !== 1 ? 's' : ''}`,
-      tag: opt.tag,
+      tag: '',
       insights: buildInsights(metrics),
     };
   };
@@ -365,25 +389,15 @@ export default function JourneyPlannerPage() {
     setIsNavigating(true);
   };
 
-  const renderDisplayData = (opt) => {
-    const cached = routeCache[opt.id];
-    if (!cached) return null;
+  const fallbackMapCenter = useMemo(() => {
+    if (coordsA) return [coordsA.lat, coordsA.lng];
+    if (coordsB) return [coordsB.lat, coordsB.lng];
+    if (currentPosition) return [currentPosition.lat, currentPosition.lng];
+    return [19.076, 72.8777];
+  }, [coordsA, coordsB, currentPosition]);
 
-    const { itinerary } = cached;
-    const modes = [
-      ...new Set(
-        (itinerary.legs || []).map((leg) => leg.mode.toUpperCase())
-      ),
-    ].slice(0, 3);
-
-    if (modes.length === 0) return null;
-
-    return (
-      <span className="transport-mode-badge">
-        {modes.join(' → ')}
-      </span>
-    );
-  };
+  const canStartJourney = Boolean(selectedRouteData);
+  const hasBothCoords = Boolean(coordsA && coordsB);
 
   return (
     <div className="planner-page">
@@ -411,6 +425,17 @@ export default function JourneyPlannerPage() {
                 className="location-input"
                 placeholder="Enter origin..."
               />
+              {currentPosition && !locA && (
+                <button
+                  className="location-current-btn"
+                  onClick={handleUseCurrentLocation}
+                  tabIndex={-1}
+                  title="Use current location"
+                  aria-label="Use current location"
+                >
+                  <Crosshair size={14} />
+                </button>
+              )}
               {locA && (
                 <button
                   className="location-clear-btn"
@@ -486,11 +511,10 @@ export default function JourneyPlannerPage() {
               {selectedRouteData
                 ? formatDistance(
                     (selectedRouteData.itinerary.legs || []).reduce(
-                      (s, l) => s + (l.distance || 0),
-                      0
+                      (s, l) => s + (l.distance || 0), 0
                     )
                   )
-                : selectedTransport.distance}
+                : '—'}
             </span>
             <span className="summary-lbl">Distance</span>
           </div>
@@ -498,7 +522,7 @@ export default function JourneyPlannerPage() {
             <span className="summary-val">
               {selectedRouteData
                 ? formatDuration(selectedRouteData.itinerary.duration)
-                : selectedTransport.duration}
+                : '—'}
             </span>
             <span className="summary-lbl">Best ETA</span>
           </div>
@@ -506,8 +530,7 @@ export default function JourneyPlannerPage() {
             <span className="summary-val">
               {selectedRouteData && selectedRouteData.metrics.transfers > 0
                 ? `${selectedRouteData.metrics.transfers}`
-                : '0'}{' '}
-              <span className="summary-val-unit">trf</span>
+                : '0'}
             </span>
             <span className="summary-lbl">Transfers</span>
           </div>
@@ -521,24 +544,56 @@ export default function JourneyPlannerPage() {
           </div>
         </section>
 
-        {/* Map Preview */}
+        {/* Map */}
         <section className="planner-map-container">
-          <svg className="planner-map-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-            {TRANSPORT_OPTIONS.map(opt => (
-              <path
-                key={`bg-${opt.id}`}
-                d={opt.path}
-                className="map-path-inactive"
-              />
-            ))}
-            <path
-              key={`active-${selectedTransport.id}`}
-              d={selectedTransport.path}
-              className={`map-path-active ${selectedTransport.id === 'walking' ? 'dashed' : ''}`}
+          <MapContainer
+            center={fallbackMapCenter}
+            zoom={13}
+            zoomControl={false}
+            attributionControl={false}
+            scrollWheelZoom={true}
+            className="planner-leaflet-map"
+          >
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             />
-          </svg>
-          <div className="map-pin origin-pin"></div>
-          <div className="map-pin dest-pin"></div>
+
+            {currentPosition && !coordsA && (
+              <Marker position={[currentPosition.lat, currentPosition.lng]} icon={currentLocationIcon} />
+            )}
+            {coordsA && (
+              <Marker position={[coordsA.lat, coordsA.lng]} icon={originMarkerIcon} />
+            )}
+            {coordsB && (
+              <Marker position={[coordsB.lat, coordsB.lng]} icon={destinationMarkerIcon} />
+            )}
+
+            {selectedRouteData && selectedRouteData.itinerary.legs && (
+              <RoutePolyline legs={selectedRouteData.itinerary.legs} />
+            )}
+
+            <MapBoundsAdjuster
+              coordsA={coordsA}
+              coordsB={coordsB}
+              currentPosition={currentPosition}
+              userMovedMap={userMovedMap}
+              setUserMovedMap={setUserMovedMap}
+            />
+          </MapContainer>
+
+          {/* Geolocation status overlay */}
+          {geoStatus === 'loading' && (
+            <div className="map-geo-overlay">
+              <Loader size={14} className="transport-loading-spinner" />
+              <span>Getting your location...</span>
+            </div>
+          )}
+          {geoStatus === 'denied' && (
+            <div className="map-geo-overlay">Location access denied</div>
+          )}
+          {geoStatus === 'unavailable' && (
+            <div className="map-geo-overlay">Location unavailable</div>
+          )}
         </section>
 
         {/* Recommendation Highlight */}
@@ -553,12 +608,10 @@ export default function JourneyPlannerPage() {
                   : 'No transfers. '}
                 Estimated arrival in {formatDuration(selectedRouteData.itinerary.duration)}.
               </>
+            ) : hasBothCoords ? (
+              'Select a transport mode above to see route details.'
             ) : (
-              <>
-                <strong>{selectedTransport.name}</strong> is the best option today.{' '}
-                {selectedTransport.insights[0]?.text}. Estimated arrival in{' '}
-                {selectedTransport.duration}.
-              </>
+              'Enter origin and destination to plan your journey.'
             )}
           </div>
         </section>
@@ -576,7 +629,7 @@ export default function JourneyPlannerPage() {
                 key={transport.id}
                 className={`transport-card ${isSelected ? 'selected' : ''}`}
                 onClick={() => handleTransportSelect(transport.id)}
-                disabled={isLoading}
+                disabled={isLoading || !hasBothCoords}
               >
                 <div className="transport-icon-wrap">
                   {isLoading ? (
@@ -608,14 +661,21 @@ export default function JourneyPlannerPage() {
             {routeError && (
               <div className="insight-row">
                 <AlertTriangle size={16} className="insight-icon" />
-                <span className="insight-text" style={{ color: '#FF6B6B' }}>{routeError}</span>
+                <span className="insight-text insight-error">{routeError}</span>
+              </div>
+            )}
+            {getTransportDisplay(selectedTransport).insights.length === 0 && !routeError && (
+              <div className="insight-row">
+                <span className="insight-text" style={{ color: 'var(--muted-text)', fontSize: '14px' }}>
+                  {hasBothCoords ? 'Select a transport mode to see journey details.' : 'Enter locations to see journey details.'}
+                </span>
               </div>
             )}
             {getTransportDisplay(selectedTransport).insights.map((insight, idx) => {
-              const Icon = insight.icon;
+              const InsightIcon = insight.icon;
               return (
                 <div key={idx} className="insight-row anim-slide-up" style={{ animationDelay: `${idx * 0.05}s` }}>
-                  <Icon size={16} className="insight-icon" />
+                  <InsightIcon size={16} className="insight-icon" />
                   <span className="insight-text">{insight.text}</span>
                 </div>
               );
@@ -627,35 +687,48 @@ export default function JourneyPlannerPage() {
 
       {/* Bottom CTA */}
       <div className="planner-cta-wrapper">
-        <button className="planner-cta-btn" onClick={handleStartJourney}>
+        <button
+          className="planner-cta-btn"
+          onClick={handleStartJourney}
+          disabled={!canStartJourney}
+          style={!canStartJourney ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+        >
           <Navigation2 size={18} strokeWidth={3} fill="currentColor" />
           Start Journey
         </button>
       </div>
 
-      {/* Active Navigation Overlay (mock, no turn-by-turn integration yet) */}
+      {/* Active Navigation Overlay */}
+      {/* TODO: Replace mock turn-by-turn with real route leg instructions when backend supports step-by-step navigation. */}
       {isNavigating && (
         <div className="active-nav-container anim-fade-in">
 
-          {/* Top Instruction Banner */}
           <div className="nav-instruction-banner">
             <div className="nav-dir-icon">
               <CornerUpRight size={32} strokeWidth={3} color="#090909" />
             </div>
             <div className="nav-instruction-text">
-              <div className="nav-dist">In 200m</div>
-              <div className="nav-action">Turn right onto Main Street</div>
+              <div className="nav-dist">
+                {selectedRouteData
+                  ? formatDistance(
+                      (selectedRouteData.itinerary.legs || []).reduce(
+                        (s, l) => s + (l.distance || 0), 0
+                      )
+                    ) + ' total'
+                  : 'In 200m'}
+              </div>
+              <div className="nav-action">
+                {selectedRouteData
+                  ? `${selectedTransport.name} to destination`
+                  : 'Turn right onto Main Street'}
+              </div>
             </div>
           </div>
 
-          {/* 3D Map View */}
           <div className="nav-3d-map">
             <div className="nav-3d-plane">
               <svg className="nav-3d-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <path
-                  d={selectedTransport.path}
-                  className="nav-3d-path"
-                />
+                <path d={selectedTransport.path} className="nav-3d-path" />
               </svg>
               <div className="nav-current-location">
                 <Navigation2 size={32} fill="var(--primary-text)" strokeWidth={0} />
@@ -663,24 +736,21 @@ export default function JourneyPlannerPage() {
             </div>
           </div>
 
-          {/* Bottom Status Panel */}
           <div className="nav-status-sheet">
             <div className="nav-status-info">
-              <div className="nav-time-remaining">
+              <div className="nav-time-remaining" style={{ color: selectedRouteData ? '#34C759' : undefined }}>
                 {selectedRouteData
                   ? formatDuration(selectedRouteData.itinerary.duration)
-                  : selectedTransport.duration}
+                  : '—'}
               </div>
               <div className="nav-meta-remaining">
                 {selectedRouteData
                   ? formatDistance(
                       (selectedRouteData.itinerary.legs || []).reduce(
-                        (s, l) => s + (l.distance || 0),
-                        0
+                        (s, l) => s + (l.distance || 0), 0
                       )
                     )
-                  : selectedTransport.distance}{' '}
-                • 12:45 PM
+                  : '— km'}
               </div>
             </div>
             <button className="nav-end-btn" onClick={() => setIsNavigating(false)}>
