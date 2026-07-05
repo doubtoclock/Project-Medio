@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { LocateFixed, ArrowLeft, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LocateFixed, ArrowLeft, Clock } from 'lucide-react';
 import { apiClient } from '../lib/apiClient';
-import { decodePolyline, formatDuration, formatDistance, getRouteMetrics, getLegRouteName, modeLabels, normalizeMode } from '../lib/routeUtils';
 import './ResultsPage.css';
 
 const CATEGORY_ORDER = [
@@ -57,52 +56,17 @@ const nexusIcon = L.divIcon({
   iconAnchor: [12, 12],
 });
 
-const originADetailIcon = L.divIcon({
-  className: '',
-  html: `<div style="width:14px;height:14px;background:#FFFFFF;border-radius:50%;border:2px solid rgba(255,255,255,0.5);box-shadow:0 0 12px rgba(255,255,255,0.6);"></div>`,
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-});
-
-const originBDetailIcon = L.divIcon({
-  className: '',
-  html: `<div style="width:14px;height:14px;background:#D4AF37;border-radius:50%;border:2px solid rgba(212,175,55,0.5);box-shadow:0 0 12px rgba(212,175,55,0.6);"></div>`,
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-});
-
-const venueDetailIcon = L.divIcon({
-  className: '',
-  html: `<div style="width:18px;height:18px;background:#FFFFFF;border-radius:50%;border:3px solid rgba(255,255,255,0.8);box-shadow:0 0 20px rgba(255,255,255,0.9);"></div>`,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-});
-
-function getItineraryPolyline(itinerary) {
-  if (!itinerary?.legs) return [];
-  const pts = [];
-  for (const leg of itinerary.legs) {
-    if (leg.legGeometry?.points) {
-      pts.push(...decodePolyline(leg.legGeometry.points));
-    }
-  }
-  return pts;
-}
-
-function MapAnimator({ positions, midpoint, phase, rescaleTrigger, detailTrigger }) {
+function MapAnimator({ positions, midpoint, phase, rescaleTrigger }) {
   const map = useMap();
 
   useEffect(() => {
-    if (detailTrigger > 0 && positions.length > 0) {
-      const bounds = L.latLngBounds(positions);
-      map.flyToBounds(bounds, { padding: [80, 80], maxZoom: 15, duration: 1.2 });
-    } else if (phase === 0) {
+    if (phase === 0) {
       map.setView([midpoint.lat, midpoint.lng], 15, { animate: false });
     } else if (phase >= 1 && positions.length > 0) {
       const bounds = L.latLngBounds(positions);
       map.flyToBounds(bounds, { padding: [100, 100], maxZoom: 14, duration: 1.5 });
     }
-  }, [map, positions, midpoint, phase, rescaleTrigger, detailTrigger]);
+  }, [map, positions, midpoint, phase, rescaleTrigger]);
 
   return null;
 }
@@ -132,15 +96,12 @@ function ResultsPage() {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [routeCache, setRouteCache] = useState({});
 
-  const [viewMode, setViewMode] = useState('list');
   const [routeDataA, setRouteDataA] = useState(null);
   const [routeDataB, setRouteDataB] = useState(null);
   const [routeErrorA, setRouteErrorA] = useState(null);
   const [routeErrorB, setRouteErrorB] = useState(null);
-  const [itineraryIndexA, setItineraryIndexA] = useState(0);
-  const [itineraryIndexB, setItineraryIndexB] = useState(0);
   const [loadingRoutes, setLoadingRoutes] = useState(false);
-  const [detailTrigger, setDetailTrigger] = useState(0);
+  const pendingNavigateRef = useRef(false);
 
   const hasResults = meetResults.length > 0;
 
@@ -160,16 +121,6 @@ function ResultsPage() {
   }, [originA.lat, originA.lng, originB.lat, originB.lng, midpoint.lat, midpoint.lng]);
 
   const allPositions = useMemo(() => {
-    if (viewMode === 'detail') {
-      const positions = [
-        [originA.lat, originA.lng],
-        [originB.lat, originB.lng],
-      ];
-      if (selectedVenue) {
-        positions.push([selectedVenue.lat, selectedVenue.lon]);
-      }
-      return positions;
-    }
     const positions = [
       [originA.lat, originA.lng],
       [originB.lat, originB.lng],
@@ -179,7 +130,7 @@ function ResultsPage() {
     }
     positions.push(...routeA, ...routeB);
     return positions;
-  }, [originA, originB, selectedVenue, routeA, routeB, viewMode]);
+  }, [originA, originB, selectedVenue, routeA, routeB]);
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase(1), 200);
@@ -198,27 +149,20 @@ function ResultsPage() {
     }
   }, [hasResults]);
 
-  const itinerariesA = routeDataA?.data?.plan?.itineraries || [];
-  const itinerariesB = routeDataB?.data?.plan?.itineraries || [];
-
-  const itineraryA = itinerariesA[itineraryIndexA] || null;
-  const itineraryB = itinerariesB[itineraryIndexB] || null;
-
-  const polylineA = useMemo(() => itineraryA ? getItineraryPolyline(itineraryA) : [], [itineraryA]);
-  const polylineB = useMemo(() => itineraryB ? getItineraryPolyline(itineraryB) : [], [itineraryB]);
-
   useEffect(() => {
     if (!selectedVenue) return;
 
     let cancelled = false;
+    let localDataA = null;
+    let localDataB = null;
+    let localErrorA = null;
+    let localErrorB = null;
 
     setLoadingRoutes(true);
     setRouteDataA(null);
     setRouteDataB(null);
     setRouteErrorA(null);
     setRouteErrorB(null);
-    setItineraryIndexA(0);
-    setItineraryIndexB(0);
 
     const fetchSide = async (side) => {
       const from = side === 'A' ? originA : originB;
@@ -227,8 +171,13 @@ function ResultsPage() {
 
       if (routeCache[routeKey]) {
         if (!cancelled) {
-          if (side === 'A') setRouteDataA(routeCache[routeKey]);
-          else setRouteDataB(routeCache[routeKey]);
+          if (side === 'A') {
+            setRouteDataA(routeCache[routeKey]);
+            localDataA = routeCache[routeKey];
+          } else {
+            setRouteDataB(routeCache[routeKey]);
+            localDataB = routeCache[routeKey];
+          }
         }
         return;
       }
@@ -242,8 +191,13 @@ function ResultsPage() {
         });
         if (!cancelled) {
           setRouteCache((prev) => ({ ...prev, [routeKey]: data }));
-          if (side === 'A') setRouteDataA(data);
-          else setRouteDataB(data);
+          if (side === 'A') {
+            setRouteDataA(data);
+            localDataA = data;
+          } else {
+            setRouteDataB(data);
+            localDataB = data;
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -256,14 +210,35 @@ function ResultsPage() {
           } else {
             errorText = 'Could not calculate route.';
           }
-          if (side === 'A') setRouteErrorA(errorText);
-          else setRouteErrorB(errorText);
+          if (side === 'A') {
+            setRouteErrorA(errorText);
+            localErrorA = errorText;
+          } else {
+            setRouteErrorB(errorText);
+            localErrorB = errorText;
+          }
         }
       }
     };
 
     Promise.all([fetchSide('A'), fetchSide('B')]).finally(() => {
-      if (!cancelled) setLoadingRoutes(false);
+      if (!cancelled) {
+        setLoadingRoutes(false);
+        if (pendingNavigateRef.current) {
+          pendingNavigateRef.current = false;
+          navigate('/detail', {
+            state: {
+              venue: selectedVenue,
+              originA,
+              originB,
+              routeDataA: localDataA,
+              routeDataB: localDataB,
+              routeErrorA: localErrorA,
+              routeErrorB: localErrorB,
+            }
+          });
+        }
+      }
     });
 
     return () => { cancelled = true; };
@@ -304,17 +279,8 @@ function ResultsPage() {
 
   const openDetailView = (venue) => {
     setSelectedVenue(venue);
-    setPhase(4);
-    setViewMode('detail');
-    setDetailTrigger((prev) => prev + 1);
+    pendingNavigateRef.current = true;
   };
-
-  const closeDetailView = () => {
-    setViewMode('list');
-    setDetailTrigger((prev) => prev + 1);
-  };
-
-  const bothFailed = viewMode === 'detail' && !loadingRoutes && !routeDataA && !routeDataB && routeErrorA && routeErrorB;
 
   return (
     <div className="results-page">
@@ -325,9 +291,7 @@ function ResultsPage() {
           </button>
           <div className="map-badge anim-slide-up-fade" style={{ flex: 1, animationDelay: '0.2s' }}>
             <div className="map-badge-bar"></div>
-            <span className="map-badge-text">
-              {viewMode === 'detail' ? 'Route Calculated' : 'Nexus Calculated'}
-            </span>
+            <span className="map-badge-text">Nexus Calculated</span>
           </div>
         </div>
 
@@ -335,7 +299,7 @@ function ResultsPage() {
           <LocateFixed size={20} className="anim-icon-tap" />
         </button>
 
-        <div className={`results-map-container ${viewMode === 'detail' ? '' : (phase === 1 ? 'cinematic-drone-zoom' : '')}`}>
+        <div className={`results-map-container ${phase === 1 ? 'cinematic-drone-zoom' : ''}`}>
           <MapContainer
             center={[midpoint.lat, midpoint.lng]}
             zoom={15}
@@ -347,26 +311,9 @@ function ResultsPage() {
             <TileLayer
               url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             />
-            <MapAnimator positions={allPositions} midpoint={midpoint} phase={phase} rescaleTrigger={rescaleTrigger} detailTrigger={detailTrigger} />
+            <MapAnimator positions={allPositions} midpoint={midpoint} phase={phase} rescaleTrigger={rescaleTrigger} />
 
-            {viewMode === 'detail' && selectedVenue && (
-              <>
-                {polylineA.length > 0 && (
-                  <>
-                    <Polyline positions={polylineA} color="#FFFFFF" weight={5} opacity={0.3} />
-                    <Polyline positions={polylineA} color="#FFFFFF" weight={2} opacity={1.0} />
-                  </>
-                )}
-                {polylineB.length > 0 && (
-                  <>
-                    <Polyline positions={polylineB} color="#D4AF37" weight={5} opacity={0.3} />
-                    <Polyline positions={polylineB} color="#D4AF37" weight={2} opacity={1.0} />
-                  </>
-                )}
-              </>
-            )}
-
-            {viewMode === 'list' && phase >= 2 && (
+            {phase >= 2 && (
               <>
                 {routeA.length > 0 && (
                   <>
@@ -383,28 +330,19 @@ function ResultsPage() {
               </>
             )}
 
-            <Marker position={[originA.lat, originA.lng]} icon={viewMode === 'detail' ? originADetailIcon : getOriginIcon(phase)}>
+            <Marker position={[originA.lat, originA.lng]} icon={getOriginIcon(phase)}>
               <Popup className="custom-popup">
                 <strong>Origin A</strong><br />{originA.name}
               </Popup>
             </Marker>
 
-            <Marker position={[originB.lat, originB.lng]} icon={viewMode === 'detail' ? originBDetailIcon : getOriginIcon(phase)}>
+            <Marker position={[originB.lat, originB.lng]} icon={getOriginIcon(phase)}>
               <Popup className="custom-popup">
                 <strong>Origin B</strong><br />{originB.name}
               </Popup>
             </Marker>
 
-            {viewMode === 'detail' && selectedVenue && (
-              <Marker position={[selectedVenue.lat, selectedVenue.lon]} icon={venueDetailIcon}>
-                <Popup className="custom-popup">
-                  <strong>{selectedVenue.name}</strong><br />
-                  {getMeetCategory(selectedVenue)}
-                </Popup>
-              </Marker>
-            )}
-
-            {viewMode === 'list' && phase >= 3 && (
+            {phase >= 3 && (
               <Marker
                 position={[midpoint.lat, midpoint.lng]}
                 icon={L.divIcon({
@@ -420,7 +358,7 @@ function ResultsPage() {
               </Marker>
             )}
 
-            {viewMode === 'list' && phase >= 4 && filteredMeetResults.map((venue) => (
+            {phase >= 4 && filteredMeetResults.map((venue) => (
               <Marker
                 key={venue.id}
                 position={[venue.lat, venue.lon]}
@@ -437,90 +375,7 @@ function ResultsPage() {
       </div>
 
       <div className="results-bottom">
-        {viewMode === 'detail' && selectedVenue ? (
-          <div className="anim-ui-reveal" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <div className="route-detail-header">
-              <button className="route-detail-back" onClick={closeDetailView}>
-                <ArrowLeft size={16} strokeWidth={2.5} />
-                <span>Meeting Points</span>
-              </button>
-              <div style={{ marginTop: 12 }}>
-                <span className="route-detail-category">{getMeetCategory(selectedVenue)}</span>
-                <h2 className="route-detail-title">{selectedVenue.name}</h2>
-              </div>
-            </div>
-
-            {loadingRoutes && (
-              <div className="route-loading">
-                <div className="route-spinner"></div>
-                <p>Calculating routes...</p>
-              </div>
-            )}
-
-            {bothFailed && (
-              <div className="route-error-full">
-                <p>{routeErrorA}</p>
-                <button className="route-error-back" onClick={closeDetailView}>Back to meeting points</button>
-              </div>
-            )}
-
-            {!loadingRoutes && (routeDataA || routeDataB) && (
-              <div className="route-users">
-                <div className={`route-user-section ${!routeDataA ? 'route-user-error' : ''}`}>
-                  <div className="route-user-header">
-                    <span className="route-user-dot route-user-dot-a"></span>
-                    <span className="route-user-label">User A</span>
-                  </div>
-                  {routeErrorA && !routeDataA ? (
-                    <p className="route-user-fail">{routeErrorA}</p>
-                  ) : itineraryA && (
-                    <>
-                      <RouteMetricsPanel itinerary={itineraryA} />
-                      <RouteStepsPanel itinerary={itineraryA} />
-                      {itinerariesA.length > 1 && (
-                        <ItinerarySwitcher
-                          index={itineraryIndexA}
-                          total={itinerariesA.length}
-                          onPrev={() => setItineraryIndexA((i) => Math.max(0, i - 1))}
-                          onNext={() => setItineraryIndexA((i) => Math.min(itinerariesA.length - 1, i + 1))}
-                        />
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <div className={`route-user-section ${!routeDataB ? 'route-user-error' : ''}`}>
-                  <div className="route-user-header">
-                    <span className="route-user-dot route-user-dot-b"></span>
-                    <span className="route-user-label">User B</span>
-                  </div>
-                  {routeErrorB && !routeDataB ? (
-                    <p className="route-user-fail">{routeErrorB}</p>
-                  ) : itineraryB && (
-                    <>
-                      <RouteMetricsPanel itinerary={itineraryB} />
-                      <RouteStepsPanel itinerary={itineraryB} />
-                      {itinerariesB.length > 1 && (
-                        <ItinerarySwitcher
-                          index={itineraryIndexB}
-                          total={itinerariesB.length}
-                          onPrev={() => setItineraryIndexB((i) => Math.max(0, i - 1))}
-                          onNext={() => setItineraryIndexB((i) => Math.min(itinerariesB.length - 1, i + 1))}
-                        />
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="results-footer" style={{ marginTop: 'auto' }}>
-              <span className="results-footer-text">V.4.0 ENGINE</span>
-              <span className="results-footer-text">GRID: 1:25000</span>
-            </div>
-          </div>
-        ) : (
-          <div className="anim-ui-reveal" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div className="anim-ui-reveal" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <h1 className="results-title">Meeting<br />Points.</h1>
             <p className="results-subtitle">Found {meetResults.length} matches near {(midpoint.lat).toFixed(4)}° N</p>
             <div className="results-divider"></div>
@@ -622,77 +477,7 @@ function ResultsPage() {
               <span className="results-footer-text">GRID: 1:25000</span>
             </div>
           </div>
-        )}
       </div>
-    </div>
-  );
-}
-
-function RouteMetricsPanel({ itinerary }) {
-  const metrics = getRouteMetrics(itinerary);
-  return (
-    <div className="route-metrics">
-      <div className="route-metric">
-        <span className="route-metric-value">{formatDuration(itinerary.duration)}</span>
-        <span className="route-metric-label">Duration</span>
-      </div>
-      <div className="route-metric">
-        <span className="route-metric-value">{metrics.fare > 0 ? `₹${metrics.fare}` : 'Free'}</span>
-        <span className="route-metric-label">Fare</span>
-      </div>
-      <div className="route-metric">
-        <span className="route-metric-value">{metrics.transfers}</span>
-        <span className="route-metric-label">Transfer{metrics.transfers !== 1 ? 's' : ''}</span>
-      </div>
-      <div className="route-metric">
-        <span className="route-metric-value">{formatDistance(metrics.walkingMeters)}</span>
-        <span className="route-metric-label">Walk</span>
-      </div>
-    </div>
-  );
-}
-
-function RouteStepsPanel({ itinerary }) {
-  const legs = itinerary?.legs || [];
-  if (legs.length === 0) return null;
-
-  return (
-    <div className="route-steps">
-      {legs.map((leg, idx) => {
-        const mode = normalizeMode(leg.mode);
-        const label = modeLabels[mode] || leg.mode;
-        const routeName = getLegRouteName(leg);
-        const isTransit = !['WALK', 'CAR', 'BICYCLE'].includes(mode);
-        return (
-          <div key={idx} className="route-step">
-            <div className="route-step-line">
-              <div className={`route-step-dot route-step-dot-${mode.toLowerCase()}`}></div>
-              {idx < legs.length - 1 && <div className="route-step-connector"></div>}
-            </div>
-            <div className="route-step-content">
-              <span className="route-step-mode">{label}</span>
-              {isTransit && routeName && (
-                <span className="route-step-name">{routeName}</span>
-              )}
-              <span className="route-step-distance">{formatDistance(leg.distance || 0)}</span>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function ItinerarySwitcher({ index, total, onPrev, onNext }) {
-  return (
-    <div className="itinerary-switcher">
-      <button className="itinerary-switcher-btn" onClick={onPrev} disabled={index === 0}>
-        <ChevronLeft size={14} />
-      </button>
-      <span className="itinerary-switcher-label">{index + 1} / {total}</span>
-      <button className="itinerary-switcher-btn" onClick={onNext} disabled={index === total - 1}>
-        <ChevronRight size={14} />
-      </button>
     </div>
   );
 }

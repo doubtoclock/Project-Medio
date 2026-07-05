@@ -3,12 +3,41 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, User, Shield, ChevronRight, MapPin,
   Navigation, Bell, Globe, LogOut, Sun, Link2,
-  CreditCard, HelpCircle, Mail, Info, FileText
+  CreditCard, HelpCircle, Mail, Info, FileText, X, Check
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { apiClient } from '../lib/apiClient';
 import './ProfilePage.css';
 
-// Intersection Observer Hook for scroll animations
+function formatActivityDate(dateValue) {
+  if (!dateValue) return '';
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(dateValue));
+}
+
+function getActivityLabel(action) {
+  switch (action) {
+    case 'PLACE_CREATED': return 'Saved place';
+    case 'PLACE_DELETED': return 'Removed place';
+    case 'ROUTE_PLANNED': return 'Planned route';
+    case 'MEET_SEARCHED': return 'Searched meet point';
+    case 'PROFILE_UPDATED': return 'Updated profile';
+    default: return 'Activity';
+  }
+}
+
+function getActivityValue(action, value) {
+  switch (action) {
+    case 'ROUTE_PLANNED': return value ? value.replace(' -> ', ' → ') : value;
+    case 'MEET_SEARCHED': return value ? value.replace(/ -> /g, ' → ') : value;
+    default: return value;
+  }
+}
+
 function useOnScreen(options = { threshold: 0.15 }) {
   const ref = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -34,7 +63,7 @@ function useOnScreen(options = { threshold: 0.15 }) {
 
 function ProfileSection({ children, className = '', style = {} }) {
   const [ref, isVisible] = useOnScreen({ threshold: 0.1 });
-  
+
   return (
     <div ref={ref} className={`${className} ${isVisible ? 'is-visible' : ''}`} style={style}>
       {children}
@@ -42,7 +71,6 @@ function ProfileSection({ children, className = '', style = {} }) {
   );
 }
 
-// Simple hook for counting up numbers
 function useAnimatedCounter(endValue, duration = 1500) {
   const [count, setCount] = useState(0);
 
@@ -51,7 +79,6 @@ function useAnimatedCounter(endValue, duration = 1500) {
     const step = (timestamp) => {
       if (!startTimestamp) startTimestamp = timestamp;
       const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      // easeOutQuart
       const ease = 1 - Math.pow(1 - progress, 4);
       setCount(Math.floor(ease * endValue));
       if (progress < 1) {
@@ -120,15 +147,110 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [theme, setTheme] = useState('Dark');
-  const [notificationsOn, setNotificationsOn] = useState(true);
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [notificationsOn, setNotificationsOn] = useState(user?.notificationsEnabled ?? true);
+  const [isPrivate, setIsPrivate] = useState(user?.privacyMode ?? false);
   const [units, setUnits] = useState('Metric');
+
+  const [fullProfile, setFullProfile] = useState(null);
+  const [profileError, setProfileError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState('');
+  const [editedAvatarUrl, setEditedAvatarUrl] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const [comingSoonMsg, setComingSoonMsg] = useState('');
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    setProfileError('');
+
+    apiClient.auth.profile()
+      .then((data) => {
+        if (cancelled) return;
+        setFullProfile(data);
+        setEditedName(data.user.name);
+        setEditedAvatarUrl(data.user.avatarUrl || '');
+        setNotificationsOn(data.user.notificationsEnabled);
+        setIsPrivate(data.user.privacyMode);
+      })
+      .catch(() => {
+        if (!cancelled) setProfileError('Failed to load profile data');
+      });
+
+    return () => { cancelled = true; };
+  }, [user]);
+
+  const handleEditToggle = () => {
+    if (!isEditing && fullProfile) {
+      setEditedName(fullProfile.user.name);
+      setEditedAvatarUrl(fullProfile.user.avatarUrl || '');
+    }
+    setIsEditing((prev) => !prev);
+    setSuccessMessage('');
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editedName.trim()) return;
+    setSaving(true);
+    setSuccessMessage('');
+    setProfileError('');
+    try {
+      const data = await apiClient.auth.updateProfile({
+        name: editedName.trim(),
+        avatarUrl: editedAvatarUrl.trim() || null,
+      });
+      setFullProfile(data);
+      setSuccessMessage('Profile updated');
+      setIsEditing(false);
+    } catch (err) {
+      setProfileError(err?.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleNotification = async () => {
+    const next = !notificationsOn;
+    setNotificationsOn(next);
+    try {
+      await apiClient.auth.updateProfile({ notificationsEnabled: next });
+    } catch {
+      setNotificationsOn(!next);
+    }
+  };
+
+  const handleTogglePrivacy = async () => {
+    const next = !isPrivate;
+    setIsPrivate(next);
+    try {
+      await apiClient.auth.updateProfile({ privacyMode: next });
+    } catch {
+      setIsPrivate(!next);
+    }
+  };
+
+  const showComingSoon = (feature) => {
+    setComingSoonMsg(`${feature} — coming soon.`);
+    setTimeout(() => setComingSoonMsg(''), 3000);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
+
+  const stats = fullProfile?.stats;
+  const activity = fullProfile?.recentActivity || [];
+  const savedPlaces = fullProfile?.savedPlaces || [];
 
   return (
     <div className="profile-page">
       <div className="profile-content">
 
-        {/* Top bar */}
         <div className="profile-top-bar anim-fade-in">
           <button className="top-back-btn" onClick={() => navigate(-1)}>
             <ArrowLeft size={16} strokeWidth={2} />
@@ -136,7 +258,6 @@ export default function ProfilePage() {
           <div className="profile-badge">
             <span className="profile-badge-text">IDENTITY SYSTEM ACTIVE</span>
           </div>
-          {/* Spacer for global menu button */}
           <div className="profile-top-spacer"></div>
         </div>
 
@@ -149,77 +270,111 @@ export default function ProfilePage() {
               <User size={56} strokeWidth={1.5} color="#090909" />
             )}
           </div>
-          <div className="hero-details">
-            <h1 className="hero-name">{user?.name || "User"}</h1>
-            <p className="hero-email">{user?.email || ""}</p>
-            <div className="hero-badges">
-              <span className="badge-pro">PRO</span>
-              <button className="edit-btn">Edit</button>
+          {isEditing ? (
+            <div className="hero-details">
+              <input
+                type="text"
+                className="profile-edit-input profile-edit-name"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                placeholder="Your name"
+              />
+              <input
+                type="text"
+                className="profile-edit-input profile-edit-avatar"
+                value={editedAvatarUrl}
+                onChange={(e) => setEditedAvatarUrl(e.target.value)}
+                placeholder="Avatar URL (https://...)"
+              />
+              <div className="hero-badges">
+                <button className="edit-btn" onClick={handleSaveProfile} disabled={saving || !editedName.trim()}>
+                  {saving ? 'Saving...' : <Check size={16} />}
+                </button>
+                <button className="edit-btn" onClick={() => setIsEditing(false)}>
+                  <X size={16} />
+                </button>
+              </div>
             </div>
+          ) : (
+            <div className="hero-details">
+              <h1 className="hero-name">{user?.name || 'User'}</h1>
+              <p className="hero-email">{user?.email || ''}</p>
+              <div className="hero-badges">
+                <span className="badge-pro">PRO</span>
+                <button className="edit-btn" onClick={handleEditToggle}>Edit</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Messages */}
+        {(profileError || successMessage || comingSoonMsg) && (
+          <div style={{
+            padding: '12px 16px', borderRadius: 12, marginBottom: 16, fontSize: 13,
+            backgroundColor: comingSoonMsg ? 'rgba(255,255,255,0.03)' : (profileError ? 'rgba(217,92,92,0.1)' : 'rgba(76,175,80,0.1)'),
+            border: '1px solid',
+            borderColor: comingSoonMsg ? 'rgba(255,255,255,0.06)' : (profileError ? 'rgba(217,92,92,0.2)' : 'rgba(76,175,80,0.2)'),
+            color: comingSoonMsg ? '#A1A1A1' : (profileError ? '#D95C5C' : '#4CAF50'),
+          }}>
+            {profileError || successMessage || comingSoonMsg}
           </div>
-        </div>
+        )}
 
-        {/* Personal Statistics */}
+        {/* Statistics */}
         <div className="stats-container">
-          <StatItem label="Meetings" value={142} delay={0.1} />
-          <StatItem label="Saved Places" value={28} delay={0.15} />
-          <StatItem label="Friends" value={14} delay={0.2} />
+          <StatItem label="Trips" value={stats?.tripsCount ?? 0} delay={0.1} />
+          <StatItem label="Saved Places" value={stats?.savedPlacesCount ?? 0} delay={0.15} />
+          <StatItem label="Activity" value={stats?.activityCount ?? 0} delay={0.2} />
         </div>
 
-        {/* Recent Activity Timeline */}
+        {/* Recent Activity */}
         <ProfileSection className="section-block">
           <h2 className="section-title">Recent Activity</h2>
-          <div className="timeline">
-            <div className="timeline-item anim-slide-up" style={{ animationDelay: '0.35s' }}>
-              <div className="timeline-dot"></div>
-              <div className="timeline-content">
-                <span className="timeline-time">Yesterday</span>
-                <span className="timeline-desc">Blue Tokai Coffee · With Rahul</span>
-              </div>
+          {activity.length === 0 ? (
+            <div style={{
+              padding: 24, textAlign: 'center', borderRadius: 16,
+              backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+            }}>
+              <p style={{ color: '#A1A1A1', fontSize: 13 }}>No activity yet. Start using Medio and your actions will show up here.</p>
             </div>
-            <div className="timeline-item anim-slide-up" style={{ animationDelay: '0.4s' }}>
-              <div className="timeline-dot"></div>
-              <div className="timeline-content">
-                <span className="timeline-time">Monday</span>
-                <span className="timeline-desc">Starbucks · With Priya</span>
-              </div>
+          ) : (
+            <div className="timeline">
+              {activity.slice(0, 5).map((item) => (
+                <div key={item._id} className="timeline-item anim-slide-up" style={{ animationDelay: '0.35s' }}>
+                  <div className="timeline-dot"></div>
+                  <div className="timeline-content">
+                    <span className="timeline-time">{formatActivityDate(item.createdAt)}</span>
+                    <span className="timeline-desc">{getActivityLabel(item.action)} — {getActivityValue(item.action, item.value)}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="timeline-item anim-slide-up" style={{ animationDelay: '0.45s' }}>
-              <div className="timeline-dot"></div>
-              <div className="timeline-content">
-                <span className="timeline-time">Last Week</span>
-                <span className="timeline-desc">Phoenix Mall · Team Meeting</span>
-              </div>
-            </div>
-          </div>
+          )}
         </ProfileSection>
 
-        {/* Saved Places (Horizontal Scroll) */}
+        {/* Saved Places */}
         <ProfileSection className="section-block">
           <h2 className="section-title">Saved Places</h2>
-          <div className="places-scroll-container anim-slide-up" style={{ animationDelay: '0.55s' }}>
-            <div className="place-card">
-              <div className="place-card-bg"></div>
-              <div className="place-card-info">
-                <span className="place-name">The Roastery</span>
-                <span className="place-type">Cafe</span>
-              </div>
+          {savedPlaces.length === 0 ? (
+            <div style={{
+              padding: 24, textAlign: 'center', borderRadius: 16,
+              backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+            }}>
+              <p style={{ color: '#A1A1A1', fontSize: 13 }}>No saved places yet. Save places from the travel page and they will show up here.</p>
             </div>
-            <div className="place-card">
-              <div className="place-card-bg"></div>
-              <div className="place-card-info">
-                <span className="place-name">Berlin Library</span>
-                <span className="place-type">Workspace</span>
-              </div>
+          ) : (
+            <div className="places-scroll-container anim-slide-up" style={{ animationDelay: '0.55s' }}>
+              {savedPlaces.map((place) => (
+                <div key={place._id} className="place-card">
+                  <div className="place-card-bg"></div>
+                  <div className="place-card-info">
+                    <span className="place-name">{place.label}</span>
+                    <span className="place-type">{place.address}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="place-card">
-              <div className="place-card-bg"></div>
-              <div className="place-card-info">
-                <span className="place-name">Tempelhof</span>
-                <span className="place-type">Park</span>
-              </div>
-            </div>
-          </div>
+          )}
         </ProfileSection>
 
         {/* Preferences */}
@@ -237,7 +392,7 @@ export default function ProfilePage() {
               icon={Bell}
               title="Notifications"
               state={notificationsOn}
-              toggle={() => setNotificationsOn(!notificationsOn)}
+              toggle={handleToggleNotification}
               delay={0.7}
             />
             <ListRow
@@ -251,7 +406,7 @@ export default function ProfilePage() {
               icon={Navigation}
               title="Default Transport"
               value="Transit"
-              onClick={() => { }}
+              onClick={() => showComingSoon('Default transport preference')}
               delay={0.8}
             />
           </div>
@@ -265,12 +420,12 @@ export default function ProfilePage() {
               icon={Globe}
               title="Private Profile"
               state={isPrivate}
-              toggle={() => setIsPrivate(!isPrivate)}
+              toggle={handleTogglePrivacy}
               delay={0.9}
             />
-            <ListRow icon={Shield} title="Security & Biometrics" onClick={() => { }} delay={0.95} />
-            <ListRow icon={Link2} title="Connected Accounts" value="2 Active" onClick={() => { }} delay={1.0} />
-            <ListRow icon={CreditCard} title="Subscription" value="Pro" onClick={() => { }} delay={1.05} />
+            <ListRow icon={Shield} title="Security & Biometrics" onClick={() => showComingSoon('Security & Biometrics')} delay={0.95} />
+            <ListRow icon={Link2} title="Connected Accounts" value="2 Active" onClick={() => showComingSoon('Connected accounts')} delay={1.0} />
+            <ListRow icon={CreditCard} title="Subscription" value="Pro" onClick={() => showComingSoon('Subscription management')} delay={1.05} />
           </div>
         </ProfileSection>
 
@@ -279,9 +434,9 @@ export default function ProfilePage() {
           <h2 className="section-title">Support</h2>
           <div className="list-group">
             <ListRow icon={HelpCircle} title="How to Use Medio" onClick={() => navigate('/guide')} delay={1.15} />
-            <ListRow icon={Mail} title="Contact Support" onClick={() => { }} delay={1.2} />
-            <ListRow icon={Info} title="About Medio" value="v4.0.2" onClick={() => { }} delay={1.25} />
-            <ListRow icon={FileText} title="Privacy Policy" onClick={() => { }} delay={1.3} />
+            <ListRow icon={Mail} title="Contact Support" onClick={() => showComingSoon('Contact support')} delay={1.2} />
+            <ListRow icon={Info} title="About Medio" value="v4.0.2" onClick={() => showComingSoon('About Medio')} delay={1.25} />
+            <ListRow icon={FileText} title="Privacy Policy" onClick={() => showComingSoon('Privacy policy')} delay={1.3} />
           </div>
         </ProfileSection>
 
@@ -291,7 +446,7 @@ export default function ProfilePage() {
             <ListRow
               icon={LogOut}
               title="Log Out"
-              onClick={async () => { await logout(); navigate('/login', { replace: true }); }}
+              onClick={handleLogout}
               delay={1.35}
               danger={true}
             />

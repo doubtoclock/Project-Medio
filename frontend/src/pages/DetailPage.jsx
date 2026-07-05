@@ -1,58 +1,39 @@
-import React, { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, User, Users, ExternalLink } from 'lucide-react';
+import { RouteMetricsPanel, RouteStepsPanel, ItinerarySwitcher, formatDuration } from '../lib/routeUtils';
 import coffeeHero from '../assets/coffee-hero.png';
 import './DetailPage.css';
-
-// Venue data (in a real app this would come from an API)
-const venueData = {
-  1: {
-    name: 'The Roastery',
-    location: 'Mitte District, Berlin 10115',
-    tags: ['Specialty Coffee', 'Wi-Fi Active'],
-    description:
-      'A post-industrial workspace optimized for collaborative sessions. Located at the exact vector intersection of your trajectories.',
-    yourTime: '14m',
-    friendTime: '22m',
-    id: 'NX-882-P',
-  },
-  2: {
-    name: 'Berlin Library',
-    location: 'Mitte District, Berlin 10117',
-    tags: ['Quiet Space', 'Wi-Fi Active'],
-    description:
-      'A serene knowledge hub perfect for focused meetings. Strategically positioned along the optimal convergence corridor.',
-    yourTime: '18m',
-    friendTime: '16m',
-    id: 'NX-304-L',
-  },
-  3: {
-    name: 'Café Kranzler',
-    location: 'Mitte District, Berlin 10119',
-    tags: ['Classic Café', 'Outdoor Seating'],
-    description:
-      'A historic café with modern amenities, ideal for casual catch-ups and brainstorming.',
-    yourTime: '20m',
-    friendTime: '19m',
-    id: 'NX-112-C',
-  }
-};
+import './ResultsPage.css';
 
 function DetailPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-    const venueId = searchParams.get('venue') || '1';
-  const venue = venueData[venueId] || venueData[1];
+  const location = useLocation();
+  const state = location.state || {};
 
-  
+  const venue = state.venue || null;
+  const originA = state.originA || null;
+  const originB = state.originB || null;
+  const routeDataA = state.routeDataA || null;
+  const routeDataB = state.routeDataB || null;
+  const routeErrorA = state.routeErrorA || null;
+  const routeErrorB = state.routeErrorB || null;
+
+  const itinerariesA = routeDataA?.data?.plan?.itineraries || [];
+  const itinerariesB = routeDataB?.data?.plan?.itineraries || [];
+
+  const [itineraryIndexA, setItineraryIndexA] = useState(0);
+  const [itineraryIndexB, setItineraryIndexB] = useState(0);
+
+  const itineraryA = itinerariesA[itineraryIndexA] || null;
+  const itineraryB = itinerariesB[itineraryIndexB] || null;
+
   return (
     <div className="detail-page">
-      {/* Hero Image */}
       <div className="detail-hero">
-        <img src={coffeeHero} alt={venue.name} />
+        <img src={venue?.image || coffeeHero} alt={venue?.name || 'Venue'} />
         <div className="detail-hero-overlay"></div>
 
-        {/* Top bar */}
         <div className="detail-top-bar">
           <button className="detail-back-btn" onClick={() => navigate(-1)}>
             <ArrowLeft size={18} strokeWidth={2.5} />
@@ -60,29 +41,21 @@ function DetailPage() {
           <span className="detail-established anim-slide-up-fade">Meeting Established</span>
         </div>
 
-        {/* Tags */}
         <div className="detail-tags anim-slide-up-fade" style={{ animationDelay: '0.1s' }}>
-          {venue.tags.map((tag, i) => (
-            <span className="detail-tag" key={i}>{tag}</span>
-          ))}
+          <span className="detail-tag">{venue?.category || 'Place'}</span>
+          {venue?.rating && <span className="detail-tag">{venue.rating}/5</span>}
         </div>
 
-        {/* Title */}
         <div className="detail-hero-text anim-slide-up-fade" style={{ animationDelay: '0.2s' }}>
-          <h1 className="detail-venue-name">{venue.name}</h1>
+          <h1 className="detail-venue-name">{venue?.name || 'Venue'}</h1>
           <div className="detail-venue-location">
             <span className="loc-dot"></span>
-            {venue.location}
+            {venue?.address || venue?.location || `${venue?.lat?.toFixed(4)}, ${venue?.lon?.toFixed(4)}`}
           </div>
         </div>
       </div>
 
-      {/* Body */}
       <div className="detail-body">
-        {/* Description */}
-        <p className="detail-description anim-slide-up-fade" style={{ animationDelay: '0.3s' }}>{venue.description}</p>
-
-        {/* Travel times */}
         <div className="detail-grid anim-slide-up-fade" style={{ animationDelay: '0.4s' }}>
           <div className="detail-info-card anim-card-lift">
             <div className="info-card-header">
@@ -91,7 +64,9 @@ function DetailPage() {
               </div>
               <span className="info-card-label">You</span>
             </div>
-            <span className="info-card-value anim-slide-up-fade" style={{ animationDelay: '0.6s' }}>{venue.yourTime}</span>
+            <span className="info-card-value anim-slide-up-fade" style={{ animationDelay: '0.6s' }}>
+              {itineraryA ? formatDuration(itineraryA.duration) : (routeErrorA || '--')}
+            </span>
           </div>
 
           <div className="detail-info-card anim-card-lift">
@@ -101,11 +76,70 @@ function DetailPage() {
               </div>
               <span className="info-card-label">Friend</span>
             </div>
-            <span className="info-card-value friend-value anim-slide-up-fade" style={{ animationDelay: '0.7s' }}>{venue.friendTime}</span>
+            <span className="info-card-value friend-value anim-slide-up-fade" style={{ animationDelay: '0.7s' }}>
+              {itineraryB ? formatDuration(itineraryB.duration) : (routeErrorB || '--')}
+            </span>
           </div>
         </div>
 
-        {/* Nav engine links */}
+        {routeErrorA && !itineraryA && (
+          <div className="route-user-section route-user-error">
+            <div className="route-user-header">
+              <span className="route-user-dot route-user-dot-a"></span>
+              <span className="route-user-label">User A</span>
+            </div>
+            <p className="route-user-fail">{routeErrorA}</p>
+          </div>
+        )}
+
+        {itineraryA && (
+          <div className="route-user-section">
+            <div className="route-user-header">
+              <span className="route-user-dot route-user-dot-a"></span>
+              <span className="route-user-label">User A</span>
+            </div>
+            <RouteMetricsPanel itinerary={itineraryA} />
+            <RouteStepsPanel itinerary={itineraryA} />
+            {itinerariesA.length > 1 && (
+              <ItinerarySwitcher
+                index={itineraryIndexA}
+                total={itinerariesA.length}
+                onPrev={() => setItineraryIndexA((i) => Math.max(0, i - 1))}
+                onNext={() => setItineraryIndexA((i) => Math.min(itinerariesA.length - 1, i + 1))}
+              />
+            )}
+          </div>
+        )}
+
+        {routeErrorB && !itineraryB && (
+          <div className="route-user-section route-user-error">
+            <div className="route-user-header">
+              <span className="route-user-dot route-user-dot-b"></span>
+              <span className="route-user-label">User B</span>
+            </div>
+            <p className="route-user-fail">{routeErrorB}</p>
+          </div>
+        )}
+
+        {itineraryB && (
+          <div className="route-user-section">
+            <div className="route-user-header">
+              <span className="route-user-dot route-user-dot-b"></span>
+              <span className="route-user-label">User B</span>
+            </div>
+            <RouteMetricsPanel itinerary={itineraryB} />
+            <RouteStepsPanel itinerary={itineraryB} />
+            {itinerariesB.length > 1 && (
+              <ItinerarySwitcher
+                index={itineraryIndexB}
+                total={itinerariesB.length}
+                onPrev={() => setItineraryIndexB((i) => Math.max(0, i - 1))}
+                onNext={() => setItineraryIndexB((i) => Math.min(itinerariesB.length - 1, i + 1))}
+              />
+            )}
+          </div>
+        )}
+
         <div className="detail-grid anim-slide-up-fade" style={{ animationDelay: '0.5s' }}>
           <div className="nav-card anim-card-lift" onClick={() => window.open('https://maps.google.com', '_blank')}>
             <span className="nav-card-label">Nav Engine</span>
@@ -124,14 +158,23 @@ function DetailPage() {
           </div>
         </div>
 
-        {/* Share button */}
-        <button className="detail-share-button anim-card-lift anim-slide-up-fade" style={{ animationDelay: '0.6s' }} onClick={() => navigate(`/share?venue=${venueId}`)}>
+        <button className="detail-share-button anim-card-lift anim-slide-up-fade" style={{ animationDelay: '0.6s' }}
+          onClick={() => navigate('/share', {
+            state: {
+              venue,
+              originA,
+              originB,
+              routeDataA,
+              routeDataB,
+              routeErrorA,
+              routeErrorB,
+            }
+          })}>
           Share Meeting Point
         </button>
 
-        {/* Footer */}
         <div className="detail-footer">
-          <span className="detail-footer-text">ID: {venue.id}</span>
+          <span className="detail-footer-text">ID: {venue?.id || '---'}</span>
           <span className="detail-footer-text">Secure Link Active</span>
         </div>
       </div>

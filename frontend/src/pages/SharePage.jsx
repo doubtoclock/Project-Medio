@@ -1,33 +1,30 @@
-import React, { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Check, MessageCircle, Link2, QrCode, Share2 } from 'lucide-react';
-import { useNavigation } from '../context/NavigationContext';
 import './SharePage.css';
-
-const venueNames = {
-  1: { name: 'The Roastery', area: 'Berlin Mitte', id: 'NX-882-P' },
-  2: { name: 'Berlin Library', area: 'Berlin Mitte', id: 'NX-441-L' },
-  3: { name: 'Café Kranzler', area: 'Charlottenburg', id: 'NX-553-K' },
-};
 
 function SharePage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-    const venueId = searchParams.get('venue') || '1';
-  const venue = venueNames[venueId] || venueNames['1'];
+  const location = useLocation();
+  const state = location.state || {};
 
-  
+  const venue = state.venue || null;
+
+  const shareId = venue?.id || '---';
+  const shareName = venue?.name || 'Meeting Point';
+  const shareArea = venue?.address || venue?.location || '';
+
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(`medio.io/x/${venue.id}`);
+    navigator.clipboard.writeText(`medio.io/x/${shareId}`);
   };
 
   const handleSystemShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Meet at ${venue.name}`,
-          text: `Let's meet at ${venue.name}, ${venue.area}!`,
-          url: `https://medio.io/x/${venue.id}`,
+          title: `Meet at ${shareName}`,
+          text: `Let's meet at ${shareName}${shareArea ? `, ${shareArea}` : ''}!`,
+          url: `https://medio.io/x/${shareId}`,
         });
       } catch (err) {
         // User cancelled
@@ -38,7 +35,6 @@ function SharePage() {
   return (
     <div className="share-page">
       <div className="share-content">
-        {/* Top bar */}
         <div className="share-top-bar">
           <button className="share-close" onClick={() => navigate(-1)}>
             Close
@@ -46,18 +42,16 @@ function SharePage() {
           <span className="share-sync-label">Live Sync Active</span>
         </div>
 
-        {/* Success card */}
         <div className="share-success-card">
           <div className="share-check-icon">
             <Check />
           </div>
           <h2 className="share-locked-title">Location Locked</h2>
           <p className="share-locked-subtitle">
-            {venue.name}, {venue.area}
+            {shareName}{shareArea ? `, ${shareArea}` : ''}
           </p>
         </div>
 
-        {/* Distribution methods */}
         <p className="share-section-label">Distribution Methods</p>
 
         <div className="share-options">
@@ -77,7 +71,7 @@ function SharePage() {
             </div>
             <div className="share-option-text">
               <span className="share-option-name">Copy Secure Link</span>
-              <span className="share-option-desc">medio.io/x/{venue.id}</span>
+              <span className="share-option-desc">medio.io/x/{shareId}</span>
             </div>
           </div>
 
@@ -102,10 +96,8 @@ function SharePage() {
           </div>
         </div>
 
-        {/* Spacer */}
         <div className="share-spacer"></div>
 
-        {/* Return button */}
         <button
           className="share-return-button"
           onClick={() => navigate('/meet')}
@@ -113,9 +105,8 @@ function SharePage() {
           Return to Navigation
         </button>
 
-        {/* Footer */}
         <div className="share-footer">
-          <span className="share-footer-text">ID: {venue.id}</span>
+          <span className="share-footer-text">ID: {shareId}</span>
           <span className="share-footer-text">Encryption: AES-256</span>
         </div>
       </div>

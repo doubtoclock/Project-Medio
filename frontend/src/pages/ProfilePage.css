@@ -539,3 +539,35 @@
   transform: translateX(20px);
   background-color: #090909;
 }
+
+/* Edit profile inputs */
+.profile-edit-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  color: #F5F5F5;
+  font-family: inherit;
+  padding: 4px 0;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.profile-edit-input:focus {
+  border-color: rgba(255,255,255,0.3);
+}
+
+.profile-edit-name {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -1.2px;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+.profile-edit-avatar {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 14px;
+  color: rgba(161,161,161,0.6);
+}

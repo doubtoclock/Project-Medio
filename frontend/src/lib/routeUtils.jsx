@@ -1,3 +1,6 @@
+import React from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
 export const modeLabels = {
   WALK: 'Walk',
   CAR: 'Car',
@@ -136,3 +139,72 @@ export const MODE_TO_API_PARAMS = {
   bike: { travelMode: 'bike' },
   walking: { travelMode: 'walk' },
 };
+
+export function RouteMetricsPanel({ itinerary }) {
+  const metrics = getRouteMetrics(itinerary);
+  return (
+    <div className="route-metrics">
+      <div className="route-metric">
+        <span className="route-metric-value">{formatDuration(itinerary.duration)}</span>
+        <span className="route-metric-label">Duration</span>
+      </div>
+      <div className="route-metric">
+        <span className="route-metric-value">{metrics.fare > 0 ? `₹${metrics.fare}` : 'Free'}</span>
+        <span className="route-metric-label">Fare</span>
+      </div>
+      <div className="route-metric">
+        <span className="route-metric-value">{metrics.transfers}</span>
+        <span className="route-metric-label">Transfer{metrics.transfers !== 1 ? 's' : ''}</span>
+      </div>
+      <div className="route-metric">
+        <span className="route-metric-value">{formatDistance(metrics.walkingMeters)}</span>
+        <span className="route-metric-label">Walk</span>
+      </div>
+    </div>
+  );
+}
+
+export function RouteStepsPanel({ itinerary }) {
+  const legs = itinerary?.legs || [];
+  if (legs.length === 0) return null;
+
+  return (
+    <div className="route-steps">
+      {legs.map((leg, idx) => {
+        const mode = normalizeMode(leg.mode);
+        const label = modeLabels[mode] || leg.mode;
+        const routeName = getLegRouteName(leg);
+        const isTransit = !['WALK', 'CAR', 'BICYCLE'].includes(mode);
+        return (
+          <div key={idx} className="route-step">
+            <div className="route-step-line">
+              <div className={`route-step-dot route-step-dot-${mode.toLowerCase()}`}></div>
+              {idx < legs.length - 1 && <div className="route-step-connector"></div>}
+            </div>
+            <div className="route-step-content">
+              <span className="route-step-mode">{label}</span>
+              {isTransit && routeName && (
+                <span className="route-step-name">{routeName}</span>
+              )}
+              <span className="route-step-distance">{formatDistance(leg.distance || 0)}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function ItinerarySwitcher({ index, total, onPrev, onNext }) {
+  return (
+    <div className="itinerary-switcher">
+      <button className="itinerary-switcher-btn" onClick={onPrev} disabled={index === 0}>
+        <ChevronLeft size={14} />
+      </button>
+      <span className="itinerary-switcher-label">{index + 1} / {total}</span>
+      <button className="itinerary-switcher-btn" onClick={onNext} disabled={index === total - 1}>
+        <ChevronRight size={14} />
+      </button>
+    </div>
+  );
+}
