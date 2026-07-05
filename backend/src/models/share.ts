@@ -21,7 +21,6 @@ const shareSchema = new Schema<IShare>(
   {
     shareId: {
       type: String,
-      required: true,
       unique: true,
       index: true,
     },

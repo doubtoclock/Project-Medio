@@ -16,6 +16,8 @@ const meet_routes_1 = __importDefault(require("./routes/meet.routes"));
 const place_routes_1 = __importDefault(require("./routes/place.routes"));
 const route_routes_1 = __importDefault(require("./routes/route.routes"));
 const search_routes_1 = __importDefault(require("./routes/search.routes"));
+const share_routes_1 = __importDefault(require("./routes/share.routes"));
+const overpass_routes_1 = __importDefault(require("./routes/overpass.routes"));
 const app = (0, express_1.default)();
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
@@ -52,7 +54,9 @@ app.use("/api/auth", auth_routes_1.default);
 app.use("/api/meet", meet_routes_1.default);
 app.use("/api/places", place_routes_1.default);
 app.use("/api/search", search_routes_1.default);
+app.use("/api/share", share_routes_1.default);
 app.use("/api/otp", route_routes_1.default);
+app.use("/api/overpass", overpass_routes_1.default);
 app.use((err, req, res, next) => {
     logger_1.logger.error("Unhandled request error", {
         error: err,

@@ -38,12 +38,17 @@ const getAllowedFrontendOrigin = (url) => {
         return null;
     }
 };
-const getSafeRedirectUrl = (success, customBase) => {
+const getSafeRedirectUrl = (success, customBase, token) => {
     const fallbackBase = `${env_1.env.FRONTEND_URL}/login`;
     const customUrl = customBase ? getAllowedFrontendOrigin(customBase) : null;
     const redirectUrl = customUrl ?? new URL(fallbackBase);
     redirectUrl.searchParams.set("login", success ? "success" : "failed");
-    redirectUrl.searchParams.delete("token");
+    if (token) {
+        redirectUrl.searchParams.set("token", token);
+    }
+    else {
+        redirectUrl.searchParams.delete("token");
+    }
     return redirectUrl.toString();
 };
 const upsertGoogleUser = async (payload) => {
@@ -230,7 +235,7 @@ const googleRedirectCallback = async (req, res) => {
             picture: user.avatarUrl,
         });
         res.cookie(AUTH_COOKIE_NAME, appToken, cookieOptions(AUTH_COOKIE_MAX_AGE_MS));
-        res.redirect(getSafeRedirectUrl(true, customRedirect || undefined));
+        res.redirect(getSafeRedirectUrl(true, customRedirect || undefined, appToken));
     }
     catch (error) {
         logger_1.logger.error("Google OAuth callback failed", { error });

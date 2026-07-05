@@ -6,8 +6,6 @@ const history_1 = require("../models/history");
 const current_user_1 = require("../utils/current-user");
 const logger_1 = require("../utils/logger");
 const MUMBAI_TIME_ZONE = "Asia/Kolkata";
-const METRO_SERVICE_START_HOUR = 6;
-const METRO_SERVICE_END_HOUR = 23;
 const getMumbaiDateTimeParts = (date) => {
     const parts = new Intl.DateTimeFormat("en-GB", {
         timeZone: MUMBAI_TIME_ZONE,
@@ -31,29 +29,6 @@ const getMumbaiDateTimeParts = (date) => {
 const getRoutingDateTime = (transportModes) => {
     const now = new Date();
     const current = getMumbaiDateTimeParts(now);
-    const hasMetro = transportModes.includes("SUBWAY");
-    if (!hasMetro) {
-        return {
-            date: current.date,
-            time: current.time,
-            adjustedToNextMetroService: false,
-        };
-    }
-    if (current.hour < METRO_SERVICE_START_HOUR) {
-        return {
-            date: current.date,
-            time: "06:00:00",
-            adjustedToNextMetroService: true,
-        };
-    }
-    if (current.hour >= METRO_SERVICE_END_HOUR) {
-        const tomorrow = getMumbaiDateTimeParts(new Date(now.getTime() + 24 * 60 * 60 * 1000));
-        return {
-            date: tomorrow.date,
-            time: "06:00:00",
-            adjustedToNextMetroService: true,
-        };
-    }
     return {
         date: current.date,
         time: current.time,

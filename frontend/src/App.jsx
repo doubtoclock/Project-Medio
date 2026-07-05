@@ -49,12 +49,12 @@ function AppRoutes() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/meet" element={<ProtectedRoute><MeetPage /></ProtectedRoute>} />
               <Route path="/results" element={<ProtectedRoute><ResultsPage /></ProtectedRoute>} />
-              <Route path="/detail" element={<ProtectedRoute><DetailPage /></ProtectedRoute>} />
+              <Route path="/detail" element={<DetailPage />} />
               <Route path="/share" element={<ProtectedRoute><SharePage /></ProtectedRoute>} />
               <Route path="/share/:shareId" element={<SharedLinkPage />} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/guide" element={<ProtectedRoute><HowToUsePage /></ProtectedRoute>} />
-              <Route path="/travel" element={<ProtectedRoute><JourneyPlannerPage /></ProtectedRoute>} />
+              <Route path="/travel" element={<JourneyPlannerPage />} />
             </Routes>
           </AuthProvider>
         </div>
