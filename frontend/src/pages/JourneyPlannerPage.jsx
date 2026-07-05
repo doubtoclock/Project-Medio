@@ -3,7 +3,7 @@ import {
   ArrowLeft, ArrowUpDown, MapPin, Navigation2,
   Train, Bus, Car, Bike, Footprints,
   Clock, AlertTriangle, Zap, Route,
-  CornerUpRight, X, Loader, Crosshair
+  X, Loader, Crosshair
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
@@ -21,36 +21,11 @@ import {
 import './JourneyPlannerPage.css';
 
 const TRANSPORT_OPTIONS = [
-  {
-    id: 'metro',
-    name: 'Metro',
-    icon: Train,
-    path: 'M20,80 Q40,40 80,20',
-  },
-  {
-    id: 'bus',
-    name: 'Bus',
-    icon: Bus,
-    path: 'M20,80 Q30,60 50,50 T80,20',
-  },
-  {
-    id: 'car',
-    name: 'Car',
-    icon: Car,
-    path: 'M20,80 C20,60 60,60 80,20',
-  },
-  {
-    id: 'bike',
-    name: 'Bike',
-    icon: Bike,
-    path: 'M20,80 C30,70 50,30 80,20',
-  },
-  {
-    id: 'walking',
-    name: 'Walking',
-    icon: Footprints,
-    path: 'M20,80 L30,60 L50,60 L60,40 L80,20',
-  }
+  { id: 'metro', name: 'Metro', icon: Train },
+  { id: 'bus', name: 'Bus', icon: Bus },
+  { id: 'car', name: 'Car', icon: Car },
+  { id: 'bike', name: 'Bike', icon: Bike },
+  { id: 'walking', name: 'Walking', icon: Footprints },
 ];
 
 const currentLocationIcon = L.divIcon({
@@ -410,6 +385,7 @@ export default function JourneyPlannerPage() {
   };
 
   const handleStartJourney = () => {
+    setUserMovedMap(false);
     setIsNavigating(true);
   };
 
@@ -433,8 +409,9 @@ export default function JourneyPlannerPage() {
         <div className="planner-title">Journey Planner</div>
       </header>
 
-      <div className="planner-content">
+      <div className={`planner-content ${isNavigating ? 'planner-content--navigating' : ''}`}>
 
+        {!isNavigating && (<>
         {/* Locations */}
         <section className="planner-locations">
           <div className="location-inputs">
@@ -567,9 +544,10 @@ export default function JourneyPlannerPage() {
             <span className="summary-lbl">Walk</span>
           </div>
         </section>
+        </>)}
 
         {/* Map */}
-        <section className="planner-map-container">
+        <section className={`planner-map-container ${isNavigating ? 'planner-map-container--navigating' : ''}`}>
           <MapContainer
             center={fallbackMapCenter}
             zoom={13}
@@ -618,8 +596,54 @@ export default function JourneyPlannerPage() {
           {geoStatus === 'unavailable' && (
             <div className="map-geo-overlay">Location unavailable</div>
           )}
+
+          {isNavigating && (
+            <div className="nav-map-overlay-top">
+              {selectedRouteData && (
+                <div className="nav-map-banner">
+                  <Navigation2 size={18} strokeWidth={3} fill="#090909" color="#090909" />
+                  <span className="nav-map-banner-text">
+                    {selectedTransport.name} to {locB || 'destination'}
+                  </span>
+                  <span className="nav-map-banner-dist">
+                    {formatDistance(
+                      (selectedRouteData.itinerary.legs || []).reduce(
+                        (s, l) => s + (l.distance || 0), 0
+                      )
+                    )} total
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isNavigating && (
+            <div className="nav-map-overlay-bottom">
+              <div className="nav-map-status">
+                <div className="nav-map-time">
+                  {selectedRouteData
+                    ? formatDuration(selectedRouteData.itinerary.duration)
+                    : '—'}
+                </div>
+                <div className="nav-map-meta">
+                  {selectedRouteData
+                    ? formatDistance(
+                        (selectedRouteData.itinerary.legs || []).reduce(
+                          (s, l) => s + (l.distance || 0), 0
+                        )
+                      )
+                    : '—'}
+                </div>
+              </div>
+              <button className="nav-end-btn" onClick={() => setIsNavigating(false)}>
+                <X size={20} strokeWidth={2.5} />
+                <span>End Route</span>
+              </button>
+            </div>
+          )}
         </section>
 
+        {!isNavigating && (<>
         {/* Recommendation Highlight */}
         <section className="planner-recommendation">
           <div className="rec-badge">Recommended</div>
@@ -706,10 +730,12 @@ export default function JourneyPlannerPage() {
             })}
           </div>
         </section>
+        </>)} {/* end !isNavigating block */}
 
       </div>
 
       {/* Bottom CTA */}
+      {!isNavigating && (
       <div className="planner-cta-wrapper">
         <button
           className="planner-cta-btn"
@@ -721,68 +747,6 @@ export default function JourneyPlannerPage() {
           Start Journey
         </button>
       </div>
-
-      {/* Active Navigation Overlay */}
-      {/* TODO: Replace mock turn-by-turn with real route leg instructions when backend supports step-by-step navigation. */}
-      {isNavigating && (
-        <div className="active-nav-container anim-fade-in">
-
-          <div className="nav-instruction-banner">
-            <div className="nav-dir-icon">
-              <CornerUpRight size={32} strokeWidth={3} color="#090909" />
-            </div>
-            <div className="nav-instruction-text">
-              <div className="nav-dist">
-                {selectedRouteData
-                  ? formatDistance(
-                      (selectedRouteData.itinerary.legs || []).reduce(
-                        (s, l) => s + (l.distance || 0), 0
-                      )
-                    ) + ' total'
-                  : 'In 200m'}
-              </div>
-              <div className="nav-action">
-                {selectedRouteData
-                  ? `${selectedTransport.name} to destination`
-                  : 'Turn right onto Main Street'}
-              </div>
-            </div>
-          </div>
-
-          <div className="nav-3d-map">
-            <div className="nav-3d-plane">
-              <svg className="nav-3d-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <path d={selectedTransport.path} className="nav-3d-path" />
-              </svg>
-              <div className="nav-current-location">
-                <Navigation2 size={32} fill="var(--primary-text)" strokeWidth={0} />
-              </div>
-            </div>
-          </div>
-
-          <div className="nav-status-sheet">
-            <div className="nav-status-info">
-              <div className="nav-time-remaining" style={{ color: selectedRouteData ? '#34C759' : undefined }}>
-                {selectedRouteData
-                  ? formatDuration(selectedRouteData.itinerary.duration)
-                  : '—'}
-              </div>
-              <div className="nav-meta-remaining">
-                {selectedRouteData
-                  ? formatDistance(
-                      (selectedRouteData.itinerary.legs || []).reduce(
-                        (s, l) => s + (l.distance || 0), 0
-                      )
-                    )
-                  : '— km'}
-              </div>
-            </div>
-            <button className="nav-end-btn" onClick={() => setIsNavigating(false)}>
-              <X size={20} strokeWidth={2.5} />
-              <span>End Route</span>
-            </button>
-          </div>
-        </div>
       )}
     </div>
   );
