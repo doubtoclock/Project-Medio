@@ -5,7 +5,7 @@ import {
   Clock, AlertTriangle, Zap, Route,
   CornerUpRight, X, Loader, Crosshair
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -154,6 +154,8 @@ function buildInsights(metrics) {
 
 export default function JourneyPlannerPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefilledRef = useRef(false);
 
   // Location search state
   const [locA, setLocA] = useState('');
@@ -233,8 +235,10 @@ export default function JourneyPlannerPage() {
       (position) => {
         const { latitude, longitude } = position.coords;
         setCurrentPosition({ lat: latitude, lng: longitude });
-        setLocA('Current Location');
-        setCoordsA({ lat: latitude, lng: longitude });
+        if (!prefilledRef.current) {
+          setLocA('Current Location');
+          setCoordsA({ lat: latitude, lng: longitude });
+        }
         setGeoStatus('success');
       },
       (error) => {
@@ -249,6 +253,26 @@ export default function JourneyPlannerPage() {
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
   }, []);
+
+  // Prefill from navigation state (e.g. from DetailPage "Navigate" button)
+  useEffect(() => {
+    const st = location.state;
+    if (st?.origin && st?.destination) {
+      prefilledRef.current = true;
+      setLocA(st.origin.name || 'My Location');
+      setCoordsA({ lat: st.origin.lat, lng: st.origin.lng });
+      setLocB(st.destination.name || 'Destination');
+      setCoordsB({ lat: st.destination.lat, lng: st.destination.lng });
+      setUserMovedMap(false);
+    }
+  }, []);
+
+  // Auto-fetch route when coords are set from prefilled state
+  useEffect(() => {
+    if (prefilledRef.current && coordsA && coordsB) {
+      handleTransportSelect('metro');
+    }
+  }, [coordsA, coordsB]);
 
   const handleInputChange = (value, field) => {
     if (field === 'A') { setLocA(value); setCoordsA(null); }

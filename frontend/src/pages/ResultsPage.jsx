@@ -250,6 +250,15 @@ function ResultsPage() {
             routeCache: routeCacheRef.current,
             selectedCategories,
           }));
+          sessionStorage.setItem('detailRestore', JSON.stringify({
+            venue: selectedVenue,
+            originA,
+            originB,
+            routeDataA: localDataA,
+            routeDataB: localDataB,
+            routeErrorA: localErrorA,
+            routeErrorB: localErrorB,
+          }));
           navigate('/detail', {
             state: {
               venue: selectedVenue,
