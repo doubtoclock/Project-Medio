@@ -76,6 +76,18 @@ function ResultsPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
+  const savedRestore = useMemo(() => {
+    try {
+      const saved = sessionStorage.getItem('resultsRestore');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        sessionStorage.removeItem('resultsRestore');
+        return parsed;
+      }
+    } catch {}
+    return null;
+  }, []);
+
   const meetResults = useMemo(() => location.state?.meetResults || [], [location.state?.meetResults]);
   const originA = useMemo(() => location.state?.originA || {
     lat: parseFloat(searchParams.get('latA')) || 52.5350,
@@ -92,9 +104,9 @@ function ResultsPage() {
   const [rescaleTrigger, setRescaleTrigger] = useState(0);
   const [routeA, setRouteA] = useState([]);
   const [routeB, setRouteB] = useState([]);
-  const [selectedVenue, setSelectedVenue] = useState(null);
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [routeCache, setRouteCache] = useState({});
+  const [selectedVenue, setSelectedVenue] = useState(savedRestore?.selectedVenue || null);
+  const [selectedCategories, setSelectedCategories] = useState(savedRestore?.selectedCategories || []);
+  const [routeCache, setRouteCache] = useState(savedRestore?.routeCache || {});
 
   const [routeDataA, setRouteDataA] = useState(null);
   const [routeDataB, setRouteDataB] = useState(null);
@@ -102,6 +114,8 @@ function ResultsPage() {
   const [routeErrorB, setRouteErrorB] = useState(null);
   const [loadingRoutes, setLoadingRoutes] = useState(false);
   const pendingNavigateRef = useRef(false);
+  const routeCacheRef = useRef(savedRestore?.routeCache || {});
+  routeCacheRef.current = routeCache;
 
   const hasResults = meetResults.length > 0;
 
@@ -164,19 +178,20 @@ function ResultsPage() {
     setRouteErrorA(null);
     setRouteErrorB(null);
 
-    const fetchSide = async (side) => {
+      const fetchSide = async (side) => {
       const from = side === 'A' ? originA : originB;
       const fromName = side === 'A' ? originA.name : originB.name;
       const routeKey = `${side}-${selectedVenue.id}`;
+      const cached = routeCacheRef.current[routeKey];
 
-      if (routeCache[routeKey]) {
+      if (cached) {
         if (!cancelled) {
           if (side === 'A') {
-            setRouteDataA(routeCache[routeKey]);
-            localDataA = routeCache[routeKey];
+            setRouteDataA(cached);
+            localDataA = cached;
           } else {
-            setRouteDataB(routeCache[routeKey]);
-            localDataB = routeCache[routeKey];
+            setRouteDataB(cached);
+            localDataB = cached;
           }
         }
         return;
@@ -190,7 +205,11 @@ function ResultsPage() {
           toName: selectedVenue.name,
         });
         if (!cancelled) {
-          setRouteCache((prev) => ({ ...prev, [routeKey]: data }));
+          setRouteCache((prev) => {
+            const next = { ...prev, [routeKey]: data };
+            routeCacheRef.current = next;
+            return next;
+          });
           if (side === 'A') {
             setRouteDataA(data);
             localDataA = data;
@@ -226,6 +245,11 @@ function ResultsPage() {
         setLoadingRoutes(false);
         if (pendingNavigateRef.current) {
           pendingNavigateRef.current = false;
+          sessionStorage.setItem('resultsRestore', JSON.stringify({
+            selectedVenue,
+            routeCache: routeCacheRef.current,
+            selectedCategories,
+          }));
           navigate('/detail', {
             state: {
               venue: selectedVenue,

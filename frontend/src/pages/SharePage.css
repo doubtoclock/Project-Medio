@@ -258,6 +258,63 @@
   color: var(--border-color);
 }
 
+/* Feedback banner */
+.share-feedback {
+  text-align: center;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background-color: rgba(245, 245, 245, 0.12);
+  border: 1px solid rgba(245, 245, 245, 0.2);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-text);
+  animation: shareFeedbackIn 0.25s ease-out;
+}
+
+@keyframes shareFeedbackIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* QR container */
+.share-qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  margin: -6px 0 10px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-card);
+  animation: shareQrIn 0.3s ease-out;
+}
+
+@keyframes shareQrIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.share-qr-code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background-color: #FFFFFF;
+  border-radius: 12px;
+}
+
+.share-qr-url {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
+  word-break: break-all;
+  max-width: 100%;
+}
+
 /* Animations */
 @keyframes shareCardIn {
   from {

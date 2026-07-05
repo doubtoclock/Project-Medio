@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, User, Users, ExternalLink } from 'lucide-react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, User, Users, MapPin } from 'lucide-react';
 import { RouteMetricsPanel, RouteStepsPanel, ItinerarySwitcher, formatDuration } from '../lib/routeUtils';
 import coffeeHero from '../assets/coffee-hero.png';
 import './DetailPage.css';
@@ -9,9 +9,23 @@ import './ResultsPage.css';
 function DetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const state = location.state || {};
 
-  const venue = state.venue || null;
+  const venue = useMemo(() => {
+    if (state.venue) return state.venue;
+    const id = searchParams.get('id');
+    const lat = parseFloat(searchParams.get('lat'));
+    const lon = parseFloat(searchParams.get('lon'));
+    const name = searchParams.get('name');
+    const rating = searchParams.get('rating');
+    const category = searchParams.get('category');
+    if (id && !isNaN(lat) && !isNaN(lon)) {
+      return { id, lat, lon, lng: lon, name: name || 'Meeting Point', rating: rating || null, category: category || 'Place' };
+    }
+    return null;
+  }, [state.venue, searchParams]);
+
   const originA = state.originA || null;
   const originB = state.originB || null;
   const routeDataA = state.routeDataA || null;
@@ -27,6 +41,27 @@ function DetailPage() {
 
   const itineraryA = itinerariesA[itineraryIndexA] || null;
   const itineraryB = itinerariesB[itineraryIndexB] || null;
+
+  const handleOpenMaps = useCallback(() => {
+    const lat = venue?.lat;
+    const lon = venue?.lon ?? venue?.lng;
+    if (lat == null || lon == null) return;
+
+    const ua = navigator.userAgent;
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+    const isAndroid = /Android/i.test(ua);
+
+    if (isIOS) {
+      window.open(`maps://app?daddr=${lat},${lon}&q=${encodeURIComponent(venue?.name || 'Meeting Point')}`, '_blank');
+      setTimeout(() => {
+        window.open(`https://maps.apple.com/?daddr=${lat},${lon}&q=${encodeURIComponent(venue?.name || 'Meeting Point')}`, '_blank');
+      }, 500);
+    } else if (isAndroid) {
+      window.open(`geo:${lat},${lon}?q=${lat},${lon}(${encodeURIComponent(venue?.name || 'Meeting Point')})`, '_blank');
+    } else {
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`, '_blank');
+    }
+  }, [venue]);
 
   return (
     <div className="detail-page">
@@ -140,20 +175,12 @@ function DetailPage() {
           </div>
         )}
 
-        <div className="detail-grid anim-slide-up-fade" style={{ animationDelay: '0.5s' }}>
-          <div className="nav-card anim-card-lift" onClick={() => window.open('https://maps.google.com', '_blank')}>
+        <div className="anim-slide-up-fade" style={{ animationDelay: '0.5s' }}>
+          <div className="nav-card anim-card-lift" onClick={handleOpenMaps}>
             <span className="nav-card-label">Nav Engine</span>
             <div className="nav-card-bottom">
-              <span className="nav-card-name">Google Maps</span>
-              <ExternalLink className="nav-card-icon anim-icon-tap" />
-            </div>
-          </div>
-
-          <div className="nav-card anim-card-lift" onClick={() => window.open('https://maps.apple.com', '_blank')}>
-            <span className="nav-card-label">Nav Engine</span>
-            <div className="nav-card-bottom">
-              <span className="nav-card-name">Apple Maps</span>
-              <ExternalLink className="nav-card-icon anim-icon-tap" />
+              <span className="nav-card-name">Show in Maps</span>
+              <MapPin className="nav-card-icon anim-icon-tap" />
             </div>
           </div>
         </div>
