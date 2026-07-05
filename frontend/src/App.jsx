@@ -6,6 +6,7 @@ import MeetPage from './pages/MeetPage';
 import ResultsPage from './pages/ResultsPage';
 import DetailPage from './pages/DetailPage';
 import SharePage from './pages/SharePage';
+import SharedLinkPage from './pages/SharedLinkPage';
 import ProfilePage from './pages/ProfilePage';
 import HowToUsePage from './pages/HowToUsePage';
 import JourneyPlannerPage from './pages/JourneyPlannerPage';
@@ -50,6 +51,7 @@ function AppRoutes() {
               <Route path="/results" element={<ProtectedRoute><ResultsPage /></ProtectedRoute>} />
               <Route path="/detail" element={<ProtectedRoute><DetailPage /></ProtectedRoute>} />
               <Route path="/share" element={<ProtectedRoute><SharePage /></ProtectedRoute>} />
+              <Route path="/share/:shareId" element={<SharedLinkPage />} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/guide" element={<ProtectedRoute><HowToUsePage /></ProtectedRoute>} />
               <Route path="/travel" element={<ProtectedRoute><JourneyPlannerPage /></ProtectedRoute>} />

@@ -58,6 +58,18 @@ export const apiClient = {
       }).then(handleResponse),
   },
 
+  share: {
+    create: (body) =>
+      apiFetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }).then(handleResponse),
+
+    get: (shareId) =>
+      apiFetch(`/api/share/${shareId}`).then(handleResponse),
+  },
+
   search: {
     locations: (query, signal) =>
       apiFetch(`/api/search?q=${encodeURIComponent(query)}`, { signal }).then(handleResponse),

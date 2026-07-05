@@ -46,7 +46,7 @@ function DetailPage() {
   const routeErrorA = state.routeErrorA || savedDetail?.routeErrorA || null;
   const routeErrorB = state.routeErrorB || savedDetail?.routeErrorB || null;
 
-  const isRecipient = !state.venue && !savedDetail?.venue && !!searchParams.get('id');
+  const isRecipient = state.fromSharedLink || (!state.venue && !savedDetail?.venue && !!searchParams.get('id'));
 
   const itinerariesA = routeDataA?.data?.plan?.itineraries || [];
   const itinerariesB = routeDataB?.data?.plan?.itineraries || [];

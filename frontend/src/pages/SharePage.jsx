@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Check, MessageCircle, Link2, QrCode, Share2, Send, Mail, MapPin } from 'lucide-react';
+import { Check, MessageCircle, Link2, QrCode, Share2, Send, Mail, Loader, AlertTriangle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { apiClient } from '../lib/apiClient';
 import './SharePage.css';
 
 function SharePage() {
@@ -22,16 +23,25 @@ function SharePage() {
     return null;
   }, [state.venue, searchParams]);
 
-  const shareId = venue?.id || '---';
+  const [shareId, setShareId] = useState(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState(null);
+
+  useEffect(() => {
+    if (!venue) return;
+    setShareLoading(true);
+    setShareError(null);
+
+    apiClient.share.create({ venue })
+      .then((data) => setShareId(data.shareId))
+      .catch(() => setShareError('Failed to generate share link.'))
+      .finally(() => setShareLoading(false));
+  }, [venue?.id]);
+
+  const meetingUrl = shareId ? `${window.location.origin}/share/${shareId}` : null;
+
   const shareName = venue?.name || 'Meeting Point';
   const shareArea = venue?.address || venue?.location || '';
-  const lat = venue?.lat;
-  const lon = venue?.lon ?? venue?.lng;
-  const hasCoords = lat != null && lon != null;
-
-  const meetingUrl = hasCoords
-    ? `${window.location.origin}/detail?id=${encodeURIComponent(shareId)}&lat=${lat}&lon=${lon}&name=${encodeURIComponent(shareName)}`
-    : `${window.location.origin}/detail?id=${encodeURIComponent(shareId)}`;
 
   const [feedback, setFeedback] = useState(null);
   const [showQr, setShowQr] = useState(false);
@@ -55,34 +65,34 @@ function SharePage() {
   }, [showFeedback]);
 
   const handleCopyLink = useCallback(() => {
+    if (!meetingUrl) return;
     copyToClipboard(meetingUrl, 'Link');
   }, [meetingUrl, copyToClipboard]);
 
-  const handleCopyCoords = useCallback(() => {
-    if (!hasCoords) {
-      showFeedback('Coordinates not available');
-      return;
-    }
-    copyToClipboard(`${lat},${lon}`, 'Coordinates');
-  }, [hasCoords, lat, lon, copyToClipboard, showFeedback]);
-
   const handleWhatsApp = useCallback(() => {
+    if (!meetingUrl) return;
     const text = `Let's meet at ${shareName}${shareArea ? `, ${shareArea}` : ''}! ${meetingUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   }, [shareName, shareArea, meetingUrl]);
 
   const handleTelegram = useCallback(() => {
+    if (!meetingUrl) return;
     const text = `Let's meet at ${shareName}${shareArea ? `, ${shareArea}` : ''}`;
     window.open(`https://t.me/share/url?url=${encodeURIComponent(meetingUrl)}&text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   }, [shareName, shareArea, meetingUrl]);
 
   const handleEmail = useCallback(() => {
+    if (!meetingUrl) return;
     const subject = `Meet at ${shareName}`;
     const body = `Let's meet at ${shareName}${shareArea ? `, ${shareArea}` : ''}!\n\n${meetingUrl}`;
     window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank', 'noopener,noreferrer');
   }, [shareName, shareArea, meetingUrl]);
 
   const handleSystemShare = useCallback(async () => {
+    if (!meetingUrl) {
+      showFeedback('Share link not ready yet');
+      return;
+    }
     if (!navigator.share) {
       showFeedback('Share not supported on this device');
       return;
@@ -128,10 +138,25 @@ function SharePage() {
           <div className="share-feedback">{feedback}</div>
         )}
 
+        {shareLoading && (
+          <div className="share-feedback">
+            <Loader size={14} className="transport-loading-spinner" style={{ marginRight: 6 }} />
+            Generating secure link...
+          </div>
+        )}
+
+        {shareError && (
+          <div className="share-feedback">
+            <AlertTriangle size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+            {shareError}
+          </div>
+        )}
+
         <p className="share-section-label">Distribution Methods</p>
 
         <div className="share-options">
-          <div className="share-option" onClick={handleWhatsApp}>
+          <div className={`share-option${!meetingUrl ? ' share-option-disabled' : ''}`}
+            onClick={!meetingUrl ? undefined : handleWhatsApp}>
             <div className="share-option-icon">
               <MessageCircle />
             </div>
@@ -141,7 +166,8 @@ function SharePage() {
             </div>
           </div>
 
-          <div className="share-option" onClick={handleTelegram}>
+          <div className={`share-option${!meetingUrl ? ' share-option-disabled' : ''}`}
+            onClick={!meetingUrl ? undefined : handleTelegram}>
             <div className="share-option-icon">
               <Send />
             </div>
@@ -151,7 +177,8 @@ function SharePage() {
             </div>
           </div>
 
-          <div className="share-option" onClick={handleEmail}>
+          <div className={`share-option${!meetingUrl ? ' share-option-disabled' : ''}`}
+            onClick={!meetingUrl ? undefined : handleEmail}>
             <div className="share-option-icon">
               <Mail />
             </div>
@@ -161,29 +188,22 @@ function SharePage() {
             </div>
           </div>
 
-          <div className="share-option" onClick={handleCopyLink}>
+          <div className={`share-option${!meetingUrl ? ' share-option-disabled' : ''}`}
+            onClick={!meetingUrl ? undefined : handleCopyLink}>
             <div className="share-option-icon">
               <Link2 />
             </div>
             <div className="share-option-text">
               <span className="share-option-name">Copy Secure Link</span>
-              <span className="share-option-desc">{meetingUrl}</span>
+              <span className="share-option-desc">
+                {meetingUrl || (shareLoading ? 'Generating...' : '')}
+              </span>
             </div>
           </div>
 
-          {hasCoords && (
-            <div className="share-option" onClick={handleCopyCoords}>
-              <div className="share-option-icon">
-                <MapPin />
-              </div>
-              <div className="share-option-text">
-                <span className="share-option-name">Copy Coordinates</span>
-                <span className="share-option-desc">{`${lat.toFixed(4)}, ${lon.toFixed(4)}`}</span>
-              </div>
-            </div>
-          )}
 
-          <div className="share-option" onClick={handleToggleQr}>
+          <div className={`share-option${!meetingUrl ? ' share-option-disabled' : ''}`}
+            onClick={!meetingUrl ? undefined : handleToggleQr}>
             <div className="share-option-icon">
               <QrCode />
             </div>
@@ -193,7 +213,7 @@ function SharePage() {
             </div>
           </div>
 
-          {showQr && (
+          {showQr && meetingUrl && (
             <div className="share-qr-container">
               <div className="share-qr-code">
                 <QRCodeSVG value={meetingUrl} size={180} bgColor="#FFFFFF" fgColor="#0F0F0F" />
@@ -202,7 +222,14 @@ function SharePage() {
             </div>
           )}
 
-          <div className="share-option" onClick={handleSystemShare}>
+          {showQr && !meetingUrl && shareLoading && (
+            <div className="share-qr-container">
+              <p className="share-qr-url" style={{ color: '#A1A1A1' }}>Generating QR code...</p>
+            </div>
+          )}
+
+          <div className={`share-option${!meetingUrl ? ' share-option-disabled' : ''}`}
+            onClick={!meetingUrl ? undefined : handleSystemShare}>
             <div className="share-option-icon">
               <Share2 />
             </div>
@@ -223,7 +250,7 @@ function SharePage() {
         </button>
 
         <div className="share-footer">
-          <span className="share-footer-text">ID: {shareId}</span>
+          <span className="share-footer-text">ID: {shareId || '---'}</span>
           <span className="share-footer-text">Encryption: AES-256</span>
         </div>
       </div>
