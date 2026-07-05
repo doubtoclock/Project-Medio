@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   ArrowLeft, ArrowUpDown, MapPin, Navigation2,
   Train, Bus, Car, Bike, Footprints,
@@ -48,6 +48,48 @@ const destinationMarkerIcon = L.divIcon({
   iconSize: [14, 14],
   iconAnchor: [7, 7],
 });
+
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180)
+    * Math.cos(lat2 * Math.PI / 180)
+    * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function MapResizer() {
+  const map = useMap();
+  const { isNavigating } = React.useContext(MapContext);
+  useEffect(() => {
+    if (isNavigating) {
+      requestAnimationFrame(() => map.invalidateSize());
+    }
+  }, [isNavigating, map]);
+  return null;
+}
+
+function LiveLocationMarker() {
+  const markerRef = useRef(null);
+  const { livePosition } = React.useContext(MapContext);
+  useEffect(() => {
+    if (markerRef.current && livePosition) {
+      markerRef.current.setLatLng([livePosition.lat, livePosition.lng]);
+    }
+  }, [livePosition]);
+  if (!livePosition) return null;
+  return (
+    <Marker
+      ref={markerRef}
+      position={[livePosition.lat, livePosition.lng]}
+      icon={currentLocationIcon}
+    />
+  );
+}
+
+const MapContext = React.createContext({ isNavigating: false, livePosition: null });
 
 function MapBoundsAdjuster({ coordsA, coordsB, currentPosition, userMovedMap, setUserMovedMap }) {
   const map = useMap();
@@ -159,9 +201,34 @@ export default function JourneyPlannerPage() {
 
   // Navigation overlay
   const [isNavigating, setIsNavigating] = useState(false);
+  const [livePosition, setLivePosition] = useState(null);
+  const [currentLegIndex, setCurrentLegIndex] = useState(0);
+  const [navRemainingDistance, setNavRemainingDistance] = useState(null);
+  const watchIdRef = useRef(null);
 
   const selectedTransport = TRANSPORT_OPTIONS.find(t => t.id === selectedId) || TRANSPORT_OPTIONS[0];
   const selectedRouteData = routeCache[selectedId] || null;
+
+  const decodedLegs = useMemo(() => {
+    if (!selectedRouteData?.itinerary?.legs) return [];
+    return selectedRouteData.itinerary.legs.map(leg => {
+      if (!leg.legGeometry?.points) return null;
+      const coords = decodePolyline(leg.legGeometry.points);
+      return { ...leg, decodedCoords: coords, endCoord: coords[coords.length - 1] };
+    }).filter(Boolean);
+  }, [selectedRouteData]);
+
+  const currentLegInstruction = useMemo(() => {
+    if (!decodedLegs.length || currentLegIndex >= decodedLegs.length) return '';
+    const leg = decodedLegs[currentLegIndex];
+    if (leg.mode === 'WALK') {
+      if (currentLegIndex === decodedLegs.length - 1) return 'Walk to destination';
+      return `Walk to ${leg.to?.name || 'next stop'}`;
+    }
+    const routeName = leg.route?.shortName || leg.route?.longName || '';
+    const prefix = routeName ? `Board ${routeName}` : `Take ${leg.mode}`;
+    return `${prefix} towards ${leg.to?.name || 'destination'}`;
+  }, [decodedLegs, currentLegIndex]);
 
   // Debounce A
   useEffect(() => {
@@ -228,6 +295,38 @@ export default function JourneyPlannerPage() {
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
   }, []);
+
+  // Cleanup watchPosition on unmount
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
+
+  // Live position: advance leg and update remaining distance
+  useEffect(() => {
+    if (!livePosition || !decodedLegs.length) return;
+    const currentLeg = decodedLegs[currentLegIndex];
+    if (!currentLeg) return;
+    if (currentLeg.endCoord) {
+      const distToEnd = haversineDistance(
+        livePosition.lat, livePosition.lng,
+        currentLeg.endCoord[0], currentLeg.endCoord[1]
+      );
+      if (distToEnd < 50 && currentLegIndex < decodedLegs.length - 1) {
+        setCurrentLegIndex(prev => prev + 1);
+      }
+    }
+    const destCoord = decodedLegs[decodedLegs.length - 1]?.endCoord;
+    if (destCoord) {
+      setNavRemainingDistance(haversineDistance(
+        livePosition.lat, livePosition.lng,
+        destCoord[0], destCoord[1]
+      ));
+    }
+  }, [livePosition, decodedLegs, currentLegIndex]);
 
   // Prefill from navigation state (e.g. from DetailPage "Navigate" button)
   useEffect(() => {
@@ -386,8 +485,30 @@ export default function JourneyPlannerPage() {
 
   const handleStartJourney = () => {
     setUserMovedMap(false);
+    setCurrentLegIndex(0);
+    setNavRemainingDistance(null);
     setIsNavigating(true);
+    if (!watchIdRef.current && 'geolocation' in navigator) {
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          setLivePosition({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        () => {},
+        { enableHighAccuracy: true, maximumAge: 5000 }
+      );
+    }
   };
+
+  const handleEndRoute = useCallback(() => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setLivePosition(null);
+    setCurrentLegIndex(0);
+    setNavRemainingDistance(null);
+    setIsNavigating(false);
+  }, []);
 
   const fallbackMapCenter = useMemo(() => {
     if (coordsA) return [coordsA.lat, coordsA.lng];
@@ -556,31 +677,36 @@ export default function JourneyPlannerPage() {
             scrollWheelZoom={true}
             className="planner-leaflet-map"
           >
-            <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            />
+            <MapContext.Provider value={{ isNavigating, livePosition }}>
+              <TileLayer
+                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              />
 
-            {currentPosition && !coordsA && (
-              <Marker position={[currentPosition.lat, currentPosition.lng]} icon={currentLocationIcon} />
-            )}
-            {coordsA && (
-              <Marker position={[coordsA.lat, coordsA.lng]} icon={originMarkerIcon} />
-            )}
-            {coordsB && (
-              <Marker position={[coordsB.lat, coordsB.lng]} icon={destinationMarkerIcon} />
-            )}
+              {currentPosition && !coordsA && !isNavigating && (
+                <Marker position={[currentPosition.lat, currentPosition.lng]} icon={currentLocationIcon} />
+              )}
+              {coordsA && (
+                <Marker position={[coordsA.lat, coordsA.lng]} icon={originMarkerIcon} />
+              )}
+              {coordsB && (
+                <Marker position={[coordsB.lat, coordsB.lng]} icon={destinationMarkerIcon} />
+              )}
 
-            {selectedRouteData && selectedRouteData.itinerary.legs && (
-              <RoutePolyline legs={selectedRouteData.itinerary.legs} />
-            )}
+              {selectedRouteData && selectedRouteData.itinerary.legs && (
+                <RoutePolyline legs={selectedRouteData.itinerary.legs} />
+              )}
 
-            <MapBoundsAdjuster
-              coordsA={coordsA}
-              coordsB={coordsB}
-              currentPosition={currentPosition}
-              userMovedMap={userMovedMap}
-              setUserMovedMap={setUserMovedMap}
-            />
+              <MapBoundsAdjuster
+                coordsA={coordsA}
+                coordsB={coordsB}
+                currentPosition={currentPosition}
+                userMovedMap={userMovedMap}
+                setUserMovedMap={setUserMovedMap}
+              />
+
+              <MapResizer />
+              <LiveLocationMarker />
+            </MapContext.Provider>
           </MapContainer>
 
           {/* Geolocation status overlay */}
@@ -599,19 +725,13 @@ export default function JourneyPlannerPage() {
 
           {isNavigating && (
             <div className="nav-map-overlay-top">
-              {selectedRouteData && (
+              {currentLegInstruction && (
                 <div className="nav-map-banner">
                   <Navigation2 size={18} strokeWidth={3} fill="#090909" color="#090909" />
-                  <span className="nav-map-banner-text">
-                    {selectedTransport.name} to {locB || 'destination'}
-                  </span>
-                  <span className="nav-map-banner-dist">
-                    {formatDistance(
-                      (selectedRouteData.itinerary.legs || []).reduce(
-                        (s, l) => s + (l.distance || 0), 0
-                      )
-                    )} total
-                  </span>
+                  <span className="nav-map-banner-text">{currentLegInstruction}</span>
+                  {navRemainingDistance != null && (
+                    <span className="nav-map-banner-dist">{formatDistance(navRemainingDistance)}</span>
+                  )}
                 </div>
               )}
             </div>
@@ -621,21 +741,19 @@ export default function JourneyPlannerPage() {
             <div className="nav-map-overlay-bottom">
               <div className="nav-map-status">
                 <div className="nav-map-time">
-                  {selectedRouteData
-                    ? formatDuration(selectedRouteData.itinerary.duration)
-                    : '—'}
+                  {decodedLegs.length > 0
+                    ? `Leg ${currentLegIndex + 1} of ${decodedLegs.length}`
+                    : 'Navigating'}
                 </div>
                 <div className="nav-map-meta">
-                  {selectedRouteData
-                    ? formatDistance(
-                        (selectedRouteData.itinerary.legs || []).reduce(
-                          (s, l) => s + (l.distance || 0), 0
-                        )
-                      )
-                    : '—'}
+                  {navRemainingDistance != null
+                    ? `${formatDistance(navRemainingDistance)} remaining`
+                    : decodedLegs.length > 0 ? formatDistance(
+                        decodedLegs.reduce((s, l) => s + (l.distance || 0), 0)
+                      ) + ' total' : '—'}
                 </div>
               </div>
-              <button className="nav-end-btn" onClick={() => setIsNavigating(false)}>
+              <button className="nav-end-btn" onClick={handleEndRoute}>
                 <X size={20} strokeWidth={2.5} />
                 <span>End Route</span>
               </button>
