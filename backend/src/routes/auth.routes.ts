@@ -1,6 +1,7 @@
 import { Request, Response, Router } from "express";
 import {
   checkAuth,
+  deleteAccount,
   getProfile,
   googleNativeSignIn,
   googleRedirectCallback,
@@ -36,6 +37,7 @@ router.patch(
   validateBody(updateProfileSchema),
   updateProfile
 );
+router.delete("/account", authMiddleware, deleteAccount);
 
 router.get("/protected", authMiddleware, (req: Request, res: Response) => {
   const user = (req as any).user;

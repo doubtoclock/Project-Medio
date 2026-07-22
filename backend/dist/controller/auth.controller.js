@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logout = exports.updateProfile = exports.getProfile = exports.checkAuth = exports.googleNativeSignIn = exports.googleRedirectCallback = exports.googleRedirectLogin = exports.login = exports.register = void 0;
+exports.logout = exports.updateProfile = exports.getProfile = exports.checkAuth = exports.deleteAccount = exports.googleNativeSignIn = exports.googleRedirectCallback = exports.googleRedirectLogin = exports.login = exports.register = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 const google_auth_library_1 = require("google-auth-library");
 const env_1 = require("../config/env");
@@ -23,8 +23,8 @@ const OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000;
 const googleClient = new google_auth_library_1.OAuth2Client(env_1.env.GOOGLE_CLIENT_ID, env_1.env.GOOGLE_CLIENT_SECRET);
 const cookieOptions = (maxAge) => ({
     httpOnly: true,
-    sameSite: env_1.env.IS_PRODUCTION || env_1.env.IS_CODESPACE ? "none" : "lax",
-    secure: env_1.env.IS_PRODUCTION || env_1.env.IS_CODESPACE,
+    sameSite: env_1.env.IS_PRODUCTION ? "none" : "lax",
+    secure: env_1.env.IS_PRODUCTION,
     path: "/",
     ...(maxAge ? { maxAge } : {}),
 });
@@ -279,6 +279,7 @@ const googleNativeSignIn = async (req, res) => {
             name: user.name,
             picture: user.avatarUrl,
         });
+        res.cookie(AUTH_COOKIE_NAME, appToken, cookieOptions(AUTH_COOKIE_MAX_AGE_MS));
         return res.status(200).json({
             token: appToken,
             user: {
@@ -296,6 +297,34 @@ const googleNativeSignIn = async (req, res) => {
     }
 };
 exports.googleNativeSignIn = googleNativeSignIn;
+const deleteAccount = async (req, res) => {
+    try {
+        const user = await (0, current_user_1.getOrCreateCurrentUser)(req);
+        if (!user) {
+            return res.status(401).json({
+                message: "Not authenticated",
+            });
+        }
+        await Promise.all([
+            place_1.Place.deleteMany({ userId: user._id }),
+            history_1.History.deleteMany({ userId: user._id }),
+            user_1.User.deleteOne({ _id: user._id }),
+        ]);
+        res.clearCookie(AUTH_COOKIE_NAME, cookieOptions());
+        res.clearCookie(OAUTH_STATE_COOKIE_NAME, cookieOptions());
+        res.clearCookie(OAUTH_REDIRECT_COOKIE_NAME, cookieOptions());
+        return res.status(200).json({
+            message: "Account deleted successfully",
+        });
+    }
+    catch (error) {
+        logger_1.logger.error("Failed to delete account", { error });
+        return res.status(500).json({
+            message: "Failed to delete account",
+        });
+    }
+};
+exports.deleteAccount = deleteAccount;
 const checkAuth = async (req, res) => {
     try {
         const token = extractToken(req);

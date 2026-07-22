@@ -1,42 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, User, Shield, ChevronRight, MapPin,
-  Navigation, Bell, Globe, LogOut, Sun, Link2,
-  CreditCard, HelpCircle, Mail, Info, FileText, X, Check
+  ArrowLeft, User, ChevronRight, MapPin,
+  Navigation, Bell, LogOut,
+  CreditCard, HelpCircle, Mail, Info, FileText, X, Check, Trash2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../lib/apiClient';
+import { getPreferredUnits, setPreferredUnits } from '../lib/routeUtils';
 import './ProfilePage.css';
-
-function formatActivityDate(dateValue) {
-  if (!dateValue) return '';
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(dateValue));
-}
-
-function getActivityLabel(action) {
-  switch (action) {
-    case 'PLACE_CREATED': return 'Saved place';
-    case 'PLACE_DELETED': return 'Removed place';
-    case 'ROUTE_PLANNED': return 'Planned route';
-    case 'MEET_SEARCHED': return 'Searched meet point';
-    case 'PROFILE_UPDATED': return 'Updated profile';
-    default: return 'Activity';
-  }
-}
-
-function getActivityValue(action, value) {
-  switch (action) {
-    case 'ROUTE_PLANNED': return value ? value.replace(' -> ', ' → ') : value;
-    case 'MEET_SEARCHED': return value ? value.replace(/ -> /g, ' → ') : value;
-    default: return value;
-  }
-}
 
 function useOnScreen(options = { threshold: 0.15 }) {
   const ref = useRef(null);
@@ -146,10 +118,8 @@ function ToggleRow({ icon: Icon, title, state, toggle, delay }) {
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [theme, setTheme] = useState('Dark');
   const [notificationsOn, setNotificationsOn] = useState(user?.notificationsEnabled ?? true);
-  const [isPrivate, setIsPrivate] = useState(user?.privacyMode ?? false);
-  const [units, setUnits] = useState('Metric');
+  const [units, setUnits] = useState(() => getPreferredUnits());
 
   const [fullProfile, setFullProfile] = useState(null);
   const [profileError, setProfileError] = useState('');
@@ -159,6 +129,7 @@ export default function ProfilePage() {
   const [editedName, setEditedName] = useState('');
   const [editedAvatarUrl, setEditedAvatarUrl] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [comingSoonMsg, setComingSoonMsg] = useState('');
 
@@ -175,7 +146,6 @@ export default function ProfilePage() {
         setEditedName(data.user.name);
         setEditedAvatarUrl(data.user.avatarUrl || '');
         setNotificationsOn(data.user.notificationsEnabled);
-        setIsPrivate(data.user.privacyMode);
       })
       .catch(() => {
         if (!cancelled) setProfileError('Failed to load profile data');
@@ -223,16 +193,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleTogglePrivacy = async () => {
-    const next = !isPrivate;
-    setIsPrivate(next);
-    try {
-      await apiClient.auth.updateProfile({ privacyMode: next });
-    } catch {
-      setIsPrivate(!next);
-    }
-  };
-
   const showComingSoon = (feature) => {
     setComingSoonMsg(`${feature} — coming soon.`);
     setTimeout(() => setComingSoonMsg(''), 3000);
@@ -243,8 +203,30 @@ export default function ProfilePage() {
     navigate('/login', { replace: true });
   };
 
+  const handleToggleUnits = () => {
+    const next = units === 'metric' ? 'imperial' : 'metric';
+    setUnits(next);
+    setPreferredUnits(next);
+    setSuccessMessage(`Units switched to ${next === 'metric' ? 'kilometers' : 'miles'}`);
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm('Delete your MEDIO account and all related saved places and activity? This cannot be undone.');
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setProfileError('');
+    try {
+      await apiClient.auth.deleteAccount();
+      await logout();
+      navigate('/login', { replace: true });
+    } catch (err) {
+      setProfileError(err?.message || 'Failed to delete account');
+      setDeleting(false);
+    }
+  };
+
   const stats = fullProfile?.stats;
-  const activity = fullProfile?.recentActivity || [];
   const savedPlaces = fullProfile?.savedPlaces || [];
 
   return (
@@ -327,31 +309,6 @@ export default function ProfilePage() {
           <StatItem label="Activity" value={stats?.activityCount ?? 0} delay={0.2} />
         </div>
 
-        {/* Recent Activity */}
-        <ProfileSection className="section-block">
-          <h2 className="section-title">Recent Activity</h2>
-          {activity.length === 0 ? (
-            <div style={{
-              padding: 24, textAlign: 'center', borderRadius: 16,
-              backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-            }}>
-              <p style={{ color: '#A1A1A1', fontSize: 13 }}>No activity yet. Start using Medio and your actions will show up here.</p>
-            </div>
-          ) : (
-            <div className="timeline">
-              {activity.slice(0, 5).map((item) => (
-                <div key={item._id} className="timeline-item anim-slide-up" style={{ animationDelay: '0.35s' }}>
-                  <div className="timeline-dot"></div>
-                  <div className="timeline-content">
-                    <span className="timeline-time">{formatActivityDate(item.createdAt)}</span>
-                    <span className="timeline-desc">{getActivityLabel(item.action)} — {getActivityValue(item.action, item.value)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </ProfileSection>
-
         {/* Saved Places */}
         <ProfileSection className="section-block">
           <h2 className="section-title">Saved Places</h2>
@@ -381,33 +338,26 @@ export default function ProfilePage() {
         <ProfileSection className="section-block">
           <h2 className="section-title">Preferences</h2>
           <div className="list-group">
-            <ListRow
-              icon={Sun}
-              title="Theme"
-              value={theme}
-              onClick={() => setTheme(theme === 'Dark' ? 'Light' : 'Dark')}
-              delay={0.65}
-            />
             <ToggleRow
               icon={Bell}
               title="Notifications"
               state={notificationsOn}
               toggle={handleToggleNotification}
-              delay={0.7}
+              delay={0.65}
             />
             <ListRow
               icon={MapPin}
               title="Units"
-              value={units}
-              onClick={() => setUnits(units === 'Metric' ? 'Imperial' : 'Metric')}
-              delay={0.75}
+              value={units === 'metric' ? 'Kilometers' : 'Miles'}
+              onClick={handleToggleUnits}
+              delay={0.7}
             />
             <ListRow
               icon={Navigation}
               title="Default Transport"
               value="Transit"
               onClick={() => showComingSoon('Default transport preference')}
-              delay={0.8}
+              delay={0.75}
             />
           </div>
         </ProfileSection>
@@ -416,16 +366,7 @@ export default function ProfilePage() {
         <ProfileSection className="section-block">
           <h2 className="section-title">Account</h2>
           <div className="list-group">
-            <ToggleRow
-              icon={Globe}
-              title="Private Profile"
-              state={isPrivate}
-              toggle={handleTogglePrivacy}
-              delay={0.9}
-            />
-            <ListRow icon={Shield} title="Security & Biometrics" onClick={() => showComingSoon('Security & Biometrics')} delay={0.95} />
-            <ListRow icon={Link2} title="Connected Accounts" value="2 Active" onClick={() => showComingSoon('Connected accounts')} delay={1.0} />
-            <ListRow icon={CreditCard} title="Subscription" value="Pro" onClick={() => showComingSoon('Subscription management')} delay={1.05} />
+            <ListRow icon={CreditCard} title="Subscription" value="Pro" onClick={() => showComingSoon('Subscription management')} delay={0.85} />
           </div>
         </ProfileSection>
 
@@ -434,9 +375,10 @@ export default function ProfilePage() {
           <h2 className="section-title">Support</h2>
           <div className="list-group">
             <ListRow icon={HelpCircle} title="How to Use Medio" onClick={() => navigate('/guide')} delay={1.15} />
-            <ListRow icon={Mail} title="Contact Support" onClick={() => showComingSoon('Contact support')} delay={1.2} />
-            <ListRow icon={Info} title="About Medio" value="v4.0.2" onClick={() => showComingSoon('About Medio')} delay={1.25} />
-            <ListRow icon={FileText} title="Privacy Policy" onClick={() => showComingSoon('Privacy policy')} delay={1.3} />
+            <ListRow icon={Mail} title="Contact Support" onClick={() => navigate('/support')} delay={1.2} />
+            <ListRow icon={Info} title="About Medio" value="v4.0.2" onClick={() => navigate('/about')} delay={1.25} />
+            <ListRow icon={FileText} title="Privacy Policy" onClick={() => navigate('/privacy')} delay={1.3} />
+            <ListRow icon={FileText} title="Terms & Conditions" onClick={() => navigate('/terms')} delay={1.35} />
           </div>
         </ProfileSection>
 
@@ -447,7 +389,14 @@ export default function ProfilePage() {
               icon={LogOut}
               title="Log Out"
               onClick={handleLogout}
-              delay={1.35}
+              delay={1.4}
+              danger={true}
+            />
+            <ListRow
+              icon={Trash2}
+              title={deleting ? 'Deleting...' : 'Delete Account'}
+              onClick={handleDeleteAccount}
+              delay={1.45}
               danger={true}
             />
           </div>

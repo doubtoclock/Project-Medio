@@ -1,6 +1,8 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+const UNITS_STORAGE_KEY = 'medio_units';
+
 export const modeLabels = {
   WALK: 'Walk',
   CAR: 'Car',
@@ -14,6 +16,24 @@ export const modeLabels = {
 
 export const normalizeMode = (mode = '') => mode.toUpperCase();
 
+export const getPreferredUnits = () => {
+  try {
+    return localStorage.getItem(UNITS_STORAGE_KEY) === 'imperial' ? 'imperial' : 'metric';
+  } catch {
+    return 'metric';
+  }
+};
+
+export const setPreferredUnits = (units) => {
+  const normalized = units === 'imperial' ? 'imperial' : 'metric';
+  try {
+    localStorage.setItem(UNITS_STORAGE_KEY, normalized);
+    window.dispatchEvent(new CustomEvent('medio:units-change', { detail: normalized }));
+  } catch {
+
+  }
+};
+
 export const formatDuration = (seconds = 0) => {
   const minutes = Math.max(1, Math.round(seconds / 60));
   if (minutes < 60) return `${minutes} min`;
@@ -22,7 +42,14 @@ export const formatDuration = (seconds = 0) => {
   return rest ? `${hours} hr ${rest} min` : `${hours} hr`;
 };
 
-export const formatDistance = (meters = 0) => {
+export const formatDistance = (meters = 0, units = getPreferredUnits()) => {
+  if (units === 'imperial') {
+    const feet = meters * 3.28084;
+    if (feet < 528) return `${Math.round(feet)} ft`;
+    const miles = meters / 1609.344;
+    return `${miles.toFixed(miles < 10 ? 1 : 0)} mi`;
+  }
+
   if (meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(meters < 10000 ? 1 : 0)} km`;
 };
@@ -34,8 +61,27 @@ export const getLegDurationMinutes = (leg) => {
   return 0;
 };
 
-export const getLegRouteName = (leg) =>
-  leg.route?.shortName || leg.route?.longName || modeLabels[normalizeMode(leg.mode)] || leg.mode;
+export const getLegRouteName = (leg) => {
+  const mode = normalizeMode(leg.mode);
+  const modeLabel = modeLabels[mode] || leg.mode;
+  const routeName = leg.route?.shortName || leg.route?.longName;
+
+  if (!routeName) return modeLabel;
+  if (['BUS', 'SUBWAY', 'RAIL'].includes(mode)) return `${modeLabel} ${routeName}`;
+  return routeName;
+};
+
+export const getLegEndpointName = (point, fallback) => {
+  const rawName = point?.name || point?.stop?.name || point?.vertexType;
+  if (!rawName || rawName === 'Origin' || rawName === 'Destination') return fallback;
+  return rawName;
+};
+
+export const getLegEndpointSummary = (leg, index, total) => {
+  const fromFallback = index === 0 ? 'Your location' : 'Transfer point';
+  const toFallback = index === total - 1 ? 'Destination' : 'Transfer point';
+  return `${getLegEndpointName(leg.from, fromFallback)} - ${getLegEndpointName(leg.to, toFallback)}`;
+};
 
 export const getTransportSequence = (itinerary) => {
   const modes = itinerary?.legs?.map((leg) => normalizeMode(leg.mode)) || [];
@@ -83,14 +129,12 @@ export const getRouteTags = (itineraries, index) => {
 
   const metrics = getRouteMetrics(itinerary);
   const fastest = Math.min(...itineraries.map((item) => item.duration || Infinity));
-  const cheapest = Math.min(...itineraries.map((item) => getRouteMetrics(item).fare));
   const leastWalking = Math.min(
     ...itineraries.map((item) => getRouteMetrics(item).walkingMeters)
   );
   const tags = [];
 
   if (itinerary.duration === fastest) tags.push('Fastest');
-  if (metrics.fare === cheapest) tags.push(metrics.fare === 0 ? 'No fare' : 'Cheapest');
   if (metrics.walkingMeters === leastWalking) tags.push('Least walking');
 
   return tags.slice(0, 3);
@@ -140,7 +184,7 @@ export const MODE_TO_API_PARAMS = {
   walking: { travelMode: 'walk' },
 };
 
-export function RouteMetricsPanel({ itinerary }) {
+export function RouteMetricsPanel({ itinerary, units = getPreferredUnits() }) {
   const metrics = getRouteMetrics(itinerary);
   return (
     <div className="route-metrics">
@@ -149,22 +193,18 @@ export function RouteMetricsPanel({ itinerary }) {
         <span className="route-metric-label">Duration</span>
       </div>
       <div className="route-metric">
-        <span className="route-metric-value">{metrics.fare > 0 ? `₹${metrics.fare}` : 'Free'}</span>
-        <span className="route-metric-label">Fare</span>
-      </div>
-      <div className="route-metric">
         <span className="route-metric-value">{metrics.transfers}</span>
         <span className="route-metric-label">Transfer{metrics.transfers !== 1 ? 's' : ''}</span>
       </div>
       <div className="route-metric">
-        <span className="route-metric-value">{formatDistance(metrics.walkingMeters)}</span>
+        <span className="route-metric-value">{formatDistance(metrics.walkingMeters, units)}</span>
         <span className="route-metric-label">Walk</span>
       </div>
     </div>
   );
 }
 
-export function RouteStepsPanel({ itinerary }) {
+export function RouteStepsPanel({ itinerary, units = getPreferredUnits() }) {
   const legs = itinerary?.legs || [];
   if (legs.length === 0) return null;
 
@@ -174,6 +214,7 @@ export function RouteStepsPanel({ itinerary }) {
         const mode = normalizeMode(leg.mode);
         const label = modeLabels[mode] || leg.mode;
         const routeName = getLegRouteName(leg);
+        const endpointSummary = getLegEndpointSummary(leg, idx, legs.length);
         const isTransit = !['WALK', 'CAR', 'BICYCLE'].includes(mode);
         return (
           <div key={idx} className="route-step">
@@ -186,7 +227,8 @@ export function RouteStepsPanel({ itinerary }) {
               {isTransit && routeName && (
                 <span className="route-step-name">{routeName}</span>
               )}
-              <span className="route-step-distance">{formatDistance(leg.distance || 0)}</span>
+              <span className="route-step-endpoints">{endpointSummary}</span>
+              <span className="route-step-distance">{formatDistance(leg.distance || 0, units)}</span>
             </div>
           </div>
         );

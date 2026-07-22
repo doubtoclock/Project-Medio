@@ -12,6 +12,9 @@ node_modules
 dist
 dist-ssr
 *.local
+.vercel
+android
+test-results
 
 # Editor directories and files
 .vscode/*

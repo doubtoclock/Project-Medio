@@ -7,10 +7,6 @@ exports.env = void 0;
 const dotenv_1 = __importDefault(require("dotenv"));
 const zod_1 = require("zod");
 dotenv_1.default.config();
-const isCodespace = Boolean(process.env.CODESPACE_NAME);
-const defaultFrontendUrl = isCodespace
-    ? `https://${process.env.CODESPACE_NAME}-5173.app.github.dev`
-    : "http://localhost:5173";
 const csv = (value) => (value ?? "")
     .split(",")
     .map((item) => item.trim())
@@ -76,7 +72,7 @@ if (!parsedEnv.success) {
     throw new Error(`Invalid environment configuration: ${issues}`);
 }
 const values = parsedEnv.data;
-const frontendUrl = values.FRONTEND_URL ?? (values.NODE_ENV === "production" ? undefined : defaultFrontendUrl);
+const frontendUrl = values.FRONTEND_URL ?? "http://localhost:5173";
 const allowedOrigins = Array.from(new Set([
     ...(frontendUrl ? [frontendUrl] : []),
     ...csv(values.ALLOWED_ORIGINS),
@@ -85,17 +81,7 @@ const allowedOrigins = Array.from(new Set([
     "http://localhost",
     "https://localhost",
 ]));
-if (values.NODE_ENV === "production" && !frontendUrl) {
-    throw new Error("FRONTEND_URL is required in production");
-}
-if (values.NODE_ENV === "production" && allowedOrigins.length === 0) {
-    throw new Error("At least one allowed frontend origin is required");
-}
 const isProduction = values.NODE_ENV === "production";
-// Ensure production frontend origins are always allowed
-const productionOrigins = isProduction
-    ? ["https://app.medio.is", "https://frontend.vercel.app"]
-    : [];
 const normalizeUrl = (url) => url.replace(/\/+$/, "");
 const hasHttpProtocol = (url) => /^https?:\/\//i.test(url);
 const otpHostport = values.OTP_HOSTPORT || "localhost:8080";
@@ -104,7 +90,6 @@ const otpGraphqlUrl = values.OTP_GRAPHQL_URL ?? `${otpBaseUrl}/otp/routers/defau
 const otpIsochroneUrl = values.OTP_ISOCHRONE_URL ?? `${otpBaseUrl}/otp/routers/default/isochrone`;
 const finalAllowedOrigins = Array.from(new Set([
     ...allowedOrigins,
-    ...productionOrigins,
 ]));
 exports.env = {
     ...values,
@@ -113,7 +98,6 @@ exports.env = {
     OTP_BASE_URL: otpBaseUrl,
     OTP_GRAPHQL_URL: otpGraphqlUrl,
     OTP_ISOCHRONE_URL: otpIsochroneUrl,
-    IS_CODESPACE: isCodespace,
     IS_PRODUCTION: isProduction,
 };
 //# sourceMappingURL=env.js.map

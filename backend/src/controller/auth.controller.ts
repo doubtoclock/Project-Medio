@@ -28,8 +28,8 @@ const googleClient = new OAuth2Client(
 
 const cookieOptions = (maxAge?: number): CookieOptions => ({
   httpOnly: true,
-  sameSite: env.IS_PRODUCTION || env.IS_CODESPACE ? "none" : "lax",
-  secure: env.IS_PRODUCTION || env.IS_CODESPACE,
+  sameSite: env.IS_PRODUCTION ? "none" : "lax",
+  secure: env.IS_PRODUCTION,
   path: "/",
   ...(maxAge ? { maxAge } : {}),
 });
@@ -355,6 +355,12 @@ export const googleNativeSignIn = async (req: Request, res: Response) => {
       picture: user.avatarUrl,
     });
 
+    res.cookie(
+      AUTH_COOKIE_NAME,
+      appToken,
+      cookieOptions(AUTH_COOKIE_MAX_AGE_MS)
+    );
+
     return res.status(200).json({
       token: appToken,
       user: {
@@ -368,6 +374,37 @@ export const googleNativeSignIn = async (req: Request, res: Response) => {
   } catch (error) {
     logger.error("Google native sign-in failed", { error });
     return res.status(401).json({ message: "Google sign-in failed" });
+  }
+};
+
+export const deleteAccount = async (req: Request, res: Response) => {
+  try {
+    const user = await getOrCreateCurrentUser(req);
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Not authenticated",
+      });
+    }
+
+    await Promise.all([
+      Place.deleteMany({ userId: user._id }),
+      History.deleteMany({ userId: user._id }),
+      User.deleteOne({ _id: user._id }),
+    ]);
+
+    res.clearCookie(AUTH_COOKIE_NAME, cookieOptions());
+    res.clearCookie(OAUTH_STATE_COOKIE_NAME, cookieOptions());
+    res.clearCookie(OAUTH_REDIRECT_COOKIE_NAME, cookieOptions());
+
+    return res.status(200).json({
+      message: "Account deleted successfully",
+    });
+  } catch (error) {
+    logger.error("Failed to delete account", { error });
+    return res.status(500).json({
+      message: "Failed to delete account",
+    });
   }
 };
 

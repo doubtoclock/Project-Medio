@@ -7,13 +7,10 @@ import { RouteRequestInput } from "../validators/api.validator";
 
 type TravelMode = "car" | "bike" | "local" | "walk";
 type OtpTransportMode = "WALK" | "CAR" | "BICYCLE" | "BUS" | "RAIL" | "SUBWAY";
-type LocalTransportMode = "bus" | "rail" | "subway";
+type LocalTransportMode = "bus" | "rail" | "subway" | "car";
 
-const MUMBAI_TIME_ZONE = "Asia/Kolkata";
-
-const getMumbaiDateTimeParts = (date: Date) => {
+const getCurrentDateTimeParts = (date: Date) => {
   const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: MUMBAI_TIME_ZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -38,7 +35,7 @@ const getMumbaiDateTimeParts = (date: Date) => {
 
 const getRoutingDateTime = (transportModes: OtpTransportMode[]) => {
   const now = new Date();
-  const current = getMumbaiDateTimeParts(now);
+  const current = getCurrentDateTimeParts(now);
 
   return {
     date: current.date,
@@ -77,7 +74,6 @@ const getRequestedTransportModes = (
     ? requestedMode
     : "local";
 
-  if (mode === "car") return ["CAR"];
   if (mode === "bike") return ["BICYCLE"];
   if (mode === "walk") return ["WALK"];
 
@@ -92,58 +88,205 @@ const getRequestedTransportModes = (
   const localModeMap: Record<LocalTransportMode, {
     otpMode: OtpTransportMode;
     aliases: string[];
+    defaultEnabled: boolean;
   }> = {
-    bus: { otpMode: "BUS", aliases: ["bus", "buses"] },
-    rail: { otpMode: "RAIL", aliases: ["rail", "locals", "local", "train"] },
-    subway: { otpMode: "SUBWAY", aliases: ["subway", "metro"] },
+    car: { otpMode: "CAR", aliases: ["car"], defaultEnabled: false },
+    bus: { otpMode: "BUS", aliases: ["bus", "buses"], defaultEnabled: true },
+    rail: { otpMode: "RAIL", aliases: ["rail", "locals", "local", "train"], defaultEnabled: true },
+    subway: { otpMode: "SUBWAY", aliases: ["subway", "metro"], defaultEnabled: true },
   };
+  const hasExplicitLocalTransport = Object.keys(settings).length > 0;
 
   const selectedTransitModes = Object.entries(localModeMap)
-    .filter(([, config]) => getBooleanSetting(settings, config.aliases, true))
+    .filter(([, config]) => getBooleanSetting(
+      settings,
+      config.aliases,
+      hasExplicitLocalTransport ? false : config.defaultEnabled
+    ))
     .map(([, config]) => config.otpMode);
+
+  if (mode === "car" && selectedTransitModes.length === 0) return ["CAR"];
 
   return selectedTransitModes.length > 0
     ? ["WALK", ...selectedTransitModes]
     : [];
 };
 
-const filterItinerariesByModes = (
-  otpData: any,
+const getItinerarySignature = (itinerary: any) => {
+  const legs = Array.isArray(itinerary?.legs) ? itinerary.legs : [];
+
+  return legs
+    .filter((leg: any) => leg?.mode && leg.mode !== "WALK")
+    .map((leg: any) => [
+      leg.mode,
+      leg.route?.shortName,
+      leg.route?.longName,
+      leg.from?.name,
+      leg.to?.name,
+    ].filter(Boolean).join(":"))
+    .join("|") || legs
+      .map((leg: any) => `${leg?.mode || "UNKNOWN"}:${Math.round((leg?.distance || 0) / 250)}`)
+      .join("|");
+};
+
+const pickDistinctBestItineraries = (itineraries: any[], limit = 3) => {
+  const seen = new Set<string>();
+  const sorted = [...itineraries].sort(
+    (a, b) => (a?.duration ?? Infinity) - (b?.duration ?? Infinity)
+  );
+
+  return sorted.filter((itinerary) => {
+    const signature = getItinerarySignature(itinerary);
+    if (seen.has(signature)) return false;
+    seen.add(signature);
+    return true;
+  }).slice(0, limit);
+};
+
+const filterItineraryListByModes = (
+  itineraries: any[],
   transportModes: OtpTransportMode[]
 ) => {
-  const itineraries = otpData?.data?.plan?.itineraries;
-  if (!Array.isArray(itineraries)) return otpData;
-
   const allowedModes = new Set(transportModes);
-  const requiredTransitModes = new Set(
+  const requestedTransitModes = new Set(
     transportModes.filter((mode) => ["BUS", "RAIL", "SUBWAY"].includes(mode))
   );
 
-  const filteredItineraries = itineraries.filter((itinerary: any) => {
+  return itineraries.filter((itinerary: any) => {
     const legs = Array.isArray(itinerary?.legs) ? itinerary.legs : [];
     const legModes = legs.map((leg: any) => leg?.mode).filter(Boolean);
     const usesOnlyAllowedModes = legModes.every((mode: string) =>
       mode === "WALK" || allowedModes.has(mode as OtpTransportMode)
     );
     const usesRequestedTransit =
-      requiredTransitModes.size === 0 ||
+      requestedTransitModes.size === 0 ||
       legModes.some((mode: string) =>
-        requiredTransitModes.has(mode as OtpTransportMode)
+        requestedTransitModes.has(mode as OtpTransportMode)
       );
 
     return usesOnlyAllowedModes && usesRequestedTransit;
   });
+};
+
+const getCandidateModeSets = (transportModes: OtpTransportMode[]) => {
+  const hasCar = transportModes.includes("CAR");
+  const transitModes = transportModes.filter((mode) =>
+    ["BUS", "RAIL", "SUBWAY"].includes(mode)
+  );
+
+  if (hasCar && transitModes.length > 0) {
+    return [
+      ["WALK", ...transitModes] as OtpTransportMode[],
+      ["WALK", "CAR"] as OtpTransportMode[],
+    ];
+  }
+
+  return [transportModes];
+};
+
+const buildOtpQuery = (
+  transportModes: OtpTransportMode[],
+  from: RouteRequestInput["from"],
+  to: RouteRequestInput["to"],
+  routingDateTime: ReturnType<typeof getRoutingDateTime>
+) => {
+  const transportModeBlock = transportModes
+    .map((mode) => `{ mode: ${mode} }`)
+    .join("\n              ");
 
   return {
-    ...otpData,
-    data: {
-      ...otpData.data,
-      plan: {
-        ...otpData.data?.plan,
-        itineraries: filteredItineraries,
-      },
+    query: `
+      query Plan(
+        $fromLat: Float!
+        $fromLon: Float!
+        $toLat: Float!
+        $toLon: Float!
+        $date: String!
+        $time: String!
+      ) {
+        plan(
+          date: $date
+          time: $time
+          from: { lat: $fromLat, lon: $fromLon }
+          to: { lat: $toLat, lon: $toLon }
+          transportModes: [
+            ${transportModeBlock}
+          ]
+          numItineraries: 12
+        ) {
+          itineraries {
+            duration
+            startTime
+            endTime
+            legs {
+              mode
+              distance
+              startTime
+              endTime
+              from {
+                name
+                lat
+                lon
+              }
+              to {
+                name
+                lat
+                lon
+              }
+              route {
+                shortName
+                longName
+              }
+              legGeometry {
+                points
+              }
+            }
+          }
+        }
+      }
+    `,
+    variables: {
+      fromLat: from.lat,
+      fromLon: from.lng,
+      toLat: to.lat,
+      toLon: to.lng,
+      date: routingDateTime.date,
+      time: routingDateTime.time,
     },
   };
+};
+
+const fetchOtpPlan = async (
+  modeSet: OtpTransportMode[],
+  from: RouteRequestInput["from"],
+  to: RouteRequestInput["to"],
+  routingDateTime: ReturnType<typeof getRoutingDateTime>
+): Promise<any> => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const response = await fetch(env.OTP_GRAPHQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildOtpQuery(modeSet, from, to, routingDateTime)),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      logger.error("OTP route request failed", {
+        status: response.status,
+        statusText: response.statusText,
+        url: env.OTP_GRAPHQL_URL,
+        requestedModes: modeSet,
+      });
+      throw new Error("Failed to fetch route from OTP");
+    }
+
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
 };
 
 export const getRouteFromOTP = async (req: Request, res: Response) => {
@@ -159,91 +302,28 @@ export const getRouteFromOTP = async (req: Request, res: Response) => {
       });
     }
 
-    const transportModeBlock = transportModes
-      .map((mode) => `{ mode: ${mode} }`)
-      .join("\n              ");
     const routingDateTime = getRoutingDateTime(transportModes);
-
-    const graphqlQuery = {
-      query: `
-        query Plan(
-          $fromLat: Float!
-          $fromLon: Float!
-          $toLat: Float!
-          $toLon: Float!
-          $date: String!
-          $time: String!
-        ) {
-          plan(
-            date: $date
-            time: $time
-            from: { lat: $fromLat, lon: $fromLon }
-            to: { lat: $toLat, lon: $toLon }
-            transportModes: [
-              ${transportModeBlock}
-            ]
-            numItineraries: 5
-          ) {
-            itineraries {
-              duration
-              startTime
-              endTime
-              legs {
-                mode
-                distance
-                startTime
-                endTime
-                from {
-                  name
-                }
-                to {
-                  name
-                }
-                route {
-                  shortName
-                  longName
-                }
-                legGeometry {
-                  points
-                }
-              }
-            }
-          }
-        }
-      `,
-      variables: {
-        fromLat: from.lat,
-        fromLon: from.lng,
-        toLat: to.lat,
-        toLon: to.lng,
-        date: routingDateTime.date,
-        time: routingDateTime.time,
+    const candidateModeSets = getCandidateModeSets(transportModes);
+    const otpResponses = await Promise.all(
+      candidateModeSets.map((modeSet) => fetchOtpPlan(modeSet, from, to, routingDateTime))
+    );
+    const baseOtpData: any = otpResponses[0] ?? { data: { plan: { itineraries: [] } } };
+    const mergedItineraries = otpResponses.flatMap((otpData, index) => {
+      const itineraries = otpData?.data?.plan?.itineraries;
+      return Array.isArray(itineraries)
+        ? filterItineraryListByModes(itineraries, candidateModeSets[index])
+        : [];
+    });
+    const routeData = {
+      ...baseOtpData,
+      data: {
+        ...baseOtpData.data,
+        plan: {
+          ...baseOtpData.data?.plan,
+          itineraries: pickDistinctBestItineraries(mergedItineraries, 3),
+        },
       },
     };
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 120000);
-
-    const response = await fetch(env.OTP_GRAPHQL_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(graphqlQuery),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      logger.error("OTP route request failed", {
-        status: response.status,
-        statusText: response.statusText,
-        url: env.OTP_GRAPHQL_URL,
-      });
-      return res.status(502).json({ message: "Failed to fetch route from OTP" });
-    }
-
-    const otpData = await response.json();
-    const routeData = filterItinerariesByModes(otpData, transportModes);
     logger.info("OTP route calculated", {
       requestedModes: transportModes,
       itineraryCount: routeData?.data?.plan?.itineraries?.length ?? 0,

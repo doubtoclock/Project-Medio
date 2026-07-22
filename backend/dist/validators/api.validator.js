@@ -42,6 +42,7 @@ exports.routeRequestSchema = zod_1.z
     travelMode: zod_1.z.enum(["car", "bike", "local", "walk"]).optional(),
     localTransport: zod_1.z
         .object({
+        car: zod_1.z.boolean().optional(),
         bus: zod_1.z.boolean().optional(),
         buses: zod_1.z.boolean().optional(),
         rail: zod_1.z.boolean().optional(),

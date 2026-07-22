@@ -10,6 +10,7 @@ import SharedLinkPage from './pages/SharedLinkPage';
 import ProfilePage from './pages/ProfilePage';
 import HowToUsePage from './pages/HowToUsePage';
 import JourneyPlannerPage from './pages/JourneyPlannerPage';
+import InfoPage from './pages/InfoPage';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -20,7 +21,7 @@ import './App.css';
 function AppRoutes() {
   const { isExpanded, setIsExpanded } = useNavigation();
   const location = useLocation();
-  const isPublicPage = location.pathname === '/' || location.pathname === '/login';
+  const isPublicPage = ['/', '/login', '/privacy', '/terms'].includes(location.pathname);
 
   return (
     <div className="app-container">
@@ -55,6 +56,10 @@ function AppRoutes() {
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/guide" element={<ProtectedRoute><HowToUsePage /></ProtectedRoute>} />
               <Route path="/travel" element={<JourneyPlannerPage />} />
+              <Route path="/privacy" element={<InfoPage type="privacy" />} />
+              <Route path="/terms" element={<InfoPage type="terms" />} />
+              <Route path="/about" element={<ProtectedRoute><InfoPage type="about" /></ProtectedRoute>} />
+              <Route path="/support" element={<ProtectedRoute><InfoPage type="support" /></ProtectedRoute>} />
             </Routes>
           </AuthProvider>
         </div>

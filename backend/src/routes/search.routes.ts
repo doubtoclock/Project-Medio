@@ -25,9 +25,223 @@ const SEARCH_CACHE_LIMIT = 160;
 const MIN_SIMILAR_QUERY_LENGTH = 5;
 const MAX_SEARCH_RESULTS = 5;
 const PHOTON_RESULT_LIMIT = 12;
+const SERVICE_AREA_BOUNDS = {
+  minLat: 18.86,
+  maxLat: 19.35,
+  minLng: 72.74,
+  maxLng: 73.08
+};
+const SERVICE_AREA_CENTER = { lat: 19.115, lng: 72.86 };
 
 const searchCache = new Map<string, SearchCacheEntry>();
 const pendingSearches = new Map<string, Promise<LocationSuggestion[]>>();
+
+const curatedLocations: Array<LocationSuggestion & { keywords: string[] }> = [
+  {
+    name: "Juhu, Mumbai",
+    lat: 19.1075,
+    lng: 72.8263,
+    keywords: ["juhu"]
+  },
+  {
+    name: "Andheri West, Mumbai",
+    lat: 19.1363,
+    lng: 72.8296,
+    keywords: ["andheri west", "andheri"]
+  },
+  {
+    name: "Andheri East, Mumbai",
+    lat: 19.1155,
+    lng: 72.8727,
+    keywords: ["andheri east", "andheri"]
+  },
+  {
+    name: "Bandra West, Mumbai",
+    lat: 19.0596,
+    lng: 72.8295,
+    keywords: ["bandra west", "bandra"]
+  },
+  {
+    name: "Bandra East, Mumbai",
+    lat: 19.0624,
+    lng: 72.8497,
+    keywords: ["bandra east", "bandra"]
+  },
+  {
+    name: "Dadar, Mumbai",
+    lat: 19.0178,
+    lng: 72.8478,
+    keywords: ["dadar"]
+  },
+  {
+    name: "Worli, Mumbai",
+    lat: 19.0176,
+    lng: 72.8162,
+    keywords: ["worli"]
+  },
+  {
+    name: "Lower Parel, Mumbai",
+    lat: 18.9959,
+    lng: 72.8307,
+    keywords: ["lower parel", "parel"]
+  },
+  {
+    name: "Powai, Mumbai",
+    lat: 19.1176,
+    lng: 72.9060,
+    keywords: ["powai"]
+  },
+  {
+    name: "Goregaon, Mumbai",
+    lat: 19.1663,
+    lng: 72.8526,
+    keywords: ["goregaon"]
+  },
+  {
+    name: "Malad, Mumbai",
+    lat: 19.1860,
+    lng: 72.8485,
+    keywords: ["malad"]
+  },
+  {
+    name: "Borivali, Mumbai",
+    lat: 19.2290,
+    lng: 72.8574,
+    keywords: ["borivali"]
+  },
+  {
+    name: "Thane West",
+    lat: 19.2183,
+    lng: 72.9781,
+    keywords: ["thane west", "thane"]
+  },
+  {
+    name: "Colaba, Mumbai",
+    lat: 18.9067,
+    lng: 72.8147,
+    keywords: ["colaba"]
+  },
+  {
+    name: "Churchgate, Mumbai",
+    lat: 18.9353,
+    lng: 72.8272,
+    keywords: ["churchgate"]
+  },
+  {
+    name: "BKC, Bandra Kurla Complex, Mumbai",
+    lat: 19.0663,
+    lng: 72.8670,
+    keywords: ["bkc", "bandra kurla complex"]
+  },
+  {
+    name: "Versova, Andheri West, Mumbai",
+    lat: 19.1312,
+    lng: 72.8146,
+    keywords: ["versova", "versova andheri"]
+  },
+  {
+    name: "Mira Road, Mira Bhayandar",
+    lat: 19.2813,
+    lng: 72.8567,
+    keywords: ["mira", "mira road", "mira bhayandar"]
+  },
+  {
+    name: "Bhayandar, Mira Bhayandar",
+    lat: 19.3002,
+    lng: 72.8544,
+    keywords: ["bhayandar", "mira bhayandar"]
+  },
+  {
+    name: "Santacruz West, Mumbai",
+    lat: 19.0815,
+    lng: 72.8379,
+    keywords: ["santacruz west", "santacruz", "santa cruz"]
+  },
+  {
+    name: "Santacruz East, Mumbai",
+    lat: 19.0811,
+    lng: 72.8506,
+    keywords: ["santacruz east", "santacruz", "santa cruz"]
+  },
+  {
+    name: "Vile Parle West, Mumbai",
+    lat: 19.1030,
+    lng: 72.8400,
+    keywords: ["vile parle west", "vile parle", "parle"]
+  },
+  {
+    name: "Vile Parle East, Mumbai",
+    lat: 19.1007,
+    lng: 72.8567,
+    keywords: ["vile parle east", "vile parle", "parle"]
+  },
+  {
+    name: "Khar West, Mumbai",
+    lat: 19.0700,
+    lng: 72.8338,
+    keywords: ["khar west", "khar"]
+  },
+  {
+    name: "Khar East, Mumbai",
+    lat: 19.0696,
+    lng: 72.8465,
+    keywords: ["khar east", "khar"]
+  },
+  {
+    name: "Mahim, Mumbai",
+    lat: 19.0350,
+    lng: 72.8402,
+    keywords: ["mahim"]
+  },
+  {
+    name: "Prabhadevi, Mumbai",
+    lat: 19.0169,
+    lng: 72.8295,
+    keywords: ["prabhadevi"]
+  },
+  {
+    name: "Chembur, Mumbai",
+    lat: 19.0622,
+    lng: 72.9024,
+    keywords: ["chembur"]
+  },
+  {
+    name: "Ghatkopar, Mumbai",
+    lat: 19.0856,
+    lng: 72.9080,
+    keywords: ["ghatkopar"]
+  },
+  {
+    name: "Kurla, Mumbai",
+    lat: 19.0726,
+    lng: 72.8845,
+    keywords: ["kurla"]
+  },
+  {
+    name: "Sion, Mumbai",
+    lat: 19.0434,
+    lng: 72.8633,
+    keywords: ["sion"]
+  },
+  {
+    name: "Mulund, Mumbai",
+    lat: 19.1726,
+    lng: 72.9425,
+    keywords: ["mulund"]
+  },
+  {
+    name: "Kandivali, Mumbai",
+    lat: 19.2058,
+    lng: 72.8698,
+    keywords: ["kandivali"]
+  },
+  {
+    name: "Dahisar, Mumbai",
+    lat: 19.2575,
+    lng: 72.8636,
+    keywords: ["dahisar"]
+  }
+];
 
 const tokenAliases: Record<string, string> = {
   ave: "avenue",
@@ -67,6 +281,18 @@ const normalizeSuggestionName = (name: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
+const isInServiceArea = (suggestion: Pick<LocationSuggestion, "lat" | "lng">) =>
+  suggestion.lat >= SERVICE_AREA_BOUNDS.minLat &&
+  suggestion.lat <= SERVICE_AREA_BOUNDS.maxLat &&
+  suggestion.lng >= SERVICE_AREA_BOUNDS.minLng &&
+  suggestion.lng <= SERVICE_AREA_BOUNDS.maxLng;
+
+const getDistanceFromServiceCenter = (suggestion: Pick<LocationSuggestion, "lat" | "lng">) => {
+  const latDelta = suggestion.lat - SERVICE_AREA_CENTER.lat;
+  const lngDelta = suggestion.lng - SERVICE_AREA_CENTER.lng;
+  return (latDelta * latDelta) + (lngDelta * lngDelta);
+};
+
 const dedupeLocationSuggestions = (suggestions: LocationSuggestion[]) => {
   const seen = new Set<string>();
   const unique: LocationSuggestion[] = [];
@@ -79,7 +305,8 @@ const dedupeLocationSuggestions = (suggestions: LocationSuggestion[]) => {
       !key ||
       seen.has(key) ||
       !Number.isFinite(suggestion.lat) ||
-      !Number.isFinite(suggestion.lng)
+      !Number.isFinite(suggestion.lng) ||
+      !isInServiceArea(suggestion)
     ) {
       continue;
     }
@@ -210,6 +437,50 @@ const setCachedSearch = (key: string, results: LocationSuggestion[]) => {
   pruneSearchCache();
 };
 
+const getCuratedSuggestions = (query: string) => {
+  const normalizedQuery = normalizeSuggestionName(query);
+  if (!normalizedQuery) return [];
+
+  return curatedLocations
+    .map((location) => {
+      const bestScore = Math.max(...location.keywords.map((keyword) => {
+        const normalizedKeyword = normalizeSuggestionName(keyword);
+        if (normalizedKeyword === normalizedQuery) return 4;
+        if (normalizedKeyword.startsWith(`${normalizedQuery} `)) return 3;
+        if (normalizedKeyword.startsWith(normalizedQuery)) return 2;
+        if (normalizedKeyword.includes(normalizedQuery)) return 1;
+        return 0;
+      }));
+
+      return { location, bestScore };
+    })
+    .filter(({ bestScore }) => bestScore > 0)
+    .sort((left, right) => right.bestScore - left.bestScore)
+    .map(({ location }) => location)
+    .map(({ keywords, ...location }) => location);
+};
+
+const getPhotonDisplayName = (properties: {
+  name?: string;
+  street?: string;
+  city?: string;
+  district?: string;
+  county?: string;
+  state?: string;
+}) => {
+  const primary = properties.name || properties.street || properties.city;
+  if (!primary) return "Unnamed location";
+
+  const context = [
+    properties.district,
+    properties.city,
+    properties.county,
+    properties.state
+  ].filter((part): part is string => Boolean(part && normalizeSuggestionName(part) !== normalizeSuggestionName(primary)));
+
+  return [primary, ...Array.from(new Set(context)).slice(0, 2)].join(", ");
+};
+
 const fetchPhotonSuggestions = async (
   query: string
 ): Promise<LocationSuggestion[]> => {
@@ -217,32 +488,47 @@ const fetchPhotonSuggestions = async (
   const timeout = setTimeout(() => controller.abort(), PHOTON_TIMEOUT_MS);
 
   try {
-    const response = await fetch(
-      `https://photon.komoot.io/api?q=${encodeURIComponent(query)}&limit=${PHOTON_RESULT_LIMIT}&lat=19.076&lon=72.8777`,
+    const bbox = [
+      SERVICE_AREA_BOUNDS.minLng,
+      SERVICE_AREA_BOUNDS.minLat,
+      SERVICE_AREA_BOUNDS.maxLng,
+      SERVICE_AREA_BOUNDS.maxLat
+    ].join(",");
+    const searchQueries = [
+      query,
+      `${query} Mumbai`,
+      `${query} Mira Bhayandar`
+    ];
+
+    const responses = await Promise.all(searchQueries.map((searchQuery) => fetch(
+      `https://photon.komoot.io/api?q=${encodeURIComponent(searchQuery)}&limit=${PHOTON_RESULT_LIMIT}&bbox=${bbox}&lang=en`,
       {
         headers: {
           "User-Agent": "Medio/1.0 (location-search)"
         },
         signal: controller.signal
       }
-    );
+    )));
 
-    if (!response.ok) return [];
-
-    const data = (await response.json()) as {
+    const payloads = await Promise.all(
+      responses.map((response) => response.ok ? response.json() : Promise.resolve({ features: [] }))
+    ) as {
       features?: {
-        properties: { name?: string; street?: string; city?: string };
+        properties: {
+          name?: string;
+          street?: string;
+          city?: string;
+          district?: string;
+          county?: string;
+          state?: string;
+        };
         geometry: { coordinates: [number, number] };
       }[];
-    };
+    }[];
 
-    const suggestions = (data.features ?? [])
+    const photonSuggestions = payloads.flatMap((data) => data.features ?? [])
       .map((item) => ({
-        name:
-          item.properties.name ||
-          item.properties.street ||
-          item.properties.city ||
-          "Unnamed location",
+        name: getPhotonDisplayName(item.properties),
         lat: item.geometry.coordinates[1],
         lng: item.geometry.coordinates[0]
       }))
@@ -252,6 +538,13 @@ const fetchPhotonSuggestions = async (
           Number.isFinite(item.lat) &&
           Number.isFinite(item.lng)
       );
+
+    const suggestions = [
+      ...getCuratedSuggestions(query),
+      ...photonSuggestions.sort(
+        (left, right) => getDistanceFromServiceCenter(left) - getDistanceFromServiceCenter(right)
+      )
+    ];
 
     return dedupeLocationSuggestions(suggestions);
   } finally {

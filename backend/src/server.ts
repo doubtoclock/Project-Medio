@@ -3,9 +3,7 @@ import { env } from "./config/env";
 import { connectDB } from "./lib/db";
 import { logger } from "./utils/logger";
 
-const serverUrl = env.IS_CODESPACE
-  ? `https://${process.env.CODESPACE_NAME}-${env.PORT}.app.github.dev`
-  : `http://localhost:${env.PORT}`;
+const serverUrl = `http://localhost:${env.PORT}`;
 
 const warmUpOTP = async () => {
   try {

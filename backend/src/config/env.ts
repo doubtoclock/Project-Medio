@@ -3,11 +3,6 @@ import { z } from "zod";
 
 dotenv.config();
 
-const isCodespace = Boolean(process.env.CODESPACE_NAME);
-const defaultFrontendUrl = isCodespace
-  ? `https://${process.env.CODESPACE_NAME}-5173.app.github.dev`
-  : "http://localhost:5173";
-
 const csv = (value: string | undefined) =>
   (value ?? "")
     .split(",")
@@ -83,7 +78,7 @@ if (!parsedEnv.success) {
 
 const values = parsedEnv.data;
 const frontendUrl =
-  values.FRONTEND_URL ?? (values.NODE_ENV === "production" ? undefined : defaultFrontendUrl);
+  values.FRONTEND_URL ?? "http://localhost:5173";
 const allowedOrigins = Array.from(
   new Set([
     ...(frontendUrl ? [frontendUrl] : []),
@@ -95,20 +90,7 @@ const allowedOrigins = Array.from(
   ])
 );
 
-if (values.NODE_ENV === "production" && !frontendUrl) {
-  throw new Error("FRONTEND_URL is required in production");
-}
-
-if (values.NODE_ENV === "production" && allowedOrigins.length === 0) {
-  throw new Error("At least one allowed frontend origin is required");
-}
-
 const isProduction = values.NODE_ENV === "production";
-
-// Ensure production frontend origins are always allowed
-const productionOrigins = isProduction
-  ? ["https://app.medio.is", "https://frontend.vercel.app"]
-  : [];
 
 const normalizeUrl = (url: string) => url.replace(/\/+$/, "");
 const hasHttpProtocol = (url: string) => /^https?:\/\//i.test(url);
@@ -126,7 +108,6 @@ const otpIsochroneUrl =
 const finalAllowedOrigins = Array.from(
   new Set([
     ...allowedOrigins,
-    ...productionOrigins,
   ])
 );
 
@@ -137,6 +118,5 @@ export const env = {
   OTP_BASE_URL: otpBaseUrl,
   OTP_GRAPHQL_URL: otpGraphqlUrl,
   OTP_ISOCHRONE_URL: otpIsochroneUrl,
-  IS_CODESPACE: isCodespace,
   IS_PRODUCTION: isProduction,
 };

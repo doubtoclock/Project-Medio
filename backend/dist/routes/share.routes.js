@@ -15,21 +15,7 @@ router.post("/", async (req, res) => {
         res.json({ shareId: share.shareId });
     }
     catch (err) {
-        const meta = { error: err };
-        if (err instanceof Error) {
-            meta.message = err.message;
-            meta.name = err.name;
-            meta.stack = err.stack;
-            meta.fullError = JSON.stringify(err, Object.getOwnPropertyNames(err));
-        }
-        if (err.errors) {
-            meta.validationErrors = err.errors;
-        }
-        try {
-            meta.body = JSON.parse(JSON.stringify({ venue: req.body.venue ? { id: req.body.venue.id, name: req.body.venue.name } : undefined }));
-        }
-        catch { /* ignore */ }
-        logger_1.logger.error("Failed to create share link", meta);
+        logger_1.logger.error("Failed to create share link", { error: err });
         res.status(500).json({ error: "Failed to create share link" });
     }
 });

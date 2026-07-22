@@ -7,9 +7,7 @@ const app_1 = __importDefault(require("./app"));
 const env_1 = require("./config/env");
 const db_1 = require("./lib/db");
 const logger_1 = require("./utils/logger");
-const serverUrl = env_1.env.IS_CODESPACE
-    ? `https://${process.env.CODESPACE_NAME}-${env_1.env.PORT}.app.github.dev`
-    : `http://localhost:${env_1.env.PORT}`;
+const serverUrl = `http://localhost:${env_1.env.PORT}`;
 const warmUpOTP = async () => {
     try {
         const otpUrl = env_1.env.OTP_GRAPHQL_URL;

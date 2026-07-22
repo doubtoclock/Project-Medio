@@ -42,7 +42,6 @@ const crypto_1 = __importDefault(require("crypto"));
 const shareSchema = new mongoose_1.Schema({
     shareId: {
         type: String,
-        required: true,
         unique: true,
         index: true,
     },

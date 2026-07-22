@@ -47,6 +47,7 @@ export const routeRequestSchema = z
     travelMode: z.enum(["car", "bike", "local", "walk"]).optional(),
     localTransport: z
       .object({
+        car: z.boolean().optional(),
         bus: z.boolean().optional(),
         buses: z.boolean().optional(),
         rail: z.boolean().optional(),

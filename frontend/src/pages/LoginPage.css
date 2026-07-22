@@ -100,6 +100,43 @@
   gap: 12px;
 }
 
+.login-legal-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--border-color);
+  color: var(--secondary-text);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.login-legal-consent.has-error {
+  border-color: var(--danger-color);
+}
+
+.login-legal-consent input {
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0;
+  accent-color: var(--primary-text);
+  flex: 0 0 auto;
+}
+
+.login-legal-consent button {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--primary-text);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
 .login-btn {
   width: 100%;
   height: 48px;

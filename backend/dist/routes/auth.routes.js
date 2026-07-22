@@ -15,6 +15,7 @@ router.post("/google/native", auth_controller_1.googleNativeSignIn);
 router.get("/me", auth_controller_1.checkAuth);
 router.get("/profile", auth_middleware_1.authMiddleware, auth_controller_1.getProfile);
 router.patch("/profile", auth_middleware_1.authMiddleware, (0, validation_middleware_1.validateBody)(auth_validator_1.updateProfileSchema), auth_controller_1.updateProfile);
+router.delete("/account", auth_middleware_1.authMiddleware, auth_controller_1.deleteAccount);
 router.get("/protected", auth_middleware_1.authMiddleware, (req, res) => {
     const user = req.user;
     res.status(200).json({

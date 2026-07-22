@@ -29,6 +29,11 @@ export const apiClient = {
         method: "POST",
       }).then(() => undefined),
 
+    deleteAccount: () =>
+      apiFetch("/api/auth/account", {
+        method: "DELETE",
+      }).then(() => undefined),
+
     nativeLogin: (idToken) =>
       fetch(
         `${getBackendUrl()}/api/auth/google/native`,
@@ -50,10 +55,11 @@ export const apiClient = {
   },
 
   route: {
-    plan: (body) =>
+    plan: (body, init = {}) =>
       apiFetch("/api/otp/route", {
+        ...init,
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(init.headers || {}) },
         body: JSON.stringify(body),
       }).then(handleResponse),
   },
