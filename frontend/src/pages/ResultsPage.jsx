@@ -124,6 +124,35 @@ function ResultsPage() {
     lng: (originA.lng + originB.lng) / 2,
   }), [originA.lat, originA.lng, originB.lat, originB.lng]);
 
+  const navigateToDetail = (venue, dataA = routeDataA, dataB = routeDataB, errorA = routeErrorA, errorB = routeErrorB) => {
+    if (!venue) return;
+    sessionStorage.setItem('resultsRestore', JSON.stringify({
+      selectedVenue: venue,
+      routeCache: routeCacheRef.current,
+      selectedCategories,
+    }));
+    sessionStorage.setItem('detailRestore', JSON.stringify({
+      venue,
+      originA,
+      originB,
+      routeDataA: dataA,
+      routeDataB: dataB,
+      routeErrorA: errorA,
+      routeErrorB: errorB,
+    }));
+    navigate('/detail', {
+      state: {
+        venue,
+        originA,
+        originB,
+        routeDataA: dataA,
+        routeDataB: dataB,
+        routeErrorA: errorA,
+        routeErrorB: errorB,
+      }
+    });
+  };
+
   useEffect(() => {
     async function loadRoutes() {
       const rA = await fetchRoute(originA, midpoint);
@@ -245,31 +274,7 @@ function ResultsPage() {
         setLoadingRoutes(false);
         if (pendingNavigateRef.current) {
           pendingNavigateRef.current = false;
-          sessionStorage.setItem('resultsRestore', JSON.stringify({
-            selectedVenue,
-            routeCache: routeCacheRef.current,
-            selectedCategories,
-          }));
-          sessionStorage.setItem('detailRestore', JSON.stringify({
-            venue: selectedVenue,
-            originA,
-            originB,
-            routeDataA: localDataA,
-            routeDataB: localDataB,
-            routeErrorA: localErrorA,
-            routeErrorB: localErrorB,
-          }));
-          navigate('/detail', {
-            state: {
-              venue: selectedVenue,
-              originA,
-              originB,
-              routeDataA: localDataA,
-              routeDataB: localDataB,
-              routeErrorA: localErrorA,
-              routeErrorB: localErrorB,
-            }
-          });
+          navigateToDetail(selectedVenue, localDataA, localDataB, localErrorA, localErrorB);
         }
       }
     });
@@ -311,6 +316,14 @@ function ResultsPage() {
   const handleRescale = () => setRescaleTrigger((prev) => prev + 1);
 
   const openDetailView = (venue) => {
+    if (selectedVenue?.id === venue.id) {
+      if (loadingRoutes) {
+        pendingNavigateRef.current = true;
+        return;
+      }
+      navigateToDetail(venue);
+      return;
+    }
     setSelectedVenue(venue);
     pendingNavigateRef.current = true;
   };

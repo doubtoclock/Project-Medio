@@ -481,11 +481,25 @@
   text-transform: uppercase;
   cursor: pointer;
   box-shadow: 0 10px 30px rgba(255, 255, 255, 0.08);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.25s ease, opacity 0.2s ease;
+}
+
+.route-search-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 34px rgba(255, 255, 255, 0.12);
 }
 
 .route-search-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.route-search-btn.is-loading {
+  opacity: 1;
+  cursor: wait;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.12), 0 12px 34px rgba(255,255,255,0.13);
 }
 
 .route-options {

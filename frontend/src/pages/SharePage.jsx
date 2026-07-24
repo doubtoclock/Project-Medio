@@ -9,7 +9,7 @@ function SharePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const state = location.state || {};
+  const state = useMemo(() => location.state || {}, [location.state]);
 
   const venue = useMemo(() => {
     if (state.venue) return state.venue;
@@ -36,9 +36,10 @@ function SharePage() {
       .then((data) => setShareId(data.shareId))
       .catch(() => setShareError('Failed to generate share link.'))
       .finally(() => setShareLoading(false));
-  }, [venue?.id]);
+  }, [venue]);
 
-  const meetingUrl = shareId ? `${window.location.origin}/share/${shareId}` : null;
+  const shareBaseUrl = (import.meta.env.VITE_SHARE_BASE_URL || window.location.origin).replace(/\/+$/, '');
+  const meetingUrl = shareId ? `${shareBaseUrl}/share/${shareId}` : null;
 
   const shareName = venue?.name || 'Meeting Point';
   const shareArea = venue?.address || venue?.location || '';
@@ -113,6 +114,25 @@ function SharePage() {
   const handleToggleQr = useCallback(() => {
     setShowQr((prev) => !prev);
   }, []);
+
+  const handleReturnToPlace = useCallback(() => {
+    if (!venue) {
+      navigate(-1);
+      return;
+    }
+
+    navigate('/detail', {
+      state: {
+        venue,
+        originA: state.originA,
+        originB: state.originB,
+        routeDataA: state.routeDataA,
+        routeDataB: state.routeDataB,
+        routeErrorA: state.routeErrorA,
+        routeErrorB: state.routeErrorB,
+      },
+    });
+  }, [navigate, state, venue]);
 
   return (
     <div className="share-page">
@@ -244,7 +264,7 @@ function SharePage() {
 
         <button
           className="share-return-button"
-          onClick={() => navigate('/meet')}
+          onClick={handleReturnToPlace}
         >
           Return to Navigation
         </button>

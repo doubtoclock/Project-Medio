@@ -572,7 +572,7 @@ export default function JourneyPlannerPage() {
                     <button
                       key={s.name}
                       className="location-suggestion-item"
-                      onMouseDown={(e) => { e.preventDefault(); handleSelectLocation(s, 'A'); }}
+                      onPointerDown={(e) => { e.preventDefault(); handleSelectLocation(s, 'A'); }}
                     >
                       <MapPin size={14} className="suggestion-icon" />
                       <span className="suggestion-name">{s.name}</span>
@@ -609,7 +609,7 @@ export default function JourneyPlannerPage() {
                     <button
                       key={s.name}
                       className="location-suggestion-item"
-                      onMouseDown={(e) => { e.preventDefault(); handleSelectLocation(s, 'B'); }}
+                      onPointerDown={(e) => { e.preventDefault(); handleSelectLocation(s, 'B'); }}
                     >
                       <MapPin size={14} className="suggestion-icon" />
                       <span className="suggestion-name">{s.name}</span>
@@ -652,12 +652,12 @@ export default function JourneyPlannerPage() {
 
         <section className="route-actions">
           <button
-            className="route-search-btn"
+            className={`route-search-btn ${routeLoading ? 'is-loading' : ''}`}
             onClick={handleFindRoutes}
             disabled={!hasBothCoords || routeLoading || selectedModeCount === 0}
           >
-            {routeLoading ? <Loader size={18} className="transport-loading-spinner" /> : <Route size={18} />}
-            {routeLoading ? 'Finding Routes...' : 'Find Best Routes'}
+            {routeLoading ? <Loader size={18} className="button-loader" /> : <Route size={18} />}
+            <span>{routeLoading ? 'Finding Routes...' : 'Find Best Routes'}</span>
           </button>
         </section>
 

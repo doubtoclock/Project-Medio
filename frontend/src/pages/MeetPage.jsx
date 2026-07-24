@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, MapPin, Navigation, X } from 'lucide-react';
+import { ArrowRight, Loader, MapPin, Navigation, X } from 'lucide-react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -35,6 +35,7 @@ function MeetPage() {
 
   const debounceRefA = useRef(null);
   const debounceRefB = useRef(null);
+  const selectingSuggestionRef = useRef(null);
 
   const resetResults = () => {
     setMeetNotice('');
@@ -122,6 +123,11 @@ function MeetPage() {
 
   const handleFieldBlur = (type) => {
     setTimeout(() => {
+      if (selectingSuggestionRef.current === type) {
+        selectingSuggestionRef.current = null;
+        return;
+      }
+      if (activeField !== type) return;
       const suggestions = type === 'A' ? suggestionsA : suggestionsB;
       const coords = type === 'A' ? coordsA : coordsB;
       if (suggestions.length > 0 && !coords) {
@@ -281,8 +287,7 @@ function MeetPage() {
               {suggestionsA.map((s) => (
                 <button
                   key={s.name}
-                  onMouseDown={(e) => { e.preventDefault(); handleSelectLocation(s, 'A'); }}
-                  onClick={() => handleSelectLocation(s, 'A')}
+                  onPointerDown={(e) => { e.preventDefault(); selectingSuggestionRef.current = 'A'; handleSelectLocation(s, 'A'); }}
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 14px', fontSize: 14, textAlign: 'left', color: '#F5F5F5',
@@ -341,8 +346,7 @@ function MeetPage() {
               {suggestionsB.map((s) => (
                 <button
                   key={s.name}
-                  onMouseDown={(e) => { e.preventDefault(); handleSelectLocation(s, 'B'); }}
-                  onClick={() => handleSelectLocation(s, 'B')}
+                  onPointerDown={(e) => { e.preventDefault(); selectingSuggestionRef.current = 'B'; handleSelectLocation(s, 'B'); }}
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 14px', fontSize: 14, textAlign: 'left', color: '#F5F5F5',
@@ -364,11 +368,12 @@ function MeetPage() {
           <p className="analysis-text">ANALYSIS ENGINE V.4.0</p>
           {coordsA && coordsB && (
             <button
-              className="meet-cta-button anim-card-lift"
+              className={`meet-cta-button anim-card-lift ${loadingMeet ? 'is-loading' : ''}`}
               onClick={handleFindMidpoint}
               disabled={loadingMeet}
             >
-              {loadingMeet ? 'Searching...' : 'Find Midpoint'}
+              {loadingMeet && <Loader className="button-loader" />}
+              <span>{loadingMeet ? 'Searching...' : 'Find Midpoint'}</span>
               {!loadingMeet && <ArrowRight className="anim-icon-tap" />}
             </button>
           )}
@@ -385,6 +390,7 @@ function MeetPage() {
               </p>
               <button
                 onClick={handleFindMidpoint}
+                disabled={loadingMeet}
                 style={{
                   marginTop: 12, padding: '8px 20px', borderRadius: 20,
                   border: '1px solid rgba(255,255,255,0.15)',

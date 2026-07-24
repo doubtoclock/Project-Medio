@@ -102,3 +102,25 @@ a {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.button-loader {
+  animation: spin 0.85s linear infinite;
+  flex: 0 0 auto;
+}
+
+button.is-loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,0.26) 45%, transparent 72%);
+  transform: translateX(-120%);
+  animation: buttonLoadingSweep 1.45s ease-in-out infinite;
+  mix-blend-mode: overlay;
+}
+
+@keyframes buttonLoadingSweep {
+  to {
+    transform: translateX(120%);
+  }
+}
