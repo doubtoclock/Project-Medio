@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  AlertTriangle, ExternalLink, MapPin, User, Users,
+  AlertTriangle, User, Users,
   Download, Compass, ShieldCheck
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
@@ -212,6 +212,7 @@ function SharedLinkPage() {
 
   const itineraryA = itinerariesA[itineraryIndexA] || null;
   const itineraryB = itinerariesB[itineraryIndexB] || null;
+  const hasDetailedRoutes = Boolean(itineraryA || itineraryB);
 
   const mapPoints = useMemo(() => {
     const pts = [];
@@ -226,13 +227,6 @@ function SharedLinkPage() {
     }
     return pts;
   }, [venue, originA, originB]);
-
-  const googleMapsUrl = useMemo(() => {
-    if (!venue) return '#';
-    const lat = venue.lat;
-    const lon = venue.lon ?? venue.lng;
-    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
-  }, [venue]);
 
   if (loading) {
     return (
@@ -299,24 +293,13 @@ function SharedLinkPage() {
 
       {/* Guest Mode Main Content */}
       <div className="guest-share-body">
-        {/* Open Google Maps Action Card */}
-        <div className="guest-action-card anim-slide-up-fade">
-          <a
-            href={googleMapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="guest-gmaps-btn anim-card-lift"
-          >
-            <div className="guest-gmaps-left">
-              <MapPin size={20} className="guest-gmaps-icon" />
-              <div className="guest-gmaps-text">
-                <span className="guest-gmaps-title">Open in Google Maps</span>
-                <span className="guest-gmaps-sub">Get turns and live directions</span>
-              </div>
-            </div>
-            <ExternalLink size={18} />
-          </a>
-        </div>
+        {/* Legacy Share Document Fallback Alert */}
+        {!hasDetailedRoutes && (
+          <div className="guest-legacy-fallback anim-slide-up-fade">
+            <Compass size={24} style={{ color: '#FF9F0A', flexShrink: 0 }} />
+            <span>This shared journey was created using an older version of MEDIO and does not contain detailed route information.</span>
+          </div>
+        )}
 
         {/* Journey Duration Overview */}
         {(itineraryA || itineraryB || routeErrorA || routeErrorB) && (

@@ -72,6 +72,19 @@
   margin: 0 auto;
 }
 
+.guest-legacy-fallback {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: rgba(255, 159, 10, 0.1);
+  border: 1px solid rgba(255, 159, 10, 0.3);
+  border-radius: 16px;
+  color: #FF9F0A;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .guest-action-card {
   width: 100%;
 }

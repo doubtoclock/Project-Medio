@@ -175,6 +175,11 @@ const buildOtpQuery = (transportModes, from, to, routingDateTime) => {
               legGeometry {
                 points
               }
+              intermediateStops {
+                name
+                lat
+                lon
+              }
             }
           }
         }

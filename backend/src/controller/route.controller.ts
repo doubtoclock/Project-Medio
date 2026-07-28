@@ -240,6 +240,11 @@ const buildOtpQuery = (
               legGeometry {
                 points
               }
+              intermediateStops {
+                name
+                lat
+                lon
+              }
             }
           }
         }
