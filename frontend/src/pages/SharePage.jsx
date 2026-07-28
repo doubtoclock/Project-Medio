@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Check, MessageCircle, Link2, QrCode, Share2, Send, Mail, Loader, AlertTriangle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { apiClient } from '../lib/apiClient';
+import { getFrontendUrl } from '../lib/frontendUrl';
 import './SharePage.css';
 
 function SharePage() {
@@ -38,8 +39,7 @@ function SharePage() {
       .finally(() => setShareLoading(false));
   }, [venue]);
 
-  const shareBaseUrl = (import.meta.env.VITE_SHARE_BASE_URL || window.location.origin).replace(/\/+$/, '');
-  const meetingUrl = shareId ? `${shareBaseUrl}/share/${shareId}` : null;
+  const meetingUrl = shareId ? getFrontendUrl(`/share/${shareId}`) : null;
 
   const shareName = venue?.name || 'Meeting Point';
   const shareArea = venue?.address || venue?.location || '';

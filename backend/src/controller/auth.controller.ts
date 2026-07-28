@@ -39,7 +39,15 @@ const getFallbackName = (email: string) => email.split("@")[0] || "Medio User";
 const getAllowedFrontendOrigin = (url: string) => {
   try {
     const parsed = new URL(url);
-    return env.ALLOWED_ORIGINS.includes(parsed.origin) ? parsed : null;
+    if (!env.ALLOWED_ORIGINS.includes(parsed.origin)) {
+      return null;
+    }
+
+    if (env.IS_PRODUCTION) {
+      return new URL(`${parsed.pathname}${parsed.search}${parsed.hash}`, env.FRONTEND_URL);
+    }
+
+    return parsed;
   } catch {
     return null;
   }

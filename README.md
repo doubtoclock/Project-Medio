@@ -21,8 +21,8 @@ The backend deploy is split into two Render services in `render.yaml`:
 
 Create a Render Blueprint from this repo and fill the synced env vars:
 
-- `FRONTEND_URL`: your production Vercel URL, for example `https://your-app.vercel.app`.
-- `ALLOWED_ORIGINS`: include the Vercel URL and any custom web domains.
+- `FRONTEND_URL`: the canonical production frontend URL, `https://medio.mywire.org`.
+- `ALLOWED_ORIGINS`: include `https://medio.mywire.org` and any local development origins you need.
 - `MONGO_URI`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`

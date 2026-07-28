@@ -12,7 +12,7 @@ The commands below use these placeholders:
 - `REGION`: Cloud Run and Artifact Registry region, for example `us-central1`.
 - `REPOSITORY`: Artifact Registry Docker repository, for example `medio`.
 - `BACKEND_URL`: final backend Cloud Run URL.
-- `FRONTEND_URL`: final frontend Cloud Run URL.
+- `FRONTEND_URL`: canonical frontend URL, `https://medio.mywire.org`.
 - `OTP_PRIVATE_IP`: internal IP address of the OTP Compute Engine VM.
 
 ## Enable APIs
@@ -38,12 +38,12 @@ gcloud artifacts repositories create REPOSITORY \
 
 ## Build and Push Images
 
-The frontend embeds `VITE_BACKEND_URL` at build time. After the backend service name is chosen, pass the backend URL into Cloud Build.
+The frontend embeds `VITE_BACKEND_URL` and `VITE_FRONTEND_URL` at build time. After the backend service name is chosen, pass the backend URL and canonical frontend URL into Cloud Build.
 
 ```sh
 gcloud builds submit . \
   --config=cloudbuild.yaml \
-  --substitutions=_REGION=REGION,_REPOSITORY=REPOSITORY,_VITE_BACKEND_URL=BACKEND_URL
+  --substitutions=_REGION=REGION,_REPOSITORY=REPOSITORY,_VITE_BACKEND_URL=BACKEND_URL,_VITE_FRONTEND_URL=https://medio.mywire.org
 ```
 
 Images pushed:
@@ -64,7 +64,7 @@ gcloud run deploy medio-api \
   --port=8080 \
   --memory=512Mi \
   --cpu=1 \
-  --set-env-vars='^|^NODE_ENV=production|FRONTEND_URL=FRONTEND_URL|ALLOWED_ORIGINS=FRONTEND_URL|CAPACITOR_ORIGINS=capacitor://localhost,http://localhost,https://localhost|OTP_BASE_URL=http://OTP_PRIVATE_IP:8080|JWT_ISSUER=medio-api|JWT_AUDIENCE=medio-web|JWT_EXPIRES_IN=7d|BCRYPT_ROUNDS=12|LOG_LEVEL=info' \
+  --set-env-vars='^|^NODE_ENV=production|FRONTEND_URL=https://medio.mywire.org|ALLOWED_ORIGINS=https://medio.mywire.org|CAPACITOR_ORIGINS=capacitor://localhost,http://localhost,https://localhost|OTP_BASE_URL=http://OTP_PRIVATE_IP:8080|JWT_ISSUER=medio-api|JWT_AUDIENCE=medio-web|JWT_EXPIRES_IN=7d|BCRYPT_ROUNDS=12|LOG_LEVEL=info' \
   --set-env-vars='^|^MONGO_URI=YOUR_MONGO_URI|JWT_SECRET=YOUR_32_PLUS_CHAR_SECRET|GOOGLE_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET=YOUR_GOOGLE_CLIENT_SECRET|GOOGLE_CALLBACK_URL=https://BACKEND_CLOUD_RUN_HOST/api/auth/google/callback'
 ```
 
@@ -99,12 +99,12 @@ gcloud run services describe medio-web \
   --format='value(status.url)'
 ```
 
-Update the backend service with the final frontend origin:
+Update the backend service with the canonical frontend origin:
 
 ```sh
 gcloud run services update medio-api \
   --region=REGION \
-  --update-env-vars=FRONTEND_URL=FRONTEND_URL,ALLOWED_ORIGINS=FRONTEND_URL
+  --update-env-vars=FRONTEND_URL=https://medio.mywire.org,ALLOWED_ORIGINS=https://medio.mywire.org
 ```
 
 ## Deploy OTP to Compute Engine
@@ -175,6 +175,7 @@ Backend:
 Frontend build:
 
 - `VITE_BACKEND_URL`
+- `VITE_FRONTEND_URL=https://medio.mywire.org`
 
 OTP:
 

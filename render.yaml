@@ -23,9 +23,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: FRONTEND_URL
-        value: https://app.medio.is
+        value: https://medio.mywire.org
       - key: ALLOWED_ORIGINS
-        value: https://app.medio.is,https://frontend.vercel.app
+        value: https://medio.mywire.org
       - key: CAPACITOR_ORIGINS
         value: capacitor://localhost,http://localhost,https://localhost
       - key: OTP_BASE_URL

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getBackendUrl } from "../lib/backend";
+import { getFrontendUrl } from "../lib/frontendUrl";
 import "./LoginPage.css";
 
 export default function LoginPage() {
@@ -43,8 +44,7 @@ export default function LoginPage() {
     }
     setGoogleLoading(true);
     setGoogleError(false);
-    // Preserve the local app URL through the OAuth round trip.
-    const returnUrl = new URL("/login", window.location.origin).toString();
+    const returnUrl = getFrontendUrl("/login");
     window.location.href = `${getBackendUrl()}/api/auth/google?redirect=${encodeURIComponent(returnUrl)}`;
   };
 
