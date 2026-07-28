@@ -25,13 +25,6 @@ const SEARCH_CACHE_LIMIT = 160;
 const MIN_SIMILAR_QUERY_LENGTH = 5;
 const MAX_SEARCH_RESULTS = 5;
 const PHOTON_RESULT_LIMIT = 12;
-const SERVICE_AREA_BOUNDS = {
-  minLat: 18.86,
-  maxLat: 19.35,
-  minLng: 72.74,
-  maxLng: 73.08
-};
-const SERVICE_AREA_CENTER = { lat: 19.115, lng: 72.86 };
 
 const searchCache = new Map<string, SearchCacheEntry>();
 const pendingSearches = new Map<string, Promise<LocationSuggestion[]>>();
@@ -281,18 +274,6 @@ const normalizeSuggestionName = (name: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-const isInServiceArea = (suggestion: Pick<LocationSuggestion, "lat" | "lng">) =>
-  suggestion.lat >= SERVICE_AREA_BOUNDS.minLat &&
-  suggestion.lat <= SERVICE_AREA_BOUNDS.maxLat &&
-  suggestion.lng >= SERVICE_AREA_BOUNDS.minLng &&
-  suggestion.lng <= SERVICE_AREA_BOUNDS.maxLng;
-
-const getDistanceFromServiceCenter = (suggestion: Pick<LocationSuggestion, "lat" | "lng">) => {
-  const latDelta = suggestion.lat - SERVICE_AREA_CENTER.lat;
-  const lngDelta = suggestion.lng - SERVICE_AREA_CENTER.lng;
-  return (latDelta * latDelta) + (lngDelta * lngDelta);
-};
-
 const dedupeLocationSuggestions = (suggestions: LocationSuggestion[]) => {
   const seen = new Set<string>();
   const unique: LocationSuggestion[] = [];
@@ -305,8 +286,7 @@ const dedupeLocationSuggestions = (suggestions: LocationSuggestion[]) => {
       !key ||
       seen.has(key) ||
       !Number.isFinite(suggestion.lat) ||
-      !Number.isFinite(suggestion.lng) ||
-      !isInServiceArea(suggestion)
+      !Number.isFinite(suggestion.lng)
     ) {
       continue;
     }
@@ -488,31 +468,21 @@ const fetchPhotonSuggestions = async (
   const timeout = setTimeout(() => controller.abort(), PHOTON_TIMEOUT_MS);
 
   try {
-    const bbox = [
-      SERVICE_AREA_BOUNDS.minLng,
-      SERVICE_AREA_BOUNDS.minLat,
-      SERVICE_AREA_BOUNDS.maxLng,
-      SERVICE_AREA_BOUNDS.maxLat
-    ].join(",");
-    const searchQueries = [
-      query,
-      `${query} Mumbai`,
-      `${query} Mira Bhayandar`
-    ];
-
-    const responses = await Promise.all(searchQueries.map((searchQuery) => fetch(
-      `https://photon.komoot.io/api?q=${encodeURIComponent(searchQuery)}&limit=${PHOTON_RESULT_LIMIT}&bbox=${bbox}&lang=en`,
+    const response = await fetch(
+      `https://photon.komoot.io/api?q=${encodeURIComponent(query)}&limit=${PHOTON_RESULT_LIMIT}&lang=en`,
       {
         headers: {
           "User-Agent": "Medio/1.0 (location-search)"
         },
         signal: controller.signal
       }
-    )));
+    );
 
-    const payloads = await Promise.all(
-      responses.map((response) => response.ok ? response.json() : Promise.resolve({ features: [] }))
-    ) as {
+    if (!response.ok) {
+      return dedupeLocationSuggestions(getCuratedSuggestions(query));
+    }
+
+    const data = (await response.json()) as {
       features?: {
         properties: {
           name?: string;
@@ -524,9 +494,9 @@ const fetchPhotonSuggestions = async (
         };
         geometry: { coordinates: [number, number] };
       }[];
-    }[];
+    };
 
-    const photonSuggestions = payloads.flatMap((data) => data.features ?? [])
+    const photonSuggestions = (data.features ?? [])
       .map((item) => ({
         name: getPhotonDisplayName(item.properties),
         lat: item.geometry.coordinates[1],
@@ -541,9 +511,7 @@ const fetchPhotonSuggestions = async (
 
     const suggestions = [
       ...getCuratedSuggestions(query),
-      ...photonSuggestions.sort(
-        (left, right) => getDistanceFromServiceCenter(left) - getDistanceFromServiceCenter(right)
-      )
+      ...photonSuggestions
     ];
 
     return dedupeLocationSuggestions(suggestions);

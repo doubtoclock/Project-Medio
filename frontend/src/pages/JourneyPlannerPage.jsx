@@ -336,13 +336,17 @@ export default function JourneyPlannerPage() {
   // Prefill from navigation state (e.g. from DetailPage "Navigate" button)
   useEffect(() => {
     const st = location.state;
-    if (st?.origin && st?.destination) {
-      prefilledRef.current = true;
+    if (st?.origin) {
       setLocA(st.origin.name || 'My Location');
       setCoordsA({ lat: st.origin.lat, lng: st.origin.lng });
+    }
+    if (st?.destination) {
       setLocB(st.destination.name || 'Destination');
       setCoordsB({ lat: st.destination.lat, lng: st.destination.lng });
       setUserMovedMap(false);
+    }
+    if (st?.origin && st?.destination) {
+      prefilledRef.current = true;
     }
   }, []);
 
