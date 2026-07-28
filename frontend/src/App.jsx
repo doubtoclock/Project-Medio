@@ -22,10 +22,12 @@ function AppRoutes() {
   const { isExpanded, setIsExpanded } = useNavigation();
   const location = useLocation();
   const isPublicPage = ['/', '/login', '/privacy', '/terms'].includes(location.pathname);
+  const isGuestSharePage = location.pathname.startsWith('/share');
+  const hideNav = isPublicPage || isGuestSharePage;
 
   return (
     <div className="app-container">
-      {!isPublicPage && (
+      {!hideNav && (
         <button
           className="floating-menu-btn anim-card-lift"
           onClick={() => setIsExpanded(!isExpanded)}
@@ -37,7 +39,7 @@ function AppRoutes() {
         </button>
       )}
 
-      {!isPublicPage && <SideNav />}
+      {!hideNav && <SideNav />}
       <div className={`main-content ${isExpanded ? 'nav-expanded' : ''}`}>
         <div className="main-content-inner">
           <div

@@ -6,13 +6,21 @@ const router = Router();
 
 router.post("/", async (req: Request, res: Response) => {
   try {
-    const { venue } = req.body;
+    const { venue, originA, originB, routeDataA, routeDataB, routeErrorA, routeErrorB } = req.body;
 
     if (!venue || !venue.id || venue.lat == null || venue.lon == null) {
       return res.status(400).json({ error: "Venue with id, lat, and lon is required" });
     }
 
-    const share = new Share({ venue });
+    const share = new Share({
+      venue,
+      originA,
+      originB,
+      routeDataA,
+      routeDataB,
+      routeErrorA,
+      routeErrorB,
+    });
     await share.save();
 
     res.json({ shareId: share.shareId });
@@ -30,7 +38,15 @@ router.get("/:shareId", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Share link not found" });
     }
 
-    res.json({ venue: share.venue });
+    res.json({
+      venue: share.venue,
+      originA: share.originA,
+      originB: share.originB,
+      routeDataA: share.routeDataA,
+      routeDataB: share.routeDataB,
+      routeErrorA: share.routeErrorA,
+      routeErrorB: share.routeErrorB,
+    });
   } catch (err) {
     logger.error("Failed to retrieve share data", { error: err });
     res.status(500).json({ error: "Failed to retrieve share data" });

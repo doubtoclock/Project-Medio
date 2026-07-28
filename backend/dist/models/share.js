@@ -49,6 +49,12 @@ const shareSchema = new mongoose_1.Schema({
         type: mongoose_1.Schema.Types.Mixed,
         required: true,
     },
+    originA: { type: mongoose_1.Schema.Types.Mixed, required: false },
+    originB: { type: mongoose_1.Schema.Types.Mixed, required: false },
+    routeDataA: { type: mongoose_1.Schema.Types.Mixed, required: false },
+    routeDataB: { type: mongoose_1.Schema.Types.Mixed, required: false },
+    routeErrorA: { type: String, required: false },
+    routeErrorB: { type: String, required: false },
 }, { timestamps: true });
 shareSchema.pre("save", function () {
     if (!this.shareId) {

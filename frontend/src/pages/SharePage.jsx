@@ -33,16 +33,21 @@ function SharePage() {
     setShareLoading(true);
     setShareError(null);
 
-    apiClient.share.create({ venue })
+    apiClient.share.create({
+      venue,
+      originA: state.originA,
+      originB: state.originB,
+      routeDataA: state.routeDataA,
+      routeDataB: state.routeDataB,
+      routeErrorA: state.routeErrorA,
+      routeErrorB: state.routeErrorB,
+    })
       .then((data) => setShareId(data.shareId))
       .catch(() => setShareError('Failed to generate share link.'))
       .finally(() => setShareLoading(false));
-  }, [venue]);
+  }, [venue, state.originA, state.originB, state.routeDataA, state.routeDataB, state.routeErrorA, state.routeErrorB]);
 
   const meetingUrl = shareId ? getFrontendUrl(`/share/${shareId}`) : null;
-
-  const shareName = venue?.name || 'Meeting Point';
-  const shareArea = venue?.address || venue?.location || '';
 
   const [feedback, setFeedback] = useState(null);
   const [showQr, setShowQr] = useState(false);

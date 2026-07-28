@@ -14,6 +14,12 @@ export interface IShare extends Document {
     location?: string;
     image?: string;
   };
+  originA?: any;
+  originB?: any;
+  routeDataA?: any;
+  routeDataB?: any;
+  routeErrorA?: string;
+  routeErrorB?: string;
   createdAt: Date;
 }
 
@@ -28,6 +34,12 @@ const shareSchema = new Schema<IShare>(
       type: Schema.Types.Mixed,
       required: true,
     },
+    originA: { type: Schema.Types.Mixed, required: false },
+    originB: { type: Schema.Types.Mixed, required: false },
+    routeDataA: { type: Schema.Types.Mixed, required: false },
+    routeDataB: { type: Schema.Types.Mixed, required: false },
+    routeErrorA: { type: String, required: false },
+    routeErrorB: { type: String, required: false },
   },
   { timestamps: true }
 );
