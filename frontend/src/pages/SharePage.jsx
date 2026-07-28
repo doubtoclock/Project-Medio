@@ -49,6 +49,9 @@ function SharePage() {
 
   const meetingUrl = shareId ? getFrontendUrl(`/share/${shareId}`) : null;
 
+  const shareName = venue?.name || 'Meeting Point';
+  const shareArea = venue?.address || venue?.location || '';
+
   const [feedback, setFeedback] = useState(null);
   const [showQr, setShowQr] = useState(false);
 
