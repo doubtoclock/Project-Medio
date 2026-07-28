@@ -1,43 +1,40 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
-  AlertTriangle, User, Users, Footprints, Train, Bus, Car, Bike,
-  Download, Compass, ShieldCheck, MapPin, ArrowDown
+  AlertTriangle, Compass, Footprints, Train, Bus, Car, Bike, ArrowDown, MapPin
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiClient } from '../lib/apiClient';
 import {
-  RouteMetricsPanel, ItinerarySwitcher,
   formatDuration, formatDistance, normalizeMode,
-  modeLabels, getLegRouteName, getLegEndpointName, getLegDurationMinutes
+  modeLabels, getLegRouteName, getLegEndpointName, getLegDurationMinutes, getRouteMetrics
 } from '../lib/routeUtils';
-import { GuestShareModal } from '../components/GuestShareModal';
 import coffeeHero from '../assets/coffee-hero.png';
 import './DetailPage.css';
 import './ResultsPage.css';
 import './SharedLinkPage.css';
 
 const venueMarkerIcon = L.divIcon({
-  className: '',
-  html: '<div class="guest-marker-venue"><div class="guest-marker-pin"></div></div>',
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
+  className: 'guest-map-marker-container',
+  html: '<div class="guest-marker-badge venue-badge"><div class="marker-dot"></div><span>Meeting Point</span></div>',
+  iconSize: [110, 28],
+  iconAnchor: [55, 14],
 });
 
-const originAMarkerIcon = L.divIcon({
-  className: '',
-  html: '<div class="planner-marker-origin" />',
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
+const userAMarkerIcon = L.divIcon({
+  className: 'guest-map-marker-container',
+  html: '<div class="guest-marker-badge user-a-badge"><div class="marker-dot"></div><span>User A</span></div>',
+  iconSize: [80, 28],
+  iconAnchor: [40, 14],
 });
 
-const originBMarkerIcon = L.divIcon({
-  className: '',
-  html: '<div class="planner-marker-dest" />',
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
+const userBMarkerIcon = L.divIcon({
+  className: 'guest-map-marker-container',
+  html: '<div class="guest-marker-badge user-b-badge"><div class="marker-dot"></div><span>User B</span></div>',
+  iconSize: [80, 28],
+  iconAnchor: [40, 14],
 });
 
 function MapBoundsAdjuster({ points }) {
@@ -50,7 +47,7 @@ function MapBoundsAdjuster({ points }) {
       return;
     }
     const bounds = L.latLngBounds(points);
-    map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
   }, [points, map]);
 
   return null;
@@ -65,106 +62,108 @@ function getModeIcon(mode) {
   return <Footprints size={18} />;
 }
 
-function GuestTimelineItinerary({ itinerary, origin, venue, userTag }) {
+function UserTimelineCard({ itinerary, origin, venue, userTag }) {
   const legs = itinerary?.legs || [];
-  if (legs.length === 0) return null;
+  const metrics = itinerary ? getRouteMetrics(itinerary) : null;
+  const totalMeters = legs.reduce((acc, leg) => acc + (leg.distance || 0), 0);
 
   return (
-    <div className="guest-timeline-card anim-slide-up-fade">
-      <div className="guest-timeline-header">
-        <div className={`guest-user-badge ${userTag === 'B' ? 'guest-user-badge-b' : 'guest-user-badge-a'}`}>
-          {userTag === 'B' ? <Users size={15} /> : <User size={15} />}
-          <span>{origin?.name ? `Route from ${origin.name}` : `Person ${userTag} Route`}</span>
-        </div>
+    <div className="user-timeline-card anim-slide-up-fade">
+      <div className="user-timeline-header">
+        <h3 className={`user-badge user-badge-${userTag.toLowerCase()}`}>
+          USER {userTag}
+        </h3>
+        {itinerary && metrics && (
+          <div className="user-summary-bar">
+            <span className="summary-chip">{formatDuration(itinerary.duration)}</span>
+            <span className="summary-chip">{formatDistance(totalMeters)}</span>
+            <span className="summary-chip">{metrics.transfers} Transfer{metrics.transfers !== 1 ? 's' : ''}</span>
+          </div>
+        )}
       </div>
 
-      <RouteMetricsPanel itinerary={itinerary} />
+      {legs.length > 0 ? (
+        <div className="guest-timeline-steps">
+          {legs.map((leg, idx) => {
+            const mode = normalizeMode(leg.mode);
+            const isWalk = mode === 'WALK';
+            const routeName = getLegRouteName(leg);
+            const fromName = getLegEndpointName(leg.from, idx === 0 ? (origin?.name || 'Start Location') : 'Transfer Point');
+            const toName = getLegEndpointName(leg.to, idx === legs.length - 1 ? (venue?.name || 'Meeting Point') : 'Transfer Point');
+            const legMinutes = getLegDurationMinutes(leg);
+            const distanceText = formatDistance(leg.distance || 0);
 
-      <div className="guest-timeline-steps">
-        {legs.map((leg, idx) => {
-          const mode = normalizeMode(leg.mode);
-          const isWalk = mode === 'WALK';
-          const routeName = getLegRouteName(leg);
-          const fromName = getLegEndpointName(leg.from, idx === 0 ? (origin?.name || 'Start Location') : 'Transfer Point');
-          const toName = getLegEndpointName(leg.to, idx === legs.length - 1 ? (venue?.name || 'Meeting Point') : 'Transfer Point');
-          const legMinutes = getLegDurationMinutes(leg);
-
-          return (
-            <React.Fragment key={idx}>
-              <div className={`guest-timeline-step ${isWalk ? 'guest-step-walk' : 'guest-step-transit'}`}>
-                <div className="guest-step-left">
-                  <div className={`guest-step-icon-badge mode-${mode.toLowerCase()}`}>
-                    {getModeIcon(mode)}
-                  </div>
-                  {idx < legs.length - 1 && <div className="guest-step-line"></div>}
-                </div>
-
-                <div className="guest-step-right">
-                  <div className="guest-step-title-row">
-                    <span className="guest-step-title">{isWalk ? `Walk • ${formatDistance(leg.distance || 0)}` : routeName}</span>
-                    <span className="guest-step-duration">
-                      {legMinutes > 0 ? `${legMinutes} min` : formatDuration((leg.endTime - leg.startTime) / 1000)}
-                    </span>
+            return (
+              <React.Fragment key={idx}>
+                <div className={`guest-timeline-step ${isWalk ? 'guest-step-walk' : 'guest-step-transit'}`}>
+                  <div className="guest-step-left">
+                    <div className={`guest-step-icon-badge mode-${mode.toLowerCase()}`}>
+                      {getModeIcon(mode)}
+                    </div>
                   </div>
 
-                  <div className="guest-step-detail">
-                    {isWalk ? (
-                      <div className="guest-step-endpoints">
-                        <span className="endpoint-text"><strong className="endpoint-label">From:</strong> {fromName}</span>
-                        <span className="endpoint-text"><strong className="endpoint-label">To:</strong> {toName}</span>
-                      </div>
-                    ) : (
-                      <div className="guest-step-endpoints">
-                        <span className="endpoint-text"><strong className="endpoint-label">Board at:</strong> {fromName}</span>
-                        <span className="endpoint-text"><strong className="endpoint-label">Get off at:</strong> {toName}</span>
-                        {leg.intermediateStops && leg.intermediateStops.length > 0 && (
-                          <span className="guest-step-stops">
-                            {leg.intermediateStops.length} stop{leg.intermediateStops.length > 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                  <div className="guest-step-right">
+                    <div className="guest-step-title-row">
+                      <span className="guest-step-title">
+                        {isWalk ? `🚶 Walk` : (modeLabels[mode] ? `🚇 ${routeName}` : routeName)}
+                      </span>
+                      <span className="guest-step-metrics">
+                        {distanceText} {legMinutes > 0 ? `• ${legMinutes} min` : ''}
+                      </span>
+                    </div>
+
+                    <div className="guest-step-detail">
+                      {isWalk ? (
+                        <div className="guest-step-endpoints">
+                          <span className="endpoint-text"><strong className="endpoint-label">From:</strong> {fromName}</span>
+                          <span className="endpoint-text"><strong className="endpoint-label">To:</strong> {toName}</span>
+                        </div>
+                      ) : (
+                        <div className="guest-step-endpoints">
+                          <span className="endpoint-text"><strong className="endpoint-label">Board:</strong> {fromName}</span>
+                          <span className="endpoint-text"><strong className="endpoint-label">Ride:</strong> {legMinutes > 0 ? `${legMinutes} min` : 'Transit'}</span>
+                          <span className="endpoint-text"><strong className="endpoint-label">Get Off:</strong> {toName}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="guest-timeline-connector">
-                <ArrowDown size={14} />
-              </div>
-            </React.Fragment>
-          );
-        })}
+                <div className="guest-timeline-connector">
+                  <ArrowDown size={16} />
+                </div>
+              </React.Fragment>
+            );
+          })}
 
-        {/* Final Destination Node */}
-        <div className="guest-timeline-step guest-step-destination">
-          <div className="guest-step-left">
-            <div className="guest-step-icon-badge mode-destination">
-              <MapPin size={18} />
+          <div className="guest-timeline-step guest-step-destination">
+            <div className="guest-step-left">
+              <div className="guest-step-icon-badge mode-destination">
+                <MapPin size={18} />
+              </div>
+            </div>
+            <div className="guest-step-right">
+              <span className="guest-step-title">{venue?.name || 'Meeting Point'}</span>
+              <span className="guest-step-sub">{venue?.address || venue?.location || 'Destination'}</span>
             </div>
           </div>
-          <div className="guest-step-right">
-            <span className="guest-step-title">{venue?.name || 'Meeting Point'}</span>
-            <span className="guest-step-sub">{venue?.address || venue?.location || 'Destination'}</span>
-          </div>
         </div>
-      </div>
+      ) : (
+        <div className="no-route-text">
+          <p>Origin: {origin?.name || `User ${userTag} Location`}</p>
+          <p className="no-route-sub">Direct travel to meeting point.</p>
+        </div>
+      )}
     </div>
   );
 }
 
 function SharedLinkPage() {
-  const navigate = useNavigate();
   const { shareId } = useParams();
   const [shareData, setShareData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [backIntercepted, setBackIntercepted] = useState(false);
 
-  const [itineraryIndexA, setItineraryIndexA] = useState(0);
-  const [itineraryIndexB, setItineraryIndexB] = useState(0);
-
-  // Fetch share link data
   useEffect(() => {
     if (!shareId) {
       setError('Invalid share link.');
@@ -195,41 +194,11 @@ function SharedLinkPage() {
     return () => { cancelled = true; };
   }, [shareId]);
 
-  // Browser Back Button Interception
-  useEffect(() => {
-    window.history.pushState({ isGuestShare: true }, '', window.location.href);
-
-    const handlePopState = (e) => {
-      if (!backIntercepted) {
-        window.history.pushState({ isGuestShare: true }, '', window.location.href);
-        setShowModal(true);
-        setBackIntercepted(true);
-      } else {
-        window.history.back();
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [backIntercepted]);
-
-  const handleCloseModal = useCallback(() => {
-    setShowModal(false);
-  }, []);
-
-  const handleDownloadApp = useCallback(() => {
-    navigate('/');
-  }, [navigate]);
-
   const venue = shareData?.venue;
   const originA = shareData?.originA;
   const originB = shareData?.originB;
   const routeDataA = shareData?.routeDataA;
   const routeDataB = shareData?.routeDataB;
-  const routeErrorA = shareData?.routeErrorA;
-  const routeErrorB = shareData?.routeErrorB;
 
   const extractItineraries = useCallback((routeData) => {
     if (!routeData) return [];
@@ -246,9 +215,8 @@ function SharedLinkPage() {
   const itinerariesA = useMemo(() => extractItineraries(routeDataA), [extractItineraries, routeDataA]);
   const itinerariesB = useMemo(() => extractItineraries(routeDataB), [extractItineraries, routeDataB]);
 
-  const itineraryA = itinerariesA[itineraryIndexA] || itinerariesA[0] || null;
-  const itineraryB = itinerariesB[itineraryIndexB] || itinerariesB[0] || null;
-  const hasDetailedRoutes = Boolean(itineraryA || itineraryB);
+  const itineraryA = itinerariesA[0] || null;
+  const itineraryB = itinerariesB[0] || null;
 
   const mapPoints = useMemo(() => {
     const pts = [];
@@ -281,34 +249,13 @@ function SharedLinkPage() {
           Link Unavailable
         </h2>
         <p style={{ color: '#A1A1A1', fontSize: 14 }}>{error || 'This share link is no longer valid.'}</p>
-        <button className="guest-btn-primary" style={{ marginTop: 16 }} onClick={() => navigate('/')}>
-          Go to MEDIO
-        </button>
       </div>
     );
   }
 
   return (
     <div className="guest-share-page">
-      <GuestShareModal
-        isOpen={showModal}
-        onClose={handleCloseModal}
-        onDownload={handleDownloadApp}
-      />
-
-      {/* Guest Mode Navigation Header */}
-      <div className="guest-top-bar">
-        <div className="guest-brand">
-          <Compass size={20} style={{ color: '#0A84FF' }} />
-          <span className="guest-brand-text">MEDIO</span>
-        </div>
-        <div className="guest-mode-badge">
-          <ShieldCheck size={14} />
-          <span>Shared View</span>
-        </div>
-      </div>
-
-      {/* Hero Header */}
+      {/* 1. Venue Hero */}
       <div className="detail-hero">
         <img src={venue?.image || coffeeHero} alt={venue?.name || 'Venue'} />
         <div className="detail-hero-overlay"></div>
@@ -327,21 +274,12 @@ function SharedLinkPage() {
         </div>
       </div>
 
-      {/* Guest Mode Main Content */}
+      {/* Main Content Body */}
       <div className="guest-share-body">
-        {/* Legacy Share Document Fallback Alert */}
-        {!hasDetailedRoutes && (
-          <div className="guest-legacy-fallback anim-slide-up-fade">
-            <Compass size={24} style={{ color: '#FF9F0A', flexShrink: 0 }} />
-            <span>This shared journey was created using an older version of MEDIO and does not contain detailed route information.</span>
-          </div>
-        )}
-
-        {/* Small Context Map (Pins Only - No Polylines) */}
+        {/* 2. Small Map (ONLY 3 Markers - NO Route Lines/Polylines/Replay) */}
         <div className="guest-map-container guest-map-small anim-slide-up-fade" style={{ animationDelay: '0.3s' }}>
           <div className="guest-map-header">
             <span className="guest-map-title">Location Overview</span>
-            <span className="guest-map-hint">Pan & Zoom active</span>
           </div>
           <div className="guest-map-wrapper guest-map-wrapper-small">
             <MapContainer
@@ -357,7 +295,7 @@ function SharedLinkPage() {
 
               <MapBoundsAdjuster points={mapPoints} />
 
-              {/* Meeting Venue Marker */}
+              {/* Meeting Point Marker */}
               {venue?.lat != null && (
                 <Marker
                   position={[venue.lat, venue.lon ?? venue.lng]}
@@ -365,76 +303,40 @@ function SharedLinkPage() {
                 />
               )}
 
-              {/* Origin A Marker */}
+              {/* User A Marker */}
               {originA?.lat != null && originA?.lng != null && (
                 <Marker
                   position={[originA.lat, originA.lng]}
-                  icon={originAMarkerIcon}
+                  icon={userAMarkerIcon}
                 />
               )}
 
-              {/* Origin B Marker */}
+              {/* User B Marker */}
               {originB?.lat != null && originB?.lng != null && (
                 <Marker
                   position={[originB.lat, originB.lng]}
-                  icon={originBMarkerIcon}
+                  icon={userBMarkerIcon}
                 />
               )}
             </MapContainer>
           </div>
         </div>
 
-        {/* Textual Step-by-Step Timeline: Person A */}
-        {itineraryA && (
-          <div>
-            <GuestTimelineItinerary
-              itinerary={itineraryA}
-              origin={originA}
-              venue={venue}
-              userTag="A"
-            />
-            {itinerariesA.length > 1 && (
-              <ItinerarySwitcher
-                index={itineraryIndexA}
-                total={itinerariesA.length}
-                onPrev={() => setItineraryIndexA((i) => Math.max(0, i - 1))}
-                onNext={() => setItineraryIndexA((i) => Math.min(itinerariesA.length - 1, i + 1))}
-              />
-            )}
-          </div>
-        )}
+        {/* 3. USER A CARD */}
+        <UserTimelineCard
+          itinerary={itineraryA}
+          origin={originA}
+          venue={venue}
+          userTag="A"
+        />
 
-        {/* Textual Step-by-Step Timeline: Person B */}
-        {itineraryB && (
-          <div>
-            <GuestTimelineItinerary
-              itinerary={itineraryB}
-              origin={originB}
-              venue={venue}
-              userTag="B"
-            />
-            {itinerariesB.length > 1 && (
-              <ItinerarySwitcher
-                index={itineraryIndexB}
-                total={itinerariesB.length}
-                onPrev={() => setItineraryIndexB((i) => Math.max(0, i - 1))}
-                onNext={() => setItineraryIndexB((i) => Math.min(itinerariesB.length - 1, i + 1))}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Download App Sticky Banner */}
-        <div className="guest-cta-banner anim-slide-up-fade">
-          <div className="guest-cta-content">
-            <span className="guest-cta-title">Enjoying this shared journey?</span>
-            <span className="guest-cta-sub">Download MEDIO to create your own smart meeting points.</span>
-          </div>
-          <button className="guest-cta-btn" onClick={handleDownloadApp}>
-            <Download size={15} />
-            Download App
-          </button>
-        </div>
+        {/* 4. USER B CARD */}
+        <UserTimelineCard
+          itinerary={itineraryB}
+          origin={originB}
+          venue={venue}
+          userTag="B"
+        />
       </div>
     </div>
   );
