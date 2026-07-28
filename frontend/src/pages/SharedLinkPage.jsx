@@ -231,11 +231,23 @@ function SharedLinkPage() {
   const routeErrorA = shareData?.routeErrorA;
   const routeErrorB = shareData?.routeErrorB;
 
-  const itinerariesA = routeDataA?.data?.plan?.itineraries || [];
-  const itinerariesB = routeDataB?.data?.plan?.itineraries || [];
+  const extractItineraries = useCallback((routeData) => {
+    if (!routeData) return [];
+    if (Array.isArray(routeData)) return routeData;
+    if (Array.isArray(routeData.itineraries)) return routeData.itineraries;
+    if (Array.isArray(routeData.plan?.itineraries)) return routeData.plan.itineraries;
+    if (Array.isArray(routeData.data?.plan?.itineraries)) return routeData.data.plan.itineraries;
+    if (Array.isArray(routeData.data?.itineraries)) return routeData.data.itineraries;
+    if (routeData.itinerary?.legs) return [routeData.itinerary];
+    if (routeData.legs) return [routeData];
+    return [];
+  }, []);
 
-  const itineraryA = itinerariesA[itineraryIndexA] || null;
-  const itineraryB = itinerariesB[itineraryIndexB] || null;
+  const itinerariesA = useMemo(() => extractItineraries(routeDataA), [extractItineraries, routeDataA]);
+  const itinerariesB = useMemo(() => extractItineraries(routeDataB), [extractItineraries, routeDataB]);
+
+  const itineraryA = itinerariesA[itineraryIndexA] || itinerariesA[0] || null;
+  const itineraryB = itinerariesB[itineraryIndexB] || itinerariesB[0] || null;
   const hasDetailedRoutes = Boolean(itineraryA || itineraryB);
 
   const mapPoints = useMemo(() => {
