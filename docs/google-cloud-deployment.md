@@ -13,6 +13,7 @@ The commands below use these placeholders:
 - `REPOSITORY`: Artifact Registry Docker repository, for example `medio`.
 - `BACKEND_URL`: final backend Cloud Run URL.
 - `FRONTEND_URL`: canonical frontend URL, `https://medio.mywire.org`.
+- `ALLOWED_ORIGINS`: production frontend origin allowlist, `https://medio.mywire.org,https://www.medio.mywire.org`.
 - `OTP_PRIVATE_IP`: internal IP address of the OTP Compute Engine VM.
 
 ## Enable APIs
@@ -64,7 +65,7 @@ gcloud run deploy medio-api \
   --port=8080 \
   --memory=512Mi \
   --cpu=1 \
-  --set-env-vars='^|^NODE_ENV=production|FRONTEND_URL=https://medio.mywire.org|ALLOWED_ORIGINS=https://medio.mywire.org|CAPACITOR_ORIGINS=capacitor://localhost,http://localhost,https://localhost|OTP_BASE_URL=http://OTP_PRIVATE_IP:8080|JWT_ISSUER=medio-api|JWT_AUDIENCE=medio-web|JWT_EXPIRES_IN=7d|BCRYPT_ROUNDS=12|LOG_LEVEL=info' \
+  --set-env-vars='^|^NODE_ENV=production|FRONTEND_URL=https://medio.mywire.org|ALLOWED_ORIGINS=https://medio.mywire.org,https://www.medio.mywire.org|CAPACITOR_ORIGINS=capacitor://localhost,http://localhost,https://localhost|OTP_BASE_URL=http://OTP_PRIVATE_IP:8080|JWT_ISSUER=medio-api|JWT_AUDIENCE=medio-web|JWT_EXPIRES_IN=7d|BCRYPT_ROUNDS=12|LOG_LEVEL=info' \
   --set-env-vars='^|^MONGO_URI=YOUR_MONGO_URI|JWT_SECRET=YOUR_32_PLUS_CHAR_SECRET|GOOGLE_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET=YOUR_GOOGLE_CLIENT_SECRET|GOOGLE_CALLBACK_URL=https://BACKEND_CLOUD_RUN_HOST/api/auth/google/callback'
 ```
 
@@ -104,7 +105,7 @@ Update the backend service with the canonical frontend origin:
 ```sh
 gcloud run services update medio-api \
   --region=REGION \
-  --update-env-vars=FRONTEND_URL=https://medio.mywire.org,ALLOWED_ORIGINS=https://medio.mywire.org
+  --update-env-vars='^|^FRONTEND_URL=https://medio.mywire.org|ALLOWED_ORIGINS=https://medio.mywire.org,https://www.medio.mywire.org'
 ```
 
 ## Deploy OTP to Compute Engine

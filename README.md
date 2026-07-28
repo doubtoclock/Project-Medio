@@ -22,7 +22,7 @@ The backend deploy is split into two Render services in `render.yaml`:
 Create a Render Blueprint from this repo and fill the synced env vars:
 
 - `FRONTEND_URL`: the canonical production frontend URL, `https://medio.mywire.org`.
-- `ALLOWED_ORIGINS`: include `https://medio.mywire.org` and any local development origins you need.
+- `ALLOWED_ORIGINS`: include `https://medio.mywire.org,https://www.medio.mywire.org` and any local development origins you need.
 - `MONGO_URI`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`

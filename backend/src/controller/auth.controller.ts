@@ -43,10 +43,6 @@ const getAllowedFrontendOrigin = (url: string) => {
       return null;
     }
 
-    if (env.IS_PRODUCTION) {
-      return new URL(`${parsed.pathname}${parsed.search}${parsed.hash}`, env.FRONTEND_URL);
-    }
-
     return parsed;
   } catch {
     return null;

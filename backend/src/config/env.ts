@@ -80,6 +80,10 @@ const values = parsedEnv.data;
 const isProduction = values.NODE_ENV === "production";
 const normalizeUrl = (url: string) => url.replace(/\/+$/, "");
 const CANONICAL_FRONTEND_URL = "https://medio.mywire.org";
+const PRODUCTION_FRONTEND_ORIGINS = [
+  CANONICAL_FRONTEND_URL,
+  "https://www.medio.mywire.org",
+];
 const LEGACY_FRONTEND_HOST = ["project-medio-rpcz", "vercel", "app"].join(".");
 const isLegacyFrontendOrigin = (url: string) => {
   try {
@@ -92,16 +96,17 @@ const configuredFrontendUrl = normalizeUrl(
   values.FRONTEND_URL ?? "http://localhost:5173"
 );
 const frontendUrl = isProduction ? CANONICAL_FRONTEND_URL : configuredFrontendUrl;
+const configuredAllowedOrigins = [
+  ...(frontendUrl ? [frontendUrl] : []),
+  ...csv(values.ALLOWED_ORIGINS),
+  ...csv(values.CAPACITOR_ORIGINS),
+  "capacitor://localhost",
+  "http://localhost",
+  "https://localhost",
+].filter((origin) => !isLegacyFrontendOrigin(origin));
 const allowedOrigins = Array.from(
-  new Set([
-    ...(frontendUrl ? [frontendUrl] : []),
-    ...csv(values.ALLOWED_ORIGINS),
-    ...csv(values.CAPACITOR_ORIGINS),
-    "capacitor://localhost",
-    "http://localhost",
-    "https://localhost",
-  ])
-).filter((origin) => !isLegacyFrontendOrigin(origin));
+  new Set(isProduction ? PRODUCTION_FRONTEND_ORIGINS : configuredAllowedOrigins)
+);
 
 const hasHttpProtocol = (url: string) => /^https?:\/\//i.test(url);
 const otpHostport = values.OTP_HOSTPORT || "localhost:8080";
