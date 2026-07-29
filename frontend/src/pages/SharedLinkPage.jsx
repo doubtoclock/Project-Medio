@@ -43,7 +43,7 @@ function UserTimelineCard({ itineraries, origin, venue, userTag }) {
     <section className="guest-route-card anim-slide-up-fade">
       <div className="guest-route-heading">
         <span className={`guest-route-dot user-${userTag.toLowerCase()}`}></span>
-        <h3>Your Route</h3>
+        <h3>Route {userTag}</h3>
       </div>
 
       <div className="guest-route-metrics">
