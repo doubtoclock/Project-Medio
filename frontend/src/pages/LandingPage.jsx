@@ -67,7 +67,7 @@ function LandingPage() {
 
         {/* Footer */}
         <p className="landing-footer">
-          52.5200° N, 13.4050° E — BERLIN HQ
+          19.0760° N, 72.8777° E — MUMBAI HQ
         </p>
       </div>
     </div>

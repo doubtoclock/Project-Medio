@@ -90,13 +90,13 @@ function ResultsPage() {
 
   const meetResults = useMemo(() => location.state?.meetResults || [], [location.state?.meetResults]);
   const originA = useMemo(() => location.state?.originA || {
-    lat: parseFloat(searchParams.get('latA')) || 52.5350,
-    lng: parseFloat(searchParams.get('lngA')) || 13.3890,
-    name: location.state?.locA || searchParams.get('nameA') || 'Berlin, Mitte',
+    lat: parseFloat(searchParams.get('latA')) || 19.0760,
+    lng: parseFloat(searchParams.get('lngA')) || 72.8777,
+    name: location.state?.locA || searchParams.get('nameA') || 'Mumbai',
   }, [location.state?.originA?.lat, location.state?.originA?.lng, location.state?.originA?.name, location.state?.locA, searchParams.get('latA'), searchParams.get('lngA'), searchParams.get('nameA')]);
   const originB = useMemo(() => location.state?.originB || {
-    lat: parseFloat(searchParams.get('latB')) || 52.5050,
-    lng: parseFloat(searchParams.get('lngB')) || 13.4250,
+    lat: parseFloat(searchParams.get('latB')) || 19.2813,
+    lng: parseFloat(searchParams.get('lngB')) || 72.8567,
     name: location.state?.locB || searchParams.get('nameB') || "Friend's Location",
   }, [location.state?.originB?.lat, location.state?.originB?.lng, location.state?.originB?.name, location.state?.locB, searchParams.get('latB'), searchParams.get('lngB'), searchParams.get('nameB')]);
 
@@ -232,7 +232,11 @@ function ResultsPage() {
           to: { lat: selectedVenue.lat, lng: selectedVenue.lon },
           fromName,
           toName: selectedVenue.name,
+          travelMode: 'local',
+          localTransport: { bus: true, rail: true, subway: true, car: true },
         });
+        const itineraries = data?.data?.plan?.itineraries;
+        if (!Array.isArray(itineraries) || itineraries.length === 0) throw new Error('No route found');
         if (!cancelled) {
           setRouteCache((prev) => {
             const next = { ...prev, [routeKey]: data };

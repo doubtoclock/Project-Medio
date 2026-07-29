@@ -208,7 +208,7 @@ function MeetPage() {
       {/* Background Map */}
       <div className="meet-bg">
         <MapContainer
-          center={[52.5200, 13.4050]}
+          center={[19.0760, 72.8777]}
           zoom={13}
           zoomControl={false}
           attributionControl={false}
@@ -221,7 +221,7 @@ function MeetPage() {
           <TileLayer
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           />
-          <Marker position={[52.5200, 13.4050]} icon={liveLocationIcon} />
+          <Marker position={[19.0760, 72.8777]} icon={liveLocationIcon} />
         </MapContainer>
         <div className="meet-bg-overlay"></div>
       </div>
@@ -407,7 +407,7 @@ function MeetPage() {
 
         {/* Footer */}
         <div className="meet-footer">
-          <span className="meet-footer-text">52.5200° N, 13.4050° E</span>
+          <span className="meet-footer-text">19.0760° N, 72.8777° E</span>
           <span className="meet-footer-text">S-01 ACTIVE</span>
         </div>
       </div>

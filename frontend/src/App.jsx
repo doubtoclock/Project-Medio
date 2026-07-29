@@ -11,6 +11,7 @@ import ProfilePage from './pages/ProfilePage';
 import HowToUsePage from './pages/HowToUsePage';
 import JourneyPlannerPage from './pages/JourneyPlannerPage';
 import InfoPage from './pages/InfoPage';
+import DownloadAppPage from './pages/DownloadAppPage';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -21,7 +22,7 @@ import './App.css';
 function AppRoutes() {
   const { isExpanded, setIsExpanded } = useNavigation();
   const location = useLocation();
-  const isPublicPage = ['/', '/login', '/privacy', '/terms'].includes(location.pathname);
+  const isPublicPage = ['/', '/login', '/privacy', '/terms', '/download-app'].includes(location.pathname);
   const isGuestSharePage = location.pathname.startsWith('/share');
   const hideNav = isPublicPage || isGuestSharePage;
 
@@ -55,6 +56,7 @@ function AppRoutes() {
               <Route path="/detail" element={<DetailPage />} />
               <Route path="/share" element={<ProtectedRoute><SharePage /></ProtectedRoute>} />
               <Route path="/share/:shareId" element={<SharedLinkPage />} />
+              <Route path="/download-app" element={<DownloadAppPage />} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/guide" element={<ProtectedRoute><HowToUsePage /></ProtectedRoute>} />
               <Route path="/travel" element={<JourneyPlannerPage />} />

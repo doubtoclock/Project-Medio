@@ -3,6 +3,7 @@ import { env } from "../config/env";
 import { History } from "../models/history";
 import { getOrCreateCurrentUser } from "../utils/current-user";
 import { logger } from "../utils/logger";
+import { isWithinServiceAreaBounds } from "../utils/service-area";
 import { RouteRequestInput } from "../validators/api.validator";
 
 type TravelMode = "car" | "bike" | "local" | "walk";
@@ -143,6 +144,24 @@ const pickDistinctBestItineraries = (itineraries: any[], limit = 3) => {
   }).slice(0, limit);
 };
 
+const getItineraryModeGroup = (itinerary: any) => {
+  const legModes = Array.isArray(itinerary?.legs)
+    ? itinerary.legs.map((leg: any) => leg?.mode).filter(Boolean)
+    : [];
+  if (legModes.includes("CAR")) return "car";
+  if (legModes.some((mode: string) => ["BUS", "RAIL", "SUBWAY"].includes(mode))) return "local";
+  if (legModes.every((mode: string) => mode === "WALK")) return "walk";
+  return "other";
+};
+
+const pickBestByModeGroup = (itineraries: any[], limit = 3) => {
+  const sorted = [...itineraries].sort((a, b) => (a?.duration ?? Infinity) - (b?.duration ?? Infinity));
+  const picked = ["car", "local", "walk"]
+    .map((group) => sorted.find((item) => getItineraryModeGroup(item) === group))
+    .filter(Boolean);
+  return pickDistinctBestItineraries([...picked, ...sorted], limit);
+};
+
 const filterItineraryListByModes = (
   itineraries: any[],
   transportModes: OtpTransportMode[]
@@ -170,6 +189,7 @@ const filterItineraryListByModes = (
 
 const getCandidateModeSets = (transportModes: OtpTransportMode[]) => {
   const hasCar = transportModes.includes("CAR");
+  const hasWalk = transportModes.includes("WALK");
   const transitModes = transportModes.filter((mode) =>
     ["BUS", "RAIL", "SUBWAY"].includes(mode)
   );
@@ -178,7 +198,12 @@ const getCandidateModeSets = (transportModes: OtpTransportMode[]) => {
     return [
       ["WALK", ...transitModes] as OtpTransportMode[],
       ["WALK", "CAR"] as OtpTransportMode[],
+      ["WALK"] as OtpTransportMode[],
     ];
+  }
+
+  if (hasWalk && transitModes.length > 0) {
+    return [transportModes, ["WALK"] as OtpTransportMode[]];
   }
 
   return [transportModes];
@@ -299,6 +324,12 @@ export const getRouteFromOTP = async (req: Request, res: Response) => {
     const { from, to, fromName, toName, travelMode, localTransport } =
       req.body as RouteRequestInput;
 
+    if (!isWithinServiceAreaBounds(from) || !isWithinServiceAreaBounds(to)) {
+      return res.status(400).json({
+        message: "Routing is available only in Mumbai and Mira Bhayandar",
+      });
+    }
+
     const transportModes = getRequestedTransportModes(travelMode, localTransport);
 
     if (transportModes.length === 0) {
@@ -309,11 +340,18 @@ export const getRouteFromOTP = async (req: Request, res: Response) => {
 
     const routingDateTime = getRoutingDateTime(transportModes);
     const candidateModeSets = getCandidateModeSets(transportModes);
-    const otpResponses = await Promise.all(
+    const otpResponses = await Promise.allSettled(
       candidateModeSets.map((modeSet) => fetchOtpPlan(modeSet, from, to, routingDateTime))
     );
-    const baseOtpData: any = otpResponses[0] ?? { data: { plan: { itineraries: [] } } };
-    const mergedItineraries = otpResponses.flatMap((otpData, index) => {
+    const fulfilledResponses = otpResponses
+      .map((result, index) => ({ result, index }))
+      .filter((item): item is { result: PromiseFulfilledResult<any>; index: number } => item.result.status === "fulfilled");
+    if (fulfilledResponses.length === 0) {
+      throw new Error("Failed to fetch route from OTP");
+    }
+    const baseOtpData: any = fulfilledResponses[0]?.result.value ?? { data: { plan: { itineraries: [] } } };
+    const mergedItineraries = fulfilledResponses.flatMap(({ result, index }) => {
+      const otpData = result.value;
       const itineraries = otpData?.data?.plan?.itineraries;
       return Array.isArray(itineraries)
         ? filterItineraryListByModes(itineraries, candidateModeSets[index])
@@ -325,7 +363,7 @@ export const getRouteFromOTP = async (req: Request, res: Response) => {
         ...baseOtpData.data,
         plan: {
           ...baseOtpData.data?.plan,
-          itineraries: pickDistinctBestItineraries(mergedItineraries, 3),
+          itineraries: pickBestByModeGroup(mergedItineraries, 3),
         },
       },
     };

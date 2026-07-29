@@ -4,6 +4,7 @@ const express_1 = require("express");
 const security_middleware_1 = require("../middlewares/security.middleware");
 const validation_middleware_1 = require("../middlewares/validation.middleware");
 const logger_1 = require("../utils/logger");
+const service_area_1 = require("../utils/service-area");
 const api_validator_1 = require("../validators/api.validator");
 const router = (0, express_1.Router)();
 const PHOTON_TIMEOUT_MS = 1800;
@@ -88,12 +89,6 @@ const curatedLocations = [
         keywords: ["borivali"]
     },
     {
-        name: "Thane West",
-        lat: 19.2183,
-        lng: 72.9781,
-        keywords: ["thane west", "thane"]
-    },
-    {
         name: "Colaba, Mumbai",
         lat: 18.9067,
         lng: 72.8147,
@@ -104,6 +99,18 @@ const curatedLocations = [
         lat: 18.9353,
         lng: 72.8272,
         keywords: ["churchgate"]
+    },
+    {
+        name: "Fort, Mumbai",
+        lat: 18.9333,
+        lng: 72.8340,
+        keywords: ["fort", "mumbai fort", "fort mumbai"]
+    },
+    {
+        name: "Kala Ghoda, Fort, Mumbai",
+        lat: 18.9275,
+        lng: 72.8315,
+        keywords: ["kala ghoda", "kala ghoda fort", "fort kala ghoda"]
     },
     {
         name: "BKC, Bandra Kurla Complex, Mumbai",
@@ -260,7 +267,8 @@ const dedupeLocationSuggestions = (suggestions) => {
         if (!key ||
             seen.has(key) ||
             !Number.isFinite(suggestion.lat) ||
-            !Number.isFinite(suggestion.lng)) {
+            !Number.isFinite(suggestion.lng) ||
+            !(0, service_area_1.isWithinServiceAreaBounds)(suggestion)) {
             continue;
         }
         seen.add(key);
@@ -402,11 +410,36 @@ const getPhotonDisplayName = (properties) => {
     ].filter((part) => Boolean(part && normalizeSuggestionName(part) !== normalizeSuggestionName(primary)));
     return [primary, ...Array.from(new Set(context)).slice(0, 2)].join(", ");
 };
+const isPhotonResultInServiceArea = (item) => {
+    const [lng, lat] = item.geometry.coordinates;
+    return (Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        (0, service_area_1.isWithinServiceAreaBounds)({ lat, lng }) &&
+        (0, service_area_1.hasServiceAreaName)([
+            item.properties.name,
+            item.properties.street,
+            item.properties.city,
+            item.properties.district,
+            item.properties.county,
+            item.properties.state,
+        ]));
+};
 const fetchPhotonSuggestions = async (query) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), PHOTON_TIMEOUT_MS);
     try {
-        const response = await fetch(`https://photon.komoot.io/api?q=${encodeURIComponent(query)}&limit=${PHOTON_RESULT_LIMIT}&lang=en`, {
+        const photonParams = new URLSearchParams({
+            q: `${query} ${service_area_1.SERVICE_AREA_QUERY}`,
+            limit: String(PHOTON_RESULT_LIMIT),
+            lang: "en",
+            bbox: [
+                service_area_1.SERVICE_AREA_BOUNDS.west,
+                service_area_1.SERVICE_AREA_BOUNDS.south,
+                service_area_1.SERVICE_AREA_BOUNDS.east,
+                service_area_1.SERVICE_AREA_BOUNDS.north,
+            ].join(","),
+        });
+        const response = await fetch(`https://photon.komoot.io/api?${photonParams.toString()}`, {
             headers: {
                 "User-Agent": "Medio/1.0 (location-search)"
             },
@@ -417,6 +450,7 @@ const fetchPhotonSuggestions = async (query) => {
         }
         const data = (await response.json());
         const photonSuggestions = (data.features ?? [])
+            .filter(isPhotonResultInServiceArea)
             .map((item) => ({
             name: getPhotonDisplayName(item.properties),
             lat: item.geometry.coordinates[1],

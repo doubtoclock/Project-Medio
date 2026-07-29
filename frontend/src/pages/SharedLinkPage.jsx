@@ -1,57 +1,18 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
-  AlertTriangle, Compass, Footprints, Train, Bus, Car, Bike, ArrowDown, MapPin
+  AlertTriangle, Compass, Footprints, Train, Bus, Car, Bike, ArrowLeft, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiClient } from '../lib/apiClient';
 import {
   formatDuration, formatDistance, normalizeMode,
-  modeLabels, getLegRouteName, getLegEndpointName, getLegDurationMinutes, getRouteMetrics
+  modeLabels, getLegRouteName, getLegEndpointName, getRouteMetrics
 } from '../lib/routeUtils';
 import coffeeHero from '../assets/coffee-hero.png';
 import './DetailPage.css';
 import './ResultsPage.css';
 import './SharedLinkPage.css';
-
-const venueMarkerIcon = L.divIcon({
-  className: 'guest-map-marker-container',
-  html: '<div class="guest-marker-badge venue-badge"><div class="marker-dot"></div><span>Meeting Point</span></div>',
-  iconSize: [110, 28],
-  iconAnchor: [55, 14],
-});
-
-const userAMarkerIcon = L.divIcon({
-  className: 'guest-map-marker-container',
-  html: '<div class="guest-marker-badge user-a-badge"><div class="marker-dot"></div><span>User A</span></div>',
-  iconSize: [80, 28],
-  iconAnchor: [40, 14],
-});
-
-const userBMarkerIcon = L.divIcon({
-  className: 'guest-map-marker-container',
-  html: '<div class="guest-marker-badge user-b-badge"><div class="marker-dot"></div><span>User B</span></div>',
-  iconSize: [80, 28],
-  iconAnchor: [40, 14],
-});
-
-function MapBoundsAdjuster({ points }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!points || points.length === 0) return;
-    if (points.length === 1) {
-      map.setView(points[0], 14);
-      return;
-    }
-    const bounds = L.latLngBounds(points);
-    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
-  }, [points, map]);
-
-  return null;
-}
 
 function getModeIcon(mode) {
   const norm = normalizeMode(mode);
@@ -62,91 +23,64 @@ function getModeIcon(mode) {
   return <Footprints size={18} />;
 }
 
-function UserTimelineCard({ itinerary, origin, venue, userTag }) {
+const getStepDotClass = (mode) => {
+  const norm = normalizeMode(mode);
+  if (norm === 'BUS') return 'dot-bus';
+  if (norm === 'RAIL' || norm === 'SUBWAY' || norm === 'TRAM') return 'dot-rail';
+  if (norm === 'CAR') return 'dot-car';
+  return 'dot-walk';
+};
+
+function UserTimelineCard({ itineraries, origin, venue, userTag }) {
+  const [index, setIndex] = useState(0);
+  const itinerary = itineraries[index] || null;
   const legs = itinerary?.legs || [];
   const metrics = itinerary ? getRouteMetrics(itinerary) : null;
   const totalMeters = legs.reduce((acc, leg) => acc + (leg.distance || 0), 0);
+  const total = itineraries.length;
 
   return (
-    <div className="user-timeline-card anim-slide-up-fade">
-      <div className="user-timeline-header">
-        <h3 className={`user-badge user-badge-${userTag.toLowerCase()}`}>
-          USER {userTag}
-        </h3>
+    <section className="guest-route-card anim-slide-up-fade">
+      <div className="guest-route-heading">
+        <span className={`guest-route-dot user-${userTag.toLowerCase()}`}></span>
+        <h3>Your Route</h3>
+      </div>
+
+      <div className="guest-route-metrics">
         {itinerary && metrics && (
-          <div className="user-summary-bar">
-            <span className="summary-chip">{formatDuration(itinerary.duration)}</span>
-            <span className="summary-chip">{formatDistance(totalMeters)}</span>
-            <span className="summary-chip">{metrics.transfers} Transfer{metrics.transfers !== 1 ? 's' : ''}</span>
-          </div>
+          <>
+            <div><strong>{formatDuration(itinerary.duration)}</strong><span>Duration</span></div>
+            <div><strong>{metrics.transfers}</strong><span>Transfer</span></div>
+            <div><strong>{formatDistance(metrics.walkingMeters)}</strong><span>Walk</span></div>
+          </>
         )}
       </div>
 
       {legs.length > 0 ? (
-        <div className="guest-timeline-steps">
+        <div className="guest-route-steps">
           {legs.map((leg, idx) => {
             const mode = normalizeMode(leg.mode);
-            const isWalk = mode === 'WALK';
             const routeName = getLegRouteName(leg);
             const fromName = getLegEndpointName(leg.from, idx === 0 ? (origin?.name || 'Start Location') : 'Transfer Point');
             const toName = getLegEndpointName(leg.to, idx === legs.length - 1 ? (venue?.name || 'Meeting Point') : 'Transfer Point');
-            const legMinutes = getLegDurationMinutes(leg);
             const distanceText = formatDistance(leg.distance || 0);
 
             return (
-              <React.Fragment key={idx}>
-                <div className={`guest-timeline-step ${isWalk ? 'guest-step-walk' : 'guest-step-transit'}`}>
-                  <div className="guest-step-left">
-                    <div className={`guest-step-icon-badge mode-${mode.toLowerCase()}`}>
-                      {getModeIcon(mode)}
-                    </div>
-                  </div>
-
-                  <div className="guest-step-right">
-                    <div className="guest-step-title-row">
-                      <span className="guest-step-title">
-                        {isWalk ? `🚶 Walk` : (modeLabels[mode] ? `🚇 ${routeName}` : routeName)}
-                      </span>
-                      <span className="guest-step-metrics">
-                        {distanceText} {legMinutes > 0 ? `• ${legMinutes} min` : ''}
-                      </span>
-                    </div>
-
-                    <div className="guest-step-detail">
-                      {isWalk ? (
-                        <div className="guest-step-endpoints">
-                          <span className="endpoint-text"><strong className="endpoint-label">From:</strong> {fromName}</span>
-                          <span className="endpoint-text"><strong className="endpoint-label">To:</strong> {toName}</span>
-                        </div>
-                      ) : (
-                        <div className="guest-step-endpoints">
-                          <span className="endpoint-text"><strong className="endpoint-label">Board:</strong> {fromName}</span>
-                          <span className="endpoint-text"><strong className="endpoint-label">Ride:</strong> {legMinutes > 0 ? `${legMinutes} min` : 'Transit'}</span>
-                          <span className="endpoint-text"><strong className="endpoint-label">Get Off:</strong> {toName}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+              <div className="guest-route-step" key={idx}>
+                <div className="guest-route-line">
+                  <span className={`guest-route-step-dot ${getStepDotClass(mode)}`}></span>
+                  {idx < legs.length - 1 && <span className="guest-route-connector"></span>}
                 </div>
-
-                <div className="guest-timeline-connector">
-                  <ArrowDown size={16} />
+                <div className="guest-route-step-body">
+                  <div className="guest-route-step-icon">{getModeIcon(mode)}</div>
+                  <h4>{modeLabels[mode] || routeName}</h4>
+                  {mode !== 'WALK' && routeName && <span className="guest-route-pill">{routeName}</span>}
+                  <p>{fromName} - {toName}</p>
+                  <small>{distanceText}</small>
                 </div>
-              </React.Fragment>
+              </div>
             );
           })}
-
-          <div className="guest-timeline-step guest-step-destination">
-            <div className="guest-step-left">
-              <div className="guest-step-icon-badge mode-destination">
-                <MapPin size={18} />
-              </div>
-            </div>
-            <div className="guest-step-right">
-              <span className="guest-step-title">{venue?.name || 'Meeting Point'}</span>
-              <span className="guest-step-sub">{venue?.address || venue?.location || 'Destination'}</span>
-            </div>
-          </div>
         </div>
       ) : (
         <div className="no-route-text">
@@ -154,12 +88,25 @@ function UserTimelineCard({ itinerary, origin, venue, userTag }) {
           <p className="no-route-sub">Direct travel to meeting point.</p>
         </div>
       )}
-    </div>
+
+      {total > 1 && (
+        <div className="guest-route-switcher">
+          <button onClick={() => setIndex((value) => Math.max(0, value - 1))} disabled={index === 0}>
+            <ChevronLeft size={18} />
+          </button>
+          <span>{index + 1} / {total}</span>
+          <button onClick={() => setIndex((value) => Math.min(total - 1, value + 1))} disabled={index === total - 1}>
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 
 function SharedLinkPage() {
   const { shareId } = useParams();
+  const navigate = useNavigate();
   const [shareData, setShareData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -215,23 +162,6 @@ function SharedLinkPage() {
   const itinerariesA = useMemo(() => extractItineraries(routeDataA), [extractItineraries, routeDataA]);
   const itinerariesB = useMemo(() => extractItineraries(routeDataB), [extractItineraries, routeDataB]);
 
-  const itineraryA = itinerariesA[0] || null;
-  const itineraryB = itinerariesB[0] || null;
-
-  const mapPoints = useMemo(() => {
-    const pts = [];
-    if (venue?.lat != null && (venue?.lon != null || venue?.lng != null)) {
-      pts.push([venue.lat, venue.lon ?? venue.lng]);
-    }
-    if (originA?.lat != null && originA?.lng != null) {
-      pts.push([originA.lat, originA.lng]);
-    }
-    if (originB?.lat != null && originB?.lng != null) {
-      pts.push([originB.lat, originB.lng]);
-    }
-    return pts;
-  }, [venue, originA, originB]);
-
   if (loading) {
     return (
       <div className="guest-share-loading">
@@ -259,6 +189,9 @@ function SharedLinkPage() {
       <div className="detail-hero">
         <img src={venue?.image || coffeeHero} alt={venue?.name || 'Venue'} />
         <div className="detail-hero-overlay"></div>
+        <button className="guest-download-back" onClick={() => navigate('/download-app')} aria-label="Download MEDIO">
+          <ArrowLeft size={20} />
+        </button>
 
         <div className="detail-tags anim-slide-up-fade" style={{ animationDelay: '0.1s' }}>
           <span className="detail-tag">{venue?.category || 'Place'}</span>
@@ -276,63 +209,15 @@ function SharedLinkPage() {
 
       {/* Main Content Body */}
       <div className="guest-share-body">
-        {/* 2. Small Map (ONLY 3 Markers - NO Route Lines/Polylines/Replay) */}
-        <div className="guest-map-container guest-map-small anim-slide-up-fade" style={{ animationDelay: '0.3s' }}>
-          <div className="guest-map-header">
-            <span className="guest-map-title">Location Overview</span>
-          </div>
-          <div className="guest-map-wrapper guest-map-wrapper-small">
-            <MapContainer
-              center={mapPoints[0] || [19.076, 72.8777]}
-              zoom={13}
-              scrollWheelZoom={true}
-              style={{ width: '100%', height: '100%' }}
-            >
-              <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-              />
-
-              <MapBoundsAdjuster points={mapPoints} />
-
-              {/* Meeting Point Marker */}
-              {venue?.lat != null && (
-                <Marker
-                  position={[venue.lat, venue.lon ?? venue.lng]}
-                  icon={venueMarkerIcon}
-                />
-              )}
-
-              {/* User A Marker */}
-              {originA?.lat != null && originA?.lng != null && (
-                <Marker
-                  position={[originA.lat, originA.lng]}
-                  icon={userAMarkerIcon}
-                />
-              )}
-
-              {/* User B Marker */}
-              {originB?.lat != null && originB?.lng != null && (
-                <Marker
-                  position={[originB.lat, originB.lng]}
-                  icon={userBMarkerIcon}
-                />
-              )}
-            </MapContainer>
-          </div>
-        </div>
-
-        {/* 3. USER A CARD */}
         <UserTimelineCard
-          itinerary={itineraryA}
+          itineraries={itinerariesA}
           origin={originA}
           venue={venue}
           userTag="A"
         />
 
-        {/* 4. USER B CARD */}
         <UserTimelineCard
-          itinerary={itineraryB}
+          itineraries={itinerariesB}
           origin={originB}
           venue={venue}
           userTag="B"

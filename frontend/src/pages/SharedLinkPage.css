@@ -1,9 +1,17 @@
 .guest-share-page {
-  min-height: 100vh;
+  min-height: 100%;
+  height: 100%;
   background-color: #0A0A0C;
   color: #F5F5F5;
-  padding-bottom: 90px;
   position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  box-sizing: border-box;
+}
+
+.guest-share-page::-webkit-scrollbar {
+  display: none;
 }
 
 .guest-share-loading,
@@ -64,12 +72,231 @@
 }
 
 .guest-share-body {
-  padding: 20px 20px 40px;
+  padding: 0 0 28px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  max-width: 640px;
+  gap: 8px;
+  max-width: 520px;
   margin: 0 auto;
+}
+
+.guest-share-page .detail-hero {
+  height: 294px;
+}
+
+.guest-share-page .detail-tags {
+  bottom: 90px;
+}
+
+.guest-share-page .detail-venue-name {
+  font-size: 56px;
+  line-height: 0.96;
+  max-width: 88%;
+}
+
+.guest-download-back {
+  position: absolute;
+  top: 68px;
+  right: 28px;
+  z-index: 20;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.72);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.guest-route-card {
+  margin-top: -1px;
+  border-radius: 24px;
+  background: #0D0D0F;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 34px 28px 26px;
+}
+
+.guest-route-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.guest-route-heading h3 {
+  margin: 0;
+  font-family: 'Space Mono', monospace;
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+}
+
+.guest-route-dot {
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.75);
+}
+
+.guest-route-dot.user-b {
+  background: #0A84FF;
+  box-shadow: 0 0 14px rgba(10, 132, 255, 0.75);
+}
+
+.guest-route-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  margin-bottom: 32px;
+}
+
+.guest-route-metrics div {
+  min-width: 0;
+}
+
+.guest-route-metrics strong {
+  display: block;
+  font-family: 'Space Mono', monospace;
+  font-size: 27px;
+  line-height: 1.05;
+  color: #F5F5F5;
+  white-space: nowrap;
+}
+
+.guest-route-metrics span {
+  display: block;
+  margin-top: 8px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #8E8E93;
+}
+
+.guest-route-steps {
+  display: flex;
+  flex-direction: column;
+}
+
+.guest-route-step {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  column-gap: 14px;
+  min-height: 126px;
+}
+
+.guest-route-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.guest-route-step-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #8E8E93;
+  flex: 0 0 auto;
+}
+
+.guest-route-step-dot.dot-bus {
+  background: #FF9F0A;
+}
+
+.guest-route-step-dot.dot-rail {
+  background: #0A84FF;
+}
+
+.guest-route-step-dot.dot-car {
+  background: #C7C7CC;
+}
+
+.guest-route-connector {
+  width: 2px;
+  flex: 1;
+  background: rgba(255, 255, 255, 0.13);
+  margin-top: 8px;
+}
+
+.guest-route-step-body {
+  text-align: center;
+  padding-bottom: 26px;
+}
+
+.guest-route-step-icon {
+  display: none;
+}
+
+.guest-route-step-body h4 {
+  margin: -4px 0 12px;
+  color: #FFFFFF;
+  font-size: 24px;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.guest-route-pill {
+  display: inline-block;
+  max-width: 100%;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #A1A1A1;
+  font-family: 'Space Mono', monospace;
+  font-size: 19px;
+  padding: 5px 12px;
+  margin-bottom: 10px;
+}
+
+.guest-route-step-body p {
+  margin: 0 auto 12px;
+  color: #F5F5F5;
+  font-size: 21px;
+  line-height: 1.25;
+}
+
+.guest-route-step-body small {
+  color: #6F6F6F;
+  font-family: 'Space Mono', monospace;
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+
+.guest-route-switcher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 22px;
+  margin-top: 8px;
+}
+
+.guest-route-switcher button {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1C1C1E;
+  color: #F5F5F5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guest-route-switcher button:disabled {
+  opacity: 0.35;
+}
+
+.guest-route-switcher span {
+  font-family: 'Space Mono', monospace;
+  color: #A1A1A1;
+  font-size: 18px;
 }
 
 .guest-legacy-fallback {
@@ -389,12 +616,33 @@
 }
 
 @media (max-width: 600px) {
-  .user-timeline-card {
-    padding: 18px 16px;
-    border-radius: 20px;
+  .guest-route-card {
+    border-radius: 22px;
+    padding: 32px 20px 24px;
   }
-  .guest-map-wrapper-small {
-    height: 180px;
+
+  .guest-share-page .detail-venue-name {
+    font-size: 52px;
+  }
+
+  .guest-route-metrics {
+    gap: 14px;
+  }
+
+  .guest-route-metrics strong {
+    font-size: 24px;
+  }
+
+  .guest-route-metrics span {
+    font-size: 11px;
+    letter-spacing: 3px;
+  }
+
+  .guest-route-step-body h4 {
+    font-size: 22px;
+  }
+
+  .guest-route-step-body p {
+    font-size: 19px;
   }
 }
-

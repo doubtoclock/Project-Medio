@@ -3,6 +3,7 @@ import { History } from "../models/history";
 import { findMeetPoints } from "../services/meet.services";
 import { getOrCreateCurrentUser } from "../utils/current-user";
 import { logger } from "../utils/logger";
+import { isWithinServiceAreaBounds } from "../utils/service-area";
 import { MeetRequestInput } from "../validators/api.validator";
 
 export const getMeetPoints = async (
@@ -23,6 +24,13 @@ export const getMeetPoints = async (
   };
 
   try {
+    if (!isWithinServiceAreaBounds(A) || !isWithinServiceAreaBounds(B)) {
+      res.status(400).json({
+        error: "Meeting search is available only in Mumbai and Mira Bhayandar",
+      });
+      return;
+    }
+
     const results = await findMeetPoints(A, B);
 
     const user = await getOrCreateCurrentUser(req);
