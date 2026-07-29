@@ -28,20 +28,6 @@ type POISearchPoint = {
   lon: number;
 };
 
-type RawPhotonFeature = {
-  properties?: {
-    osm_type?: "N" | "W" | "R";
-    osm_id?: number;
-    osm_key?: string;
-    osm_value?: string;
-    name?: string;
-    countrycode?: string;
-  };
-  geometry?: {
-    coordinates?: [number, number];
-  };
-};
-
 export class POILookupUnavailableError extends Error {
   constructor(failures: string[]) {
     super(`Live POI lookup unavailable: ${failures.join("; ")}`);
@@ -54,50 +40,6 @@ const OVERPASS_ENDPOINTS = [
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.openstreetmap.ru/api/interpreter"
 ];
-const PHOTON_ENDPOINT = "https://photon.komoot.io/api";
-const PHOTON_MEETING_QUERIES = [
-  "cafe",
-  "coffee",
-  "food",
-  "restaurant",
-  "mall",
-  "park"
-];
-const GENERIC_PHOTON_NAMES = new Set([
-  "cafe",
-  "coffee",
-  "food",
-  "mall",
-  "park",
-  "restaurant"
-]);
-const PHOTON_ALLOWED_VALUES: Record<string, Set<string>> = {
-  amenity: new Set([
-    "bar",
-    "cafe",
-    "cinema",
-    "community_centre",
-    "fast_food",
-    "food_court",
-    "ice_cream",
-    "library",
-    "marketplace",
-    "pub",
-    "restaurant",
-    "theatre"
-  ]),
-  leisure: new Set([
-    "bowling_alley",
-    "fitness_centre",
-    "garden",
-    "park",
-    "sports_centre"
-  ]),
-  natural: new Set(["beach"]),
-  shop: new Set(["books", "department_store", "mall"]),
-  tourism: new Set(["attraction", "gallery", "hotel", "museum"])
-};
-
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
 
@@ -145,83 +87,6 @@ const normalizeOverpassElements = (elements: RawOverpassElement[]) =>
   elements
     .map(normalizeOverpassElement)
     .filter((poi): poi is OverpassPOI => Boolean(poi));
-
-const normalizePhotonFeature = (
-  feature: RawPhotonFeature
-): OverpassPOI | null => {
-  const properties = feature.properties;
-  const coordinates = feature.geometry?.coordinates;
-  const lon = coordinates?.[0];
-  const lat = coordinates?.[1];
-  const name = properties?.name?.trim();
-  const osmId = properties?.osm_id;
-  const osmKey = properties?.osm_key;
-  const osmValue = properties?.osm_value;
-  const allowedValues = osmKey ? PHOTON_ALLOWED_VALUES[osmKey] : undefined;
-
-  if (
-    typeof lat !== "number" ||
-    typeof lon !== "number" ||
-    typeof osmId !== "number" ||
-    !osmKey ||
-    !osmValue ||
-    !allowedValues?.has(osmValue) ||
-    !name ||
-    GENERIC_PHOTON_NAMES.has(name.toLowerCase()) ||
-    !Number.isFinite(lat) ||
-    !Number.isFinite(lon)
-  ) {
-    return null;
-  }
-
-  const osmType =
-    properties?.osm_type === "W"
-      ? "way"
-      : properties?.osm_type === "R"
-        ? "relation"
-        : "node";
-  const tags: Record<string, string> = { name };
-
-  tags[osmKey] = osmValue;
-
-  return {
-    type: osmType,
-    id: osmId,
-    lat,
-    lon,
-    tags
-  };
-};
-
-const fetchPhotonQuery = async (
-  query: string,
-  point: POISearchPoint,
-  timeoutMs: number
-) => {
-  const response = await axios.get(PHOTON_ENDPOINT, {
-    params: {
-      q: query,
-      limit: 12,
-      lat: point.lat,
-      lon: point.lon
-    },
-    headers: {
-      "User-Agent": "Medio/1.0 (meeting-place-search)"
-    },
-    maxRedirects: 0,
-    timeout: timeoutMs
-  });
-
-  const features = response.data?.features;
-
-  if (!Array.isArray(features)) {
-    return [];
-  }
-
-  return features
-    .map(normalizePhotonFeature)
-    .filter((poi): poi is OverpassPOI => Boolean(poi));
-};
 
 const postOverpassQuery = async (
   endpoint: string,
@@ -328,51 +193,6 @@ export async function fetchMeetingPOIsNearPoints(
   }
 
   return pois;
-}
-
-export async function fetchPhotonMeetingPOIsNearPoints(
-  points: POISearchPoint[],
-  radiusKm: number,
-  limit = 80,
-  timeoutMs = 3500
-): Promise<OverpassPOI[]> {
-  if (points.length === 0) return [];
-
-  const searchPoints = points.slice(0, 3);
-  const maxDistanceKm = clamp(radiusKm, 2, 35);
-  const requests = searchPoints.flatMap((point) =>
-    PHOTON_MEETING_QUERIES.map((query) =>
-      fetchPhotonQuery(query, point, timeoutMs)
-    )
-  );
-  const settled = await Promise.allSettled(requests);
-  const pois = settled
-    .flatMap((result) => (
-      result.status === "fulfilled" ? result.value : []
-    ))
-    .filter((poi) =>
-      searchPoints.some((point) =>
-        getDistanceKm(point, { lat: poi.lat, lon: poi.lon }) <= maxDistanceKm
-      )
-    );
-  const deduped = dedupePOIs(pois);
-
-  return deduped
-    .sort((left, right) => {
-      const nearestLeft = Math.min(
-        ...searchPoints.map((point) =>
-          getDistanceKm(point, { lat: left.lat, lon: left.lon })
-        )
-      );
-      const nearestRight = Math.min(
-        ...searchPoints.map((point) =>
-          getDistanceKm(point, { lat: right.lat, lon: right.lon })
-        )
-      );
-
-      return nearestLeft - nearestRight;
-    })
-    .slice(0, limit);
 }
 
 export async function fetchMeetingPOIs(

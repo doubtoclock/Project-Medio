@@ -113,7 +113,6 @@ function ResultsPage() {
   const [routeErrorA, setRouteErrorA] = useState(null);
   const [routeErrorB, setRouteErrorB] = useState(null);
   const [loadingRoutes, setLoadingRoutes] = useState(false);
-  const pendingNavigateRef = useRef(false);
   const routeCacheRef = useRef(savedRestore?.routeCache || {});
   routeCacheRef.current = routeCache;
 
@@ -276,10 +275,6 @@ function ResultsPage() {
     Promise.all([fetchSide('A'), fetchSide('B')]).finally(() => {
       if (!cancelled) {
         setLoadingRoutes(false);
-        if (pendingNavigateRef.current) {
-          pendingNavigateRef.current = false;
-          navigateToDetail(selectedVenue, localDataA, localDataB, localErrorA, localErrorB);
-        }
       }
     });
 
@@ -321,15 +316,11 @@ function ResultsPage() {
 
   const openDetailView = (venue) => {
     if (selectedVenue?.id === venue.id) {
-      if (loadingRoutes) {
-        pendingNavigateRef.current = true;
-        return;
-      }
       navigateToDetail(venue);
       return;
     }
     setSelectedVenue(venue);
-    pendingNavigateRef.current = true;
+    navigateToDetail(venue, null, null, null, null);
   };
 
   return (

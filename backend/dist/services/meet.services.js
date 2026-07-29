@@ -93,12 +93,9 @@ const getCachedMeetResults = (key) => {
     return cached.results;
 };
 const setCachedMeetResults = (key, results) => {
-    const cacheTtlMs = results.every((result) => result.source === "estimated")
-        ? 5 * 60 * 1000
-        : MEET_CACHE_TTL_MS;
     meetCache.set(key, {
         results,
-        expiresAt: Date.now() + cacheTtlMs,
+        expiresAt: Date.now() + MEET_CACHE_TTL_MS,
         lastUsed: Date.now(),
         hits: 0
     });
@@ -201,6 +198,10 @@ const getVenueScore = (tags = {}) => {
         score += 0.04;
     if (tags.website || tags.phone || tags["contact:phone"])
         score += 0.03;
+    if (tags.brand || tags.operator)
+        score += 0.025;
+    if (tags.wikidata || tags.wikipedia)
+        score += 0.05;
     return clamp(score, 0, 1);
 };
 const getMeetQualityReason = (differenceMinutes, category) => {
@@ -342,20 +343,6 @@ const fetchExpandedMeetingPOIs = async (seeds, baseRadiusKm) => {
     }
     return results.slice(0, POI_BATCH_LIMIT);
 };
-const fetchPhotonFallbackMeetingPOIs = async (seeds, baseRadiusKm) => {
-    try {
-        const radiusKm = getQuickSearchRadiusKm(baseRadiusKm);
-        const pois = await (0, poi_services_1.fetchPhotonMeetingPOIsNearPoints)(seeds, radiusKm, POI_BATCH_LIMIT, 3500);
-        logger_1.logger.debug("Photon fallback meeting venues found", {
-            resultCount: pois.length,
-        });
-        return pois.filter(hasUsableName);
-    }
-    catch (err) {
-        logger_1.logger.warn("Photon meeting venue fallback failed", { error: err });
-        return [];
-    }
-};
 const preRankCandidate = (poi, A, B, directDistanceKm) => {
     const point = { lat: poi.lat, lon: poi.lon };
     const distA = getDistanceKm(A, point);
@@ -446,22 +433,6 @@ const rankScoredResults = (pois) => diversifyResults(pois.sort((a, b) => {
     }
     return a.difference - b.difference;
 }));
-const buildEstimatedMeetResults = (seeds, A, B) => {
-    const estimatedCandidates = seeds
-        .slice(0, 5)
-        .map((seed, index) => ({
-        id: -1 * (index + 1),
-        lat: seed.lat,
-        lon: seed.lon,
-        tags: { name: seed.name },
-        source: "estimated"
-    }));
-    return rankScoredResults(estimatedCandidates.map((poi) => ({
-        ...scoreCandidate(poi, A, B),
-        category: "Place",
-        reason: "Estimated fair meeting area while venue lookup is unavailable"
-    })));
-};
 const findSurfaceMeetPois = async (A, B) => {
     const directDuration = await (0, otp_services_1.getOtpDuration)(A.lat, A.lon, B.lat, B.lon, 3500);
     if (!directDuration || directDuration <= 0) {
@@ -533,24 +504,6 @@ const findMeetPointsLive = async (A, B) => {
         logger_1.logger.info("No named meeting venues found after expanded search", {
             maxRadiusKm: MAX_EXPANDED_RADIUS_KM,
         });
-        const photonResults = fetchPhotonFallbackMeetingPOIs(seeds, poiRadiusKm);
-        const photonCandidates = (await photonResults).map((poi) => ({
-            ...poi,
-            source: "photon"
-        }));
-        if (photonCandidates.length > 0) {
-            const photonScored = photonCandidates
-                .map((poi) => preRankCandidate(poi, A, B, directDistanceKm))
-                .sort((left, right) => left.rank - right.rank)
-                .map((candidate) => candidate.poi)
-                .slice(0, PRE_RANK_LIMIT)
-                .map((poi) => scoreCandidate(poi, A, B));
-            const photonRanked = rankScoredResults(photonScored);
-            logger_1.logger.info("Photon fallback returned meeting results", {
-                resultCount: photonRanked.length,
-            });
-            return photonRanked;
-        }
         const surfaceResults = await findMeetPointsWithSurfaceFallback(A, B, directDistanceKm);
         if (surfaceResults.length > 0) {
             logger_1.logger.info("Surface fallback returned meeting results", {
@@ -558,11 +511,7 @@ const findMeetPointsLive = async (A, B) => {
             });
             return surfaceResults;
         }
-        const estimatedResults = buildEstimatedMeetResults(seeds, A, B);
-        logger_1.logger.info("Estimated fallback returned meeting results", {
-            resultCount: estimatedResults.length,
-        });
-        return estimatedResults;
+        return [];
     }
     const candidatePois = osmCandidates
         .map((poi) => preRankCandidate(poi, A, B, directDistanceKm))

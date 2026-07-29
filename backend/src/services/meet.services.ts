@@ -3,7 +3,6 @@ import { Coordinates } from "./isochrone.services";
 import {
   fetchMeetingPOIs,
   fetchMeetingPOIsNearPoints,
-  fetchPhotonMeetingPOIsNearPoints,
   OverpassPOI,
   POILookupUnavailableError
 } from "./poi.services";
@@ -11,7 +10,7 @@ import { generateSurfaceIntersection } from "./surface.services";
 import { getOtpDuration } from "./otp.services";
 import { logger } from "../utils/logger";
 
-type MeetingSource = "osm" | "photon" | "estimated";
+type MeetingSource = "osm";
 
 type MeetCandidate = OverpassPOI & {
   source: MeetingSource;
@@ -118,13 +117,9 @@ const getCachedMeetResults = (key: string) => {
 };
 
 const setCachedMeetResults = (key: string, results: ScoredPoi[]) => {
-  const cacheTtlMs = results.every((result) => result.source === "estimated")
-    ? 5 * 60 * 1000
-    : MEET_CACHE_TTL_MS;
-
   meetCache.set(key, {
     results,
-    expiresAt: Date.now() + cacheTtlMs,
+    expiresAt: Date.now() + MEET_CACHE_TTL_MS,
     lastUsed: Date.now(),
     hits: 0
   });
@@ -213,6 +208,8 @@ const getVenueScore = (tags: Record<string, string> = {}) => {
   if (tags.name) score += 0.08;
   if (tags.opening_hours) score += 0.04;
   if (tags.website || tags.phone || tags["contact:phone"]) score += 0.03;
+  if (tags.brand || tags.operator) score += 0.025;
+  if (tags.wikidata || tags.wikipedia) score += 0.05;
 
   return clamp(score, 0, 1);
 };
@@ -417,29 +414,6 @@ const fetchExpandedMeetingPOIs = async (
   return results.slice(0, POI_BATCH_LIMIT);
 };
 
-const fetchPhotonFallbackMeetingPOIs = async (
-  seeds: RouteSeed[],
-  baseRadiusKm: number
-) => {
-  try {
-    const radiusKm = getQuickSearchRadiusKm(baseRadiusKm);
-    const pois = await fetchPhotonMeetingPOIsNearPoints(
-      seeds,
-      radiusKm,
-      POI_BATCH_LIMIT,
-      3500
-    );
-
-    logger.debug("Photon fallback meeting venues found", {
-      resultCount: pois.length,
-    });
-    return pois.filter(hasUsableName);
-  } catch (err) {
-    logger.warn("Photon meeting venue fallback failed", { error: err });
-    return [];
-  }
-};
-
 const preRankCandidate = (
   poi: MeetCandidate,
   A: Coordinates,
@@ -575,30 +549,6 @@ const rankScoredResults = (pois: ScoredPoi[]) =>
     })
   );
 
-const buildEstimatedMeetResults = (
-  seeds: RouteSeed[],
-  A: Coordinates,
-  B: Coordinates
-) => {
-  const estimatedCandidates: MeetCandidate[] = seeds
-    .slice(0, 5)
-    .map((seed, index) => ({
-      id: -1 * (index + 1),
-      lat: seed.lat,
-      lon: seed.lon,
-      tags: { name: seed.name },
-      source: "estimated"
-    }));
-
-  return rankScoredResults(
-    estimatedCandidates.map((poi) => ({
-      ...scoreCandidate(poi, A, B),
-      category: "Place",
-      reason: "Estimated fair meeting area while venue lookup is unavailable"
-    }))
-  );
-};
-
 const findSurfaceMeetPois = async (
   A: Coordinates,
   B: Coordinates
@@ -706,32 +656,6 @@ const findMeetPointsLive = async (
       maxRadiusKm: MAX_EXPANDED_RADIUS_KM,
     });
 
-    const photonResults = fetchPhotonFallbackMeetingPOIs(
-      seeds,
-      poiRadiusKm
-    );
-    const photonCandidates: MeetCandidate[] = (await photonResults).map(
-      (poi) => ({
-        ...poi,
-        source: "photon"
-      })
-    );
-
-    if (photonCandidates.length > 0) {
-      const photonScored = photonCandidates
-        .map((poi) => preRankCandidate(poi, A, B, directDistanceKm))
-        .sort((left, right) => left.rank - right.rank)
-        .map((candidate) => candidate.poi)
-        .slice(0, PRE_RANK_LIMIT)
-        .map((poi) => scoreCandidate(poi, A, B));
-      const photonRanked = rankScoredResults(photonScored);
-
-      logger.info("Photon fallback returned meeting results", {
-        resultCount: photonRanked.length,
-      });
-      return photonRanked;
-    }
-
     const surfaceResults = await findMeetPointsWithSurfaceFallback(
       A,
       B,
@@ -745,11 +669,7 @@ const findMeetPointsLive = async (
       return surfaceResults;
     }
 
-    const estimatedResults = buildEstimatedMeetResults(seeds, A, B);
-    logger.info("Estimated fallback returned meeting results", {
-      resultCount: estimatedResults.length,
-    });
-    return estimatedResults;
+    return [];
   }
 
   const candidatePois = osmCandidates

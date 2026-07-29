@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, User, Users, MapPin } from 'lucide-react';
 import { RouteMetricsPanel, RouteStepsPanel, ItinerarySwitcher, formatDuration } from '../lib/routeUtils';
+import { apiClient } from '../lib/apiClient';
 import coffeeHero from '../assets/coffee-hero.png';
 import './DetailPage.css';
 import './ResultsPage.css';
@@ -40,10 +41,10 @@ function DetailPage() {
 
   const originA = state.originA || savedDetail?.originA || null;
   const originB = state.originB || savedDetail?.originB || null;
-  const routeDataA = state.routeDataA || savedDetail?.routeDataA || null;
-  const routeDataB = state.routeDataB || savedDetail?.routeDataB || null;
-  const routeErrorA = state.routeErrorA || savedDetail?.routeErrorA || null;
-  const routeErrorB = state.routeErrorB || savedDetail?.routeErrorB || null;
+  const [routeDataA, setRouteDataA] = useState(state.routeDataA || savedDetail?.routeDataA || null);
+  const [routeDataB, setRouteDataB] = useState(state.routeDataB || savedDetail?.routeDataB || null);
+  const [routeErrorA, setRouteErrorA] = useState(state.routeErrorA || savedDetail?.routeErrorA || null);
+  const [routeErrorB, setRouteErrorB] = useState(state.routeErrorB || savedDetail?.routeErrorB || null);
 
   const isRecipient = state.fromSharedLink || (!state.venue && !savedDetail?.venue && !!searchParams.get('id'));
 
@@ -55,6 +56,41 @@ function DetailPage() {
 
   const itineraryA = itinerariesA[itineraryIndexA] || null;
   const itineraryB = itinerariesB[itineraryIndexB] || null;
+
+  useEffect(() => {
+    if (isRecipient || !venue || !originA || !originB) return;
+    if (routeDataA || routeDataB || routeErrorA || routeErrorB) return;
+
+    let cancelled = false;
+    const fetchRoute = async (origin, side) => {
+      try {
+        const data = await apiClient.route.plan({
+          from: { lat: origin.lat, lng: origin.lng },
+          to: { lat: venue.lat, lng: venue.lon ?? venue.lng },
+          fromName: origin.name,
+          toName: venue.name,
+          travelMode: 'local',
+          localTransport: { bus: true, rail: true, subway: true, car: true },
+        });
+        const itineraries = data?.data?.plan?.itineraries;
+        if (!Array.isArray(itineraries) || itineraries.length === 0) {
+          throw new Error('No route found');
+        }
+        if (cancelled) return;
+        if (side === 'A') setRouteDataA(data);
+        else setRouteDataB(data);
+      } catch {
+        if (cancelled) return;
+        if (side === 'A') setRouteErrorA('Could not calculate route.');
+        else setRouteErrorB('Could not calculate route.');
+      }
+    };
+
+    fetchRoute(originA, 'A');
+    fetchRoute(originB, 'B');
+
+    return () => { cancelled = true; };
+  }, [isRecipient, venue, originA, originB, routeDataA, routeDataB, routeErrorA, routeErrorB]);
 
   const handleNavigate = useCallback(() => {
     if (isRecipient) {
