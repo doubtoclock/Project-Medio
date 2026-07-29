@@ -42,9 +42,9 @@ const logger_1 = require("../utils/logger");
 const MAX_RESULTS = 12;
 const POI_TIMEOUT_MS = 3000;
 const PRE_RANK_LIMIT = 35;
-const MIN_LIVE_RESULTS = 14;
+const MIN_LIVE_RESULTS = 20;
 const POI_BATCH_LIMIT = 160;
-const MAX_EXPANDED_RADIUS_KM = 50;
+const MAX_EXPANDED_RADIUS_KM = 7;
 const MEET_CACHE_VERSION = "v4";
 const MEET_CACHE_BUCKET_DEGREES = 0.003;
 const MEET_CACHE_TTL_MS = 45 * 60 * 1000;
@@ -225,11 +225,15 @@ const getSearchRadiusKm = (distanceKm) => {
     return 20;
 };
 const getExpandedSearchRadii = (baseRadiusKm) => {
-    const multipliers = [1, 1.7, 2.8, 4.5, 7];
-    const radii = multipliers.map((multiplier) => Math.round(clamp(baseRadiusKm * multiplier, baseRadiusKm, MAX_EXPANDED_RADIUS_KM) * 10) / 10);
-    return Array.from(new Set(radii));
+    const radii = [
+        baseRadiusKm,
+        1.5,
+        3,
+        5,
+        MAX_EXPANDED_RADIUS_KM
+    ].map((radius) => Math.round(clamp(radius, 1.5, MAX_EXPANDED_RADIUS_KM) * 10) / 10);
+    return Array.from(new Set(radii)).sort((left, right) => left - right);
 };
-const getQuickSearchRadiusKm = (baseRadiusKm) => Math.round(clamp(baseRadiusKm * 3, 5, MAX_EXPANDED_RADIUS_KM) * 10) / 10;
 const routePoint = (line, distanceKm, fraction) => {
     const point = turf.along(line, distanceKm * fraction, {
         units: "kilometers"
@@ -301,44 +305,33 @@ const mergeUniquePois = (existing, next) => {
 };
 const fetchExpandedMeetingPOIs = async (seeds, baseRadiusKm) => {
     let results = [];
-    const quickRadiusKm = getQuickSearchRadiusKm(baseRadiusKm);
     const isLookupUnavailable = (err) => err instanceof poi_services_1.POILookupUnavailableError ||
         (err instanceof Error && err.name === "POILookupUnavailableError");
-    try {
-        const quickPois = await (0, poi_services_1.fetchMeetingPOIsNearPoints)(seeds.slice(0, 1), quickRadiusKm, POI_BATCH_LIMIT, POI_TIMEOUT_MS);
-        results = mergeUniquePois(results, quickPois.filter(hasUsableName));
-        logger_1.logger.debug("Named meeting venues found in quick search", {
-            radiusKm: quickRadiusKm,
-            resultCount: results.length,
-        });
-        if (results.length >= MIN_LIVE_RESULTS) {
-            return results.slice(0, POI_BATCH_LIMIT);
-        }
-    }
-    catch (err) {
-        logger_1.logger.warn("Quick meeting venue search failed", { error: err });
-        if (isLookupUnavailable(err))
-            return [];
-    }
     for (const radiusKm of getExpandedSearchRadii(baseRadiusKm)) {
-        try {
-            const pois = await (0, poi_services_1.fetchMeetingPOIsNearPoints)(seeds, radiusKm, POI_BATCH_LIMIT, POI_TIMEOUT_MS);
-            const namedPois = pois.filter(hasUsableName);
-            results = mergeUniquePois(results, namedPois);
-            logger_1.logger.debug("Named meeting venues found in expanded search", {
-                radiusKm,
-                resultCount: results.length,
-            });
-            if (results.length >= MIN_LIVE_RESULTS)
-                break;
-        }
-        catch (err) {
-            logger_1.logger.warn("Meeting venue search step failed", {
-                radiusKm,
-                error: err,
-            });
-            if (isLookupUnavailable(err))
-                break;
+        for (const stage of ["primary", "secondary"]) {
+            try {
+                const pois = await (0, poi_services_1.fetchMeetingPOIsNearPoints)(seeds, radiusKm, POI_BATCH_LIMIT, POI_TIMEOUT_MS, stage);
+                const namedPois = pois.filter(hasUsableName);
+                results = mergeUniquePois(results, namedPois);
+                logger_1.logger.info("Named meeting venues found", {
+                    radiusKm,
+                    stage,
+                    namedResultCount: namedPois.length,
+                    accumulatedResultCount: results.length,
+                });
+                if (results.length >= MIN_LIVE_RESULTS) {
+                    return results.slice(0, POI_BATCH_LIMIT);
+                }
+            }
+            catch (err) {
+                logger_1.logger.warn("Meeting venue search step failed", {
+                    radiusKm,
+                    stage,
+                    error: err,
+                });
+                if (isLookupUnavailable(err))
+                    return results.slice(0, POI_BATCH_LIMIT);
+            }
         }
     }
     return results.slice(0, POI_BATCH_LIMIT);
@@ -372,7 +365,7 @@ const scoreCandidateWithDurations = (poi, timeA, timeB) => {
         venueScore * 10;
     return {
         id: poi.id,
-        name: poi.tags?.name || "Recommended meeting spot",
+        name: poi.tags?.name || "Unnamed place",
         lat: poi.lat,
         lon: poi.lon,
         category,
@@ -399,8 +392,8 @@ const getOtpOrFallbackDuration = async (from, to) => {
 const scoreCandidateWithOtpFallback = async (poi, A, B) => {
     const point = { lat: poi.lat, lon: poi.lon };
     const [timeA, timeB] = await Promise.all([
-        getOtpOrFallbackDuration(A, point),
-        getOtpOrFallbackDuration(B, point)
+        getOtpOrFallbackDuration(A, point).catch(() => getFallbackDuration(A, point)),
+        getOtpOrFallbackDuration(B, point).catch(() => getFallbackDuration(B, point))
     ]);
     return scoreCandidateWithDurations(poi, timeA, timeB);
 };

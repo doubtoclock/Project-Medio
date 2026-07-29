@@ -2,6 +2,7 @@ import axios from "axios";
 import * as turf from "@turf/turf";
 import { Feature, Geometry } from "geojson";
 import { logger } from "../utils/logger";
+import { isWithinServiceAreaBounds } from "../utils/service-area";
 
 export type OverpassPOI = {
   type?: "node" | "way" | "relation";
@@ -28,6 +29,13 @@ type POISearchPoint = {
   lon: number;
 };
 
+type VenueCategoryStage = "primary" | "secondary" | "all";
+
+type PoiCacheEntry = {
+  pois: OverpassPOI[];
+  expiresAt: number;
+};
+
 export class POILookupUnavailableError extends Error {
   constructor(failures: string[]) {
     super(`Live POI lookup unavailable: ${failures.join("; ")}`);
@@ -40,13 +48,14 @@ const OVERPASS_ENDPOINTS = [
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.openstreetmap.ru/api/interpreter"
 ];
+const OVERPASS_ENDPOINT_COOLDOWN_MS = 2 * 60 * 1000;
+const POI_CACHE_TTL_MS = 45 * 60 * 1000;
+const POI_CACHE_LIMIT = 120;
+const poiCache = new Map<string, PoiCacheEntry>();
+const overpassEndpointCooldowns = new Map<string, number>();
+
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
-
-const toPoint = (point: POISearchPoint) => turf.point([point.lon, point.lat]);
-
-const getDistanceKm = (from: POISearchPoint, to: POISearchPoint) =>
-  turf.distance(toPoint(from), toPoint(to), { units: "kilometers" });
 
 const dedupePOIs = (pois: OverpassPOI[]) => {
   const seen = new Set<string>();
@@ -57,6 +66,59 @@ const dedupePOIs = (pois: OverpassPOI[]) => {
     seen.add(key);
     return true;
   });
+};
+
+const hasUsableName = (poi: OverpassPOI) => {
+  const name = poi.tags?.name?.trim();
+  return Boolean(name && name.length > 1);
+};
+
+const roundCoord = (value: number) => value.toFixed(3);
+
+const getPoiCacheKey = (
+  points: POISearchPoint[],
+  radiusKm: number,
+  stage: VenueCategoryStage
+) => [
+  stage,
+  radiusKm.toFixed(1),
+  ...points.map((point) => `${roundCoord(point.lat)},${roundCoord(point.lon)}`)
+].join(":");
+
+const getCachedPois = (key: string) => {
+  const cached = poiCache.get(key);
+  if (!cached) return null;
+  if (cached.expiresAt <= Date.now()) {
+    poiCache.delete(key);
+    return null;
+  }
+  return cached.pois;
+};
+
+const setCachedPois = (key: string, pois: OverpassPOI[]) => {
+  poiCache.set(key, {
+    pois,
+    expiresAt: Date.now() + POI_CACHE_TTL_MS
+  });
+
+  if (poiCache.size <= POI_CACHE_LIMIT) return;
+  const firstKey = poiCache.keys().next().value;
+  if (firstKey) poiCache.delete(firstKey);
+};
+
+const getAvailableOverpassEndpoints = () => {
+  const now = Date.now();
+  const available = OVERPASS_ENDPOINTS.filter((endpoint) =>
+    (overpassEndpointCooldowns.get(endpoint) ?? 0) <= now
+  );
+  return available.length > 0 ? available : OVERPASS_ENDPOINTS;
+};
+
+const coolDownEndpoint = (endpoint: string) => {
+  overpassEndpointCooldowns.set(
+    endpoint,
+    Date.now() + OVERPASS_ENDPOINT_COOLDOWN_MS
+  );
 };
 
 const normalizeOverpassElement = (
@@ -93,6 +155,7 @@ const postOverpassQuery = async (
   query: string,
   timeoutMs: number
 ) => {
+  const startedAt = Date.now();
   const response = await axios.post(endpoint, new URLSearchParams({
     data: query
   }).toString(), {
@@ -104,11 +167,25 @@ const postOverpassQuery = async (
     timeout: timeoutMs
   });
 
+  const durationMs = Date.now() - startedAt;
   if (!response.data || !response.data.elements) {
+    logger.warn("Overpass response missing elements", {
+      endpoint,
+      durationMs
+    });
     return [];
   }
 
-  return normalizeOverpassElements(response.data.elements);
+  const pois = normalizeOverpassElements(response.data.elements);
+  logger.info("Overpass endpoint returned POIs", {
+    endpoint,
+    durationMs,
+    rawElementCount: response.data.elements.length,
+    normalizedPoiCount: pois.length,
+    namedPoiCount: pois.filter(hasUsableName).length
+  });
+
+  return pois;
 };
 
 const fetchFirstOverpassResponse = async (
@@ -117,13 +194,14 @@ const fetchFirstOverpassResponse = async (
 ) => {
   const failures: string[] = [];
 
-  for (const endpoint of OVERPASS_ENDPOINTS) {
+  for (const endpoint of getAvailableOverpassEndpoints()) {
     try {
       const pois = await postOverpassQuery(endpoint, query, timeoutMs);
       return { pois, failures };
     } catch (err: any) {
       const status = err?.response?.status;
       const message = status ? `status ${status}` : err.message;
+      coolDownEndpoint(endpoint);
       failures.push(`${endpoint} (${message})`);
     }
   }
@@ -134,17 +212,28 @@ const fetchFirstOverpassResponse = async (
 const buildAroundQuery = (
   points: POISearchPoint[],
   radiusKm: number,
-  limit: number
+  limit: number,
+  stage: VenueCategoryStage
 ) => {
   const radiusMeters = Math.round(clamp(radiusKm, 0.5, 50) * 1000);
-  const venueFilters = [
-    `["amenity"~"cafe|restaurant|food_court|fast_food|ice_cream|bar|pub|library|cinema|theatre|arts_centre|community_centre|marketplace"]["name"]`,
-    `["leisure"~"park|garden|bowling_alley|sports_centre|fitness_centre"]["name"]`,
-    `["tourism"~"museum|attraction|gallery|hotel"]["name"]`,
-    `["shop"~"mall|department_store|books"]["name"]`,
-    `["natural"="beach"]["name"]`
+  const primaryFilters = [
+    `["amenity"~"cafe|restaurant|food_court|fast_food|bar|pub"]`,
+    `["shop"~"mall"]`
   ];
-  const pointLimit = radiusKm > 12 ? 3 : radiusKm > 6 ? 5 : 7;
+  const secondaryFilters = [
+    `["amenity"~"ice_cream|library|cinema|theatre|arts_centre|community_centre|marketplace"]`,
+    `["leisure"~"park|garden|bowling_alley|sports_centre|fitness_centre"]`,
+    `["tourism"~"museum|attraction|gallery|hotel"]`,
+    `["shop"~"department_store|books"]`,
+    `["natural"="beach"]`
+  ];
+  const venueFilters = stage === "primary"
+    ? primaryFilters
+    : stage === "secondary"
+      ? secondaryFilters
+      : [...primaryFilters, ...secondaryFilters];
+  const pointLimit = radiusKm > 7 ? 3 : 5;
+  const outputLimit = Math.max(limit, Math.min(limit * 3, 260));
   const blocks = points
     .slice(0, pointLimit)
     .flatMap((point) =>
@@ -156,11 +245,11 @@ const buildAroundQuery = (
     .join("\n");
 
   return `
-  [out:json][timeout:10];
+  [out:json][timeout:8];
   (
     ${blocks}
   );
-  out center ${limit};
+  out center ${outputLimit};
   `;
 };
 
@@ -168,20 +257,46 @@ export async function fetchMeetingPOIsNearPoints(
   points: POISearchPoint[],
   radiusKm: number,
   limit = 80,
-  timeoutMs = 4500
+  timeoutMs = 4500,
+  stage: VenueCategoryStage = "all"
 ): Promise<OverpassPOI[]> {
   if (points.length === 0) return [];
 
-  const query = buildAroundQuery(points, radiusKm, limit);
+  const cacheKey = getPoiCacheKey(points, radiusKm, stage);
+  const cached = getCachedPois(cacheKey);
+  if (cached) {
+    logger.info("POI cache hit", {
+      radiusKm,
+      stage,
+      resultCount: cached.length,
+      namedPoiCount: cached.filter(hasUsableName).length
+    });
+    return cached.slice(0, limit);
+  }
+
+  const query = buildAroundQuery(points, radiusKm, limit, stage);
   const { pois: responsePois, failures } = await fetchFirstOverpassResponse(
     query,
     timeoutMs
   );
   const pois = dedupePOIs(responsePois)
-    .filter((poi) => Number.isFinite(poi.lat) && Number.isFinite(poi.lon))
+    .filter((poi) =>
+      Number.isFinite(poi.lat) &&
+      Number.isFinite(poi.lon) &&
+      isWithinServiceAreaBounds({ lat: poi.lat, lon: poi.lon })
+    )
     .slice(0, limit);
 
-  logger.debug("Fast Overpass POIs returned", { resultCount: pois.length });
+  setCachedPois(cacheKey, pois);
+
+  logger.info("Overpass POI search completed", {
+    radiusKm,
+    stage,
+    returnedCount: responsePois.length,
+    filteredCount: pois.length,
+    namedPoiCount: pois.filter(hasUsableName).length,
+    failureCount: failures.length
+  });
   if (pois.length === 0 && failures.length > 0) {
     logger.warn("Live POI lookup unavailable at current radius", {
       failureCount: failures.length,
@@ -210,18 +325,16 @@ export async function fetchMeetingPOIs(
   [out:json][timeout:25];
 
   (
-    node["amenity"~"cafe|restaurant|fast_food|food_court|ice_cream"]["name"](${south},${west},${north},${east});
-    way["amenity"~"cafe|restaurant|fast_food|food_court|ice_cream"]["name"](${south},${west},${north},${east});
-    node["amenity"~"library|cinema|theatre|arts_centre|community_centre|marketplace|bar|pub"]["name"](${south},${west},${north},${east});
-    way["amenity"~"library|cinema|theatre|arts_centre|community_centre|marketplace|bar|pub"]["name"](${south},${west},${north},${east});
-    node["leisure"~"park|garden|bowling_alley|sports_centre|fitness_centre"]["name"](${south},${west},${north},${east});
-    way["leisure"~"park|garden|bowling_alley|sports_centre|fitness_centre"]["name"](${south},${west},${north},${east});
-    node["tourism"~"museum|attraction|gallery|hotel"]["name"](${south},${west},${north},${east});
-    way["tourism"~"museum|attraction|gallery|hotel"]["name"](${south},${west},${north},${east});
-    node["shop"~"mall|department_store|books"]["name"](${south},${west},${north},${east});
-    way["shop"~"mall|department_store|books"]["name"](${south},${west},${north},${east});
-    node["natural"="beach"]["name"](${south},${west},${north},${east});
-    way["natural"="beach"]["name"](${south},${west},${north},${east});
+    node["amenity"~"cafe|restaurant|fast_food|food_court|ice_cream|library|cinema|theatre|arts_centre|community_centre|marketplace|bar|pub"](${south},${west},${north},${east});
+    way["amenity"~"cafe|restaurant|fast_food|food_court|ice_cream|library|cinema|theatre|arts_centre|community_centre|marketplace|bar|pub"](${south},${west},${north},${east});
+    node["leisure"~"park|garden|bowling_alley|sports_centre|fitness_centre"](${south},${west},${north},${east});
+    way["leisure"~"park|garden|bowling_alley|sports_centre|fitness_centre"](${south},${west},${north},${east});
+    node["tourism"~"museum|attraction|gallery|hotel"](${south},${west},${north},${east});
+    way["tourism"~"museum|attraction|gallery|hotel"](${south},${west},${north},${east});
+    node["shop"~"mall|department_store|books"](${south},${west},${north},${east});
+    way["shop"~"mall|department_store|books"](${south},${west},${north},${east});
+    node["natural"="beach"](${south},${west},${north},${east});
+    way["natural"="beach"](${south},${west},${north},${east});
   );
 
   out center;
@@ -246,6 +359,7 @@ export async function fetchMeetingPOIs(
     const filtered = pois.filter((p) => {
 
       if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return false;
+      if (!isWithinServiceAreaBounds({ lat: p.lat, lon: p.lon })) return false;
 
       const point = turf.point([p.lon, p.lat]);
 
