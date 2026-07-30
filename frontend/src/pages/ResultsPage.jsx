@@ -17,18 +17,10 @@ const CATEGORY_ORDER = [
 
 const getMeetCategory = (place) => place.category || 'Place';
 
-async function fetchRoute(start, end) {
-  try {
-    const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`);
-    const data = await response.json();
-    if (data.routes && data.routes.length > 0) {
-      return data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
-    }
-  } catch (error) {
-    console.error("Error fetching route:", error);
-  }
-  return [[start.lat, start.lng], [end.lat, end.lng]];
-}
+const getPreviewRoute = (start, end) => [[start.lat, start.lng], [end.lat, end.lng]];
+
+const limitRouteCache = (cache, maxEntries = 8) =>
+  Object.fromEntries(Object.entries(cache).slice(-maxEntries));
 
 const getOriginIcon = (phase) => L.divIcon({
   className: phase >= 1 ? 'leaflet-custom-marker-container' : 'anim-hidden',
@@ -153,13 +145,8 @@ function ResultsPage() {
   };
 
   useEffect(() => {
-    async function loadRoutes() {
-      const rA = await fetchRoute(originA, midpoint);
-      const rB = await fetchRoute(originB, midpoint);
-      setRouteA(rA);
-      setRouteB(rB);
-    }
-    loadRoutes();
+    setRouteA(getPreviewRoute(originA, midpoint));
+    setRouteB(getPreviewRoute(originB, midpoint));
   }, [originA.lat, originA.lng, originB.lat, originB.lng, midpoint.lat, midpoint.lng]);
 
   const allPositions = useMemo(() => {
@@ -232,13 +219,13 @@ function ResultsPage() {
           fromName,
           toName: selectedVenue.name,
           travelMode: 'local',
-          localTransport: { bus: true, rail: true, subway: true, car: true },
+          localTransport: { bus: true, rail: true, subway: true, car: false },
         });
         const itineraries = data?.data?.plan?.itineraries;
         if (!Array.isArray(itineraries) || itineraries.length === 0) throw new Error('No route found');
         if (!cancelled) {
           setRouteCache((prev) => {
-            const next = { ...prev, [routeKey]: data };
+            const next = limitRouteCache({ ...prev, [routeKey]: data });
             routeCacheRef.current = next;
             return next;
           });

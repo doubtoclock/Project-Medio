@@ -9,6 +9,7 @@ import {
 import { generateSurfaceIntersection } from "./surface.services";
 import { getOtpDuration } from "./otp.services";
 import { logger } from "../utils/logger";
+import { env } from "../config/env";
 
 type MeetingSource = "osm";
 
@@ -39,15 +40,19 @@ type ScoredPoi = {
 };
 
 const MAX_RESULTS = 12;
-const POI_TIMEOUT_MS = 3000;
+const POI_TIMEOUT_MS = 1000;
 const PRE_RANK_LIMIT = 35;
 const MIN_LIVE_RESULTS = 20;
 const POI_BATCH_LIMIT = 160;
 const MAX_EXPANDED_RADIUS_KM = 7;
-const MEET_CACHE_VERSION = "v4";
+const MEET_CACHE_VERSION = "v5";
 const MEET_CACHE_BUCKET_DEGREES = 0.003;
 const MEET_CACHE_TTL_MS = 45 * 60 * 1000;
 const MEET_CACHE_LIMIT = 80;
+const ROUTE_SEED_TIMEOUT_MS = 1400;
+const TOUCH_SEED_COUNT = 3;
+const MIN_RESULTS_PER_TOUCH_CIRCLE = 4;
+const MIN_PRODUCTIVE_TOUCH_CIRCLES = 2;
 const MAX_REASONABLE_MEETING_MINUTES = 180;
 const MAX_SURFACE_MEETING_MINUTES = 360;
 const SURFACE_STEP_MINUTES = 15;
@@ -60,8 +65,49 @@ type MeetCacheEntry = {
   hits: number;
 };
 
+type OtpRoutePoint = Coordinates & {
+  elapsed: number;
+};
+
+type OtpItinerary = {
+  duration?: number;
+  legs?: {
+    mode?: string;
+    distance?: number;
+    startTime?: number;
+    endTime?: number;
+    from?: { lat?: number; lon?: number };
+    to?: { lat?: number; lon?: number };
+    intermediateStops?: { lat?: number; lon?: number }[];
+  }[];
+};
+
 const meetCache = new Map<string, MeetCacheEntry>();
 const pendingMeetSearches = new Map<string, Promise<ScoredPoi[]>>();
+
+const curatedMeetingPOIs: OverpassPOI[] = [
+  { type: "node", id: -1001, lat: 19.1136, lon: 72.8697, tags: { name: "Phoenix Marketcity, Kurla", shop: "mall" } },
+  { type: "node", id: -1002, lat: 19.1848, lon: 72.8347, tags: { name: "Inorbit Mall, Malad", shop: "mall" } },
+  { type: "node", id: -1003, lat: 19.1841, lon: 72.8395, tags: { name: "Infinity Mall, Malad", shop: "mall" } },
+  { type: "node", id: -1004, lat: 19.1748, lon: 72.8608, tags: { name: "Oberoi Mall, Goregaon", shop: "mall" } },
+  { type: "node", id: -1005, lat: 19.1008, lon: 72.8277, tags: { name: "Prithvi Cafe, Juhu", amenity: "cafe" } },
+  { type: "node", id: -1006, lat: 19.1075, lon: 72.8263, tags: { name: "Juhu Beach", natural: "beach" } },
+  { type: "node", id: -1007, lat: 19.0556, lon: 72.8295, tags: { name: "Linking Road, Bandra", amenity: "marketplace" } },
+  { type: "node", id: -1008, lat: 19.0642, lon: 72.8358, tags: { name: "Candies, Bandra", amenity: "cafe" } },
+  { type: "node", id: -1009, lat: 19.0607, lon: 72.8362, tags: { name: "Pali Hill, Bandra", tourism: "attraction" } },
+  { type: "node", id: -1010, lat: 19.1351, lon: 72.8146, tags: { name: "Versova Social", amenity: "restaurant" } },
+  { type: "node", id: -1011, lat: 19.1293, lon: 72.8310, tags: { name: "Lokhandwala Market", amenity: "marketplace" } },
+  { type: "node", id: -1012, lat: 19.1412, lon: 72.8309, tags: { name: "Infiniti Mall, Andheri", shop: "mall" } },
+  { type: "node", id: -1013, lat: 19.1155, lon: 72.8727, tags: { name: "Andheri East", amenity: "restaurant" } },
+  { type: "node", id: -1014, lat: 19.1176, lon: 72.9060, tags: { name: "Powai Lake", leisure: "garden" } },
+  { type: "node", id: -1015, lat: 19.1197, lon: 72.9073, tags: { name: "Galleria, Powai", shop: "mall" } },
+  { type: "node", id: -1016, lat: 19.0663, lon: 72.8670, tags: { name: "BKC, Bandra Kurla Complex", amenity: "restaurant" } },
+  { type: "node", id: -1017, lat: 19.0014, lon: 72.8302, tags: { name: "High Street Phoenix, Lower Parel", shop: "mall" } },
+  { type: "node", id: -1018, lat: 19.0178, lon: 72.8478, tags: { name: "Dadar", amenity: "restaurant" } },
+  { type: "node", id: -1019, lat: 19.2290, lon: 72.8574, tags: { name: "Borivali", amenity: "restaurant" } },
+  { type: "node", id: -1020, lat: 19.2813, lon: 72.8567, tags: { name: "Mira Road", amenity: "restaurant" } },
+  { type: "node", id: -1021, lat: 19.3002, lon: 72.8544, tags: { name: "Bhayandar", amenity: "restaurant" } }
+];
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -325,6 +371,213 @@ const buildRouteSeeds = (A: Coordinates, B: Coordinates): RouteSeed[] => {
   });
 };
 
+const isCarFreeMode = (mode?: string) => mode !== "CAR";
+
+const getLegDuration = (
+  leg: NonNullable<OtpItinerary["legs"]>[number],
+  itineraryDuration: number,
+  fallbackLegCount: number
+) => {
+  const duration = Number(leg.endTime) > Number(leg.startTime)
+    ? (Number(leg.endTime) - Number(leg.startTime)) / 1000
+    : NaN;
+  if (Number.isFinite(duration) && duration > 0) return duration;
+  const distance = Number(leg.distance);
+  if (Number.isFinite(distance) && distance > 0) {
+    return Math.max(60, distance / 1.4);
+  }
+  return Math.max(60, itineraryDuration / Math.max(fallbackLegCount, 1));
+};
+
+const addRoutePoint = (
+  points: OtpRoutePoint[],
+  seen: Set<string>,
+  lat: unknown,
+  lon: unknown,
+  elapsed: number
+) => {
+  const parsedLat = Number(lat);
+  const parsedLon = Number(lon);
+
+  if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLon)) return;
+
+  const key = `${parsedLat.toFixed(5)},${parsedLon.toFixed(5)}`;
+  if (seen.has(key)) return;
+
+  seen.add(key);
+  points.push({ lat: parsedLat, lon: parsedLon, elapsed });
+};
+
+const extractTimedRoutePoints = (itinerary: OtpItinerary) => {
+  const legs = Array.isArray(itinerary.legs)
+    ? itinerary.legs.filter((leg) => isCarFreeMode(leg.mode))
+    : [];
+  const duration = Number(itinerary.duration) || 0;
+  const points: OtpRoutePoint[] = [];
+  const seen = new Set<string>();
+  let elapsed = 0;
+
+  legs.forEach((leg) => {
+    const legDuration = getLegDuration(leg, duration, legs.length);
+    const stops = [
+      leg.from,
+      ...(Array.isArray(leg.intermediateStops) ? leg.intermediateStops : []),
+      leg.to
+    ];
+    const usableStops = stops.filter(Boolean);
+
+    usableStops.forEach((stop, index) => {
+      addRoutePoint(
+        points,
+        seen,
+        stop?.lat,
+        stop?.lon,
+        elapsed + (legDuration * index) / Math.max(usableStops.length - 1, 1)
+      );
+    });
+
+    elapsed += legDuration;
+  });
+
+  return points.sort((left, right) => left.elapsed - right.elapsed);
+};
+
+const pickRouteTouchSeeds = (
+  forward: OtpItinerary[],
+  reverse: OtpItinerary[]
+): RouteSeed[] => {
+  const candidates: Array<RouteSeed & { rank: number }> = [];
+
+  forward.slice(0, 3).forEach((forwardItinerary, itineraryIndex) => {
+    const forwardPoints = extractTimedRoutePoints(forwardItinerary);
+    const reversePoints = extractTimedRoutePoints(reverse[itineraryIndex] ?? reverse[0] ?? {});
+    if (forwardPoints.length === 0 || reversePoints.length === 0) return;
+
+    forwardPoints.forEach((forwardPoint) => {
+      const nearestReverse = reversePoints.reduce((best, reversePoint) => {
+        const distance = getDistanceKm(forwardPoint, reversePoint);
+        return !best || distance < best.distance
+          ? { point: reversePoint, distance }
+          : best;
+      }, null as null | { point: OtpRoutePoint; distance: number });
+
+      if (!nearestReverse) return;
+
+      const balancePenalty = Math.abs(forwardPoint.elapsed - nearestReverse.point.elapsed) / 900;
+      candidates.push({
+        lat: (forwardPoint.lat + nearestReverse.point.lat) / 2,
+        lon: (forwardPoint.lon + nearestReverse.point.lon) / 2,
+        name: "Transit-balanced meeting area",
+        rank: nearestReverse.distance * 4 + balancePenalty + itineraryIndex * 0.35
+      });
+    });
+  });
+
+  const selected: RouteSeed[] = [];
+  candidates
+    .sort((left, right) => left.rank - right.rank)
+    .forEach((candidate) => {
+      if (selected.length >= TOUCH_SEED_COUNT) return;
+      const tooClose = selected.some((seed) => getDistanceKm(seed, candidate) < 0.35);
+      if (tooClose) return;
+      selected.push({
+        lat: candidate.lat,
+        lon: candidate.lon,
+        name: `${candidate.name} ${selected.length + 1}`
+      });
+    });
+
+  return selected;
+};
+
+const fetchOtpItinerariesForSeeds = async (
+  from: Coordinates,
+  to: Coordinates
+) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ROUTE_SEED_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(env.OTP_GRAPHQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: `
+          query MeetingSeedPlan($fromLat: Float!, $fromLon: Float!, $toLat: Float!, $toLon: Float!) {
+            plan(
+              from: { lat: $fromLat, lon: $fromLon }
+              to: { lat: $toLat, lon: $toLon }
+              transportModes: [
+                { mode: WALK }
+                { mode: BUS }
+                { mode: RAIL }
+                { mode: SUBWAY }
+              ]
+              numItineraries: 3
+            ) {
+              itineraries {
+                duration
+                legs {
+                  mode
+                  distance
+                  startTime
+                  endTime
+                  from { lat lon }
+                  to { lat lon }
+                  intermediateStops { lat lon }
+                }
+              }
+            }
+          }
+        `,
+        variables: {
+          fromLat: from.lat,
+          fromLon: from.lon,
+          toLat: to.lat,
+          toLon: to.lon
+        }
+      }),
+      signal: controller.signal
+    });
+
+    if (!response.ok) return [];
+
+    const data: any = await response.json();
+    const itineraries = data?.data?.plan?.itineraries;
+    return Array.isArray(itineraries) ? itineraries as OtpItinerary[] : [];
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+const buildBidirectionalRouteSeeds = async (
+  A: Coordinates,
+  B: Coordinates
+) => {
+  const [forward, reverse] = await Promise.all([
+    fetchOtpItinerariesForSeeds(A, B),
+    fetchOtpItinerariesForSeeds(B, A)
+  ]);
+  const seeds = pickRouteTouchSeeds(forward, reverse);
+
+  if (seeds.length >= TOUCH_SEED_COUNT) {
+    logger.info("Meeting route seeds built from bidirectional transit search", {
+      seedCount: seeds.length,
+    });
+    return seeds;
+  }
+
+  const fallbackSeeds = buildRouteSeeds(A, B).slice(0, TOUCH_SEED_COUNT);
+  logger.info("Meeting route seed fallback used", {
+    transitSeedCount: seeds.length,
+    fallbackSeedCount: fallbackSeeds.length,
+  });
+
+  return [...seeds, ...fallbackSeeds].slice(0, TOUCH_SEED_COUNT);
+};
+
 const getPoiKey = (poi: OverpassPOI) => `${poi.type || "node"}:${poi.id}`;
 
 const hasUsableName = (poi: OverpassPOI) => {
@@ -354,45 +607,111 @@ const fetchExpandedMeetingPOIs = async (
   baseRadiusKm: number
 ) => {
   let results: OverpassPOI[] = [];
+  const circleCounts = new Map<number, number>();
   const isLookupUnavailable = (err: unknown) =>
     err instanceof POILookupUnavailableError ||
     (err instanceof Error && err.name === "POILookupUnavailableError");
 
   for (const radiusKm of getExpandedSearchRadii(baseRadiusKm)) {
     for (const stage of ["primary", "secondary"] as const) {
-      try {
-        const pois = await fetchMeetingPOIsNearPoints(
-          seeds,
-          radiusKm,
-          POI_BATCH_LIMIT,
-          POI_TIMEOUT_MS,
-          stage
-        );
-        const namedPois = pois.filter(hasUsableName);
-        results = mergeUniquePois(results, namedPois);
+      for (const [seedIndex, seed] of seeds.entries()) {
+        try {
+          const pois = await fetchMeetingPOIsNearPoints(
+            [seed],
+            radiusKm,
+            Math.ceil(POI_BATCH_LIMIT / Math.max(seeds.length, 1)),
+            POI_TIMEOUT_MS,
+            stage
+          );
+          const namedPois = pois.filter(hasUsableName);
+          results = mergeUniquePois(results, namedPois);
+          circleCounts.set(seedIndex, mergeUniquePois([], [
+            ...results.filter((poi) => getDistanceKm(seed, poi) <= radiusKm)
+          ]).length);
 
-        logger.info("Named meeting venues found", {
-          radiusKm,
-          stage,
-          namedResultCount: namedPois.length,
-          accumulatedResultCount: results.length,
-        });
+          logger.info("Named meeting venues found", {
+            radiusKm,
+            stage,
+            seed: seed.name,
+            namedResultCount: namedPois.length,
+            accumulatedResultCount: results.length,
+          });
 
-        if (results.length >= MIN_LIVE_RESULTS) {
-          return results.slice(0, POI_BATCH_LIMIT);
+          const enoughInAllCircles = seeds.every((_, index) =>
+            (circleCounts.get(index) ?? 0) >= MIN_RESULTS_PER_TOUCH_CIRCLE
+          );
+          const enoughProductiveCircles = seeds.filter((_, index) =>
+            (circleCounts.get(index) ?? 0) >= MIN_RESULTS_PER_TOUCH_CIRCLE
+          ).length >= Math.min(MIN_PRODUCTIVE_TOUCH_CIRCLES, seeds.length);
+          const isMaxRadius = radiusKm >= MAX_EXPANDED_RADIUS_KM;
+
+          if (
+            results.length >= MIN_LIVE_RESULTS &&
+            (enoughInAllCircles || (isMaxRadius && enoughProductiveCircles))
+          ) {
+            return results.slice(0, POI_BATCH_LIMIT);
+          }
+        } catch (err) {
+          logger.warn("Meeting venue search step failed", {
+            radiusKm,
+            stage,
+            seed: seed.name,
+            error: err,
+          });
+          if (isLookupUnavailable(err)) {
+            return results.slice(0, POI_BATCH_LIMIT);
+          }
         }
-      } catch (err) {
-        logger.warn("Meeting venue search step failed", {
-          radiusKm,
-          stage,
-          error: err,
-        });
-        if (isLookupUnavailable(err)) return results.slice(0, POI_BATCH_LIMIT);
       }
     }
   }
 
   return results.slice(0, POI_BATCH_LIMIT);
+};
+
+const fetchCuratedMeetingPOIsNearSeeds = (
+  seeds: RouteSeed[],
+  baseRadiusKm: number
+) => {
+  let results: OverpassPOI[] = [];
+
+  for (const radiusKm of getExpandedSearchRadii(baseRadiusKm)) {
+    const nearbyPois = curatedMeetingPOIs.filter((poi) =>
+      seeds.some((seed) => getDistanceKm(seed, poi) <= radiusKm)
+    );
+    results = mergeUniquePois(results, nearbyPois);
+
+    if (results.length >= MIN_LIVE_RESULTS) {
+      return results.slice(0, POI_BATCH_LIMIT);
+    }
+  }
+
+  return results.slice(0, POI_BATCH_LIMIT);
+};
+
+const rankMeetCandidates = async (
+  pois: OverpassPOI[],
+  A: Coordinates,
+  B: Coordinates,
+  directDistanceKm: number,
+  useOtpDurations: boolean
+) => {
+  const candidates: MeetCandidate[] = pois.map((poi) => ({
+    ...poi,
+    source: "osm"
+  }));
+  const candidatePois = candidates
+    .map((poi) => preRankCandidate(poi, A, B, directDistanceKm))
+    .sort((left, right) => left.rank - right.rank)
+    .map((candidate) => candidate.poi)
+    .slice(0, PRE_RANK_LIMIT);
+  const enriched = useOtpDurations
+    ? await Promise.all(
+      candidatePois.map((poi) => scoreCandidateWithOtpFallback(poi, A, B))
+    )
+    : candidatePois.map((poi) => scoreCandidate(poi, A, B));
+
+  return rankScoredResults(enriched);
 };
 
 const preRankCandidate = (
@@ -596,20 +915,7 @@ const findMeetPointsWithSurfaceFallback = async (
 
   if (surfacePois.length === 0) return [];
 
-  const candidates: MeetCandidate[] = surfacePois.map((poi) => ({
-    ...poi,
-    source: "osm"
-  }));
-  const candidatePois = candidates
-    .map((poi) => preRankCandidate(poi, A, B, directDistanceKm))
-    .sort((left, right) => left.rank - right.rank)
-    .map((candidate) => candidate.poi)
-    .slice(0, PRE_RANK_LIMIT);
-  const enriched = await Promise.all(
-    candidatePois.map((poi) => scoreCandidateWithOtpFallback(poi, A, B))
-  );
-
-  return rankScoredResults(enriched);
+  return rankMeetCandidates(surfacePois, A, B, directDistanceKm, true);
 };
 
 const findMeetPointsLive = async (
@@ -618,7 +924,7 @@ const findMeetPointsLive = async (
 ) => {
   const startedAt = Date.now();
   const directDistanceKm = getDistanceKm(A, B);
-  const seeds = buildRouteSeeds(A, B);
+  const seeds = await buildBidirectionalRouteSeeds(A, B);
 
   logger.info("Meeting point search started", {
     directDistanceKm: Number(directDistanceKm.toFixed(2)),
@@ -627,15 +933,25 @@ const findMeetPointsLive = async (
   const poiRadiusKm = getSearchRadiusKm(directDistanceKm);
   const livePois = await fetchExpandedMeetingPOIs(seeds, poiRadiusKm);
 
-  const osmCandidates: MeetCandidate[] = livePois.map((poi) => ({
-    ...poi,
-    source: "osm"
-  }));
-
-  if (osmCandidates.length === 0) {
+  if (livePois.length === 0) {
     logger.info("No named meeting venues found after expanded search", {
       maxRadiusKm: MAX_EXPANDED_RADIUS_KM,
     });
+
+    const curatedResults = await rankMeetCandidates(
+      fetchCuratedMeetingPOIsNearSeeds(seeds, poiRadiusKm),
+      A,
+      B,
+      directDistanceKm,
+      false
+    );
+
+    if (curatedResults.length > 0) {
+      logger.info("Curated fallback returned meeting results", {
+        resultCount: curatedResults.length,
+      });
+      return curatedResults;
+    }
 
     const surfaceResults = await findMeetPointsWithSurfaceFallback(
       A,
@@ -653,15 +969,13 @@ const findMeetPointsLive = async (
     return [];
   }
 
-  const candidatePois = osmCandidates
-    .map((poi) => preRankCandidate(poi, A, B, directDistanceKm))
-    .sort((left, right) => left.rank - right.rank)
-    .map((candidate) => candidate.poi)
-    .slice(0, PRE_RANK_LIMIT);
-
-  const enriched = candidatePois.map((poi) => scoreCandidate(poi, A, B));
-
-  const ranked = rankScoredResults(enriched);
+  const ranked = await rankMeetCandidates(
+    livePois,
+    A,
+    B,
+    directDistanceKm,
+    false
+  );
 
   logger.info("Meeting point search completed", {
     resultCount: ranked.length,

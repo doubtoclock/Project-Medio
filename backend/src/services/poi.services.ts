@@ -192,18 +192,28 @@ const fetchFirstOverpassResponse = async (
   query: string,
   timeoutMs: number
 ) => {
+  const endpoints = getAvailableOverpassEndpoints();
+  const attempts = await Promise.allSettled(
+    endpoints.map(async (endpoint) => ({
+      endpoint,
+      pois: await postOverpassQuery(endpoint, query, timeoutMs)
+    }))
+  );
+
   const failures: string[] = [];
 
-  for (const endpoint of getAvailableOverpassEndpoints()) {
-    try {
-      const pois = await postOverpassQuery(endpoint, query, timeoutMs);
-      return { pois, failures };
-    } catch (err: any) {
-      const status = err?.response?.status;
-      const message = status ? `status ${status}` : err.message;
-      coolDownEndpoint(endpoint);
-      failures.push(`${endpoint} (${message})`);
+  for (const attempt of attempts) {
+    if (attempt.status === "fulfilled") {
+      return { pois: attempt.value.pois, failures };
     }
+
+    const index = attempts.indexOf(attempt);
+    const endpoint = endpoints[index];
+    const err: any = attempt.reason;
+    const status = err?.response?.status;
+    const message = status ? `status ${status}` : err.message;
+    coolDownEndpoint(endpoint);
+    failures.push(`${endpoint} (${message})`);
   }
 
   return { pois: [], failures };

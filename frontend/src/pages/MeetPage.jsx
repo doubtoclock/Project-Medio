@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiClient } from '../lib/apiClient';
-import { fetchLocationSuggestions } from '../lib/locationSearch';
+import { fetchLocationSuggestions, recordLocationSelection } from '../lib/locationSearch';
 import './MeetPage.css';
 
 const liveLocationIcon = L.divIcon({
@@ -137,6 +137,7 @@ function MeetPage() {
   };
 
   const handleSelectLocation = (location, type) => {
+    recordLocationSelection(location);
     if (type === 'A') {
       setLocA(location.name);
       setCoordsA(location);

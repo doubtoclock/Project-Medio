@@ -28,12 +28,18 @@ type SearchCacheEntry = {
 const PHOTON_TIMEOUT_MS = 1800;
 const SEARCH_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const SEARCH_CACHE_LIMIT = 160;
+const POPULARITY_CACHE_LIMIT = 500;
 const MIN_SIMILAR_QUERY_LENGTH = 5;
 const MAX_SEARCH_RESULTS = 5;
 const PHOTON_RESULT_LIMIT = 12;
 
 const searchCache = new Map<string, SearchCacheEntry>();
 const pendingSearches = new Map<string, Promise<LocationSuggestion[]>>();
+const popularityCache = new Map<string, {
+  suggestion: LocationSuggestion;
+  count: number;
+  lastSelected: number;
+}>();
 
 const curatedLocations: Array<LocationSuggestion & { keywords: string[] }> = [
   {
@@ -317,6 +323,75 @@ const dedupeLocationSuggestions = (suggestions: LocationSuggestion[]) => {
   return unique;
 };
 
+const getPopularityKey = (suggestion: LocationSuggestion) =>
+  `${normalizeSuggestionName(suggestion.name)}:${suggestion.lat.toFixed(4)},${suggestion.lng.toFixed(4)}`;
+
+const getPopularityScore = (suggestion: LocationSuggestion) => {
+  const entry = popularityCache.get(getPopularityKey(suggestion));
+  if (!entry) return 0;
+
+  const daysSinceSelected = (Date.now() - entry.lastSelected) / (24 * 60 * 60 * 1000);
+  return entry.count * 4 + Math.max(0, 7 - daysSinceSelected);
+};
+
+const rankSuggestionsByPopularity = (suggestions: LocationSuggestion[]) =>
+  dedupeLocationSuggestions(suggestions)
+    .map((suggestion, index) => ({
+      suggestion,
+      score: getPopularityScore(suggestion),
+      index
+    }))
+    .sort((left, right) =>
+      right.score - left.score ||
+      left.index - right.index
+    )
+    .map(({ suggestion }) => suggestion)
+    .slice(0, MAX_SEARCH_RESULTS);
+
+const getPopularSuggestionsForQuery = (query: string) => {
+  const normalizedQuery = normalizeSuggestionName(query);
+  if (!normalizedQuery) return [];
+
+  return [...popularityCache.values()]
+    .filter(({ suggestion }) =>
+      normalizeSuggestionName(suggestion.name).includes(normalizedQuery)
+    )
+    .sort((left, right) =>
+      right.count - left.count ||
+      right.lastSelected - left.lastSelected
+    )
+    .map(({ suggestion }) => suggestion)
+    .slice(0, MAX_SEARCH_RESULTS);
+};
+
+const prunePopularityCache = () => {
+  if (popularityCache.size <= POPULARITY_CACHE_LIMIT) return;
+
+  const removeCount = popularityCache.size - POPULARITY_CACHE_LIMIT;
+  [...popularityCache.entries()]
+    .sort((left, right) =>
+      left[1].count - right[1].count ||
+      left[1].lastSelected - right[1].lastSelected
+    )
+    .slice(0, removeCount)
+    .forEach(([key]) => popularityCache.delete(key));
+};
+
+const recordLocationSelection = (suggestion: LocationSuggestion) => {
+  const [normalized] = dedupeLocationSuggestions([suggestion]);
+  if (!normalized) return false;
+
+  const key = getPopularityKey(normalized);
+  const existing = popularityCache.get(key);
+  popularityCache.set(key, {
+    suggestion: normalized,
+    count: (existing?.count ?? 0) + 1,
+    lastSelected: Date.now()
+  });
+  prunePopularityCache();
+  return true;
+};
+
 const getBigrams = (value: string) => {
   const compact = value.replace(/\s+/g, "");
   if (compact.length < 2) return [compact];
@@ -419,7 +494,7 @@ const getCachedSearch = (key: string) => {
 };
 
 const setCachedSearch = (key: string, results: LocationSuggestion[]) => {
-  const normalizedResults = dedupeLocationSuggestions(results);
+  const normalizedResults = rankSuggestionsByPopularity(results);
 
   searchCache.set(key, {
     results: normalizedResults,
@@ -562,15 +637,27 @@ const fetchPhotonSuggestions = async (
       );
 
     const suggestions = [
+      ...getPopularSuggestionsForQuery(query),
       ...getCuratedSuggestions(query),
       ...photonSuggestions
     ];
 
-    return dedupeLocationSuggestions(suggestions);
+    return rankSuggestionsByPopularity(suggestions);
   } finally {
     clearTimeout(timeout);
   }
 };
+
+router.post("/select", searchRateLimiter, async (req, res) => {
+  const { name, lat, lng } = req.body ?? {};
+  const accepted = recordLocationSelection({
+    name: typeof name === "string" ? name : "",
+    lat: Number(lat),
+    lng: Number(lng),
+  });
+
+  res.status(accepted ? 204 : 400).end();
+});
 
 router.get("/", searchRateLimiter, validateQuery(searchQuerySchema), async (req, res) => {
   const query = req.query.q as string;
@@ -580,7 +667,10 @@ router.get("/", searchRateLimiter, validateQuery(searchQuerySchema), async (req,
   const cached = getCachedSearch(cacheKey);
   if (cached) {
     res.setHeader("X-Medio-Cache", "hit");
-    res.json(cached.results);
+    res.json(rankSuggestionsByPopularity([
+      ...getPopularSuggestionsForQuery(query),
+      ...cached.results
+    ]));
     return;
   }
 

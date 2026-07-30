@@ -70,7 +70,7 @@ function DetailPage() {
           fromName: origin.name,
           toName: venue.name,
           travelMode: 'local',
-          localTransport: { bus: true, rail: true, subway: true, car: true },
+          localTransport: { bus: true, rail: true, subway: true, car: false },
         });
         const itineraries = data?.data?.plan?.itineraries;
         if (!Array.isArray(itineraries) || itineraries.length === 0) {
