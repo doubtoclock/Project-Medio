@@ -5,6 +5,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LocateFixed, ArrowLeft, Clock } from 'lucide-react';
 import { apiClient } from '../lib/apiClient';
+import { decodePolyline } from '../lib/routeUtils';
 import './ResultsPage.css';
 
 const CATEGORY_ORDER = [
@@ -16,8 +17,6 @@ const CATEGORY_ORDER = [
 ];
 
 const getMeetCategory = (place) => place.category || 'Place';
-
-const getPreviewRoute = (start, end) => [[start.lat, start.lng], [end.lat, end.lng]];
 
 const limitRouteCache = (cache, maxEntries = 32) =>
   Object.fromEntries(Object.entries(cache).slice(-maxEntries));
@@ -43,6 +42,30 @@ const assertRouteData = (data) => {
   }
   return data;
 };
+
+const getRouteSegments = (routeData) => {
+  const itinerary = routeData?.data?.plan?.itineraries?.[0];
+  if (!itinerary?.legs) return [];
+
+  return itinerary.legs
+    .map((leg) => decodePolyline(leg?.legGeometry?.points))
+    .filter((points) => points.length > 1);
+};
+
+function RoutedPolylines({ segments, color, className }) {
+  if (segments.length === 0) return null;
+
+  return (
+    <>
+      {segments.map((points, index) => (
+        <React.Fragment key={`${className}-${index}`}>
+          <Polyline positions={points} color={color} weight={5} opacity={0.3} className={className} />
+          <Polyline positions={points} color={color} weight={2} opacity={1.0} className={className} />
+        </React.Fragment>
+      ))}
+    </>
+  );
+}
 
 const getOriginIcon = (phase) => L.divIcon({
   className: phase >= 1 ? 'leaflet-custom-marker-container' : 'anim-hidden',
@@ -116,8 +139,6 @@ function ResultsPage() {
 
   const [phase, setPhase] = useState(0);
   const [rescaleTrigger, setRescaleTrigger] = useState(0);
-  const [routeA, setRouteA] = useState([]);
-  const [routeB, setRouteB] = useState([]);
   const [selectedVenue, setSelectedVenue] = useState(savedRestore?.selectedVenue || null);
   const [selectedCategories, setSelectedCategories] = useState(savedRestore?.selectedCategories || []);
   const [routeCache, setRouteCache] = useState(savedRestore?.routeCache || {});
@@ -203,10 +224,8 @@ function ResultsPage() {
     });
   };
 
-  useEffect(() => {
-    setRouteA(getPreviewRoute(originA, midpoint));
-    setRouteB(getPreviewRoute(originB, midpoint));
-  }, [originA.lat, originA.lng, originB.lat, originB.lng, midpoint.lat, midpoint.lng]);
+  const routeSegmentsA = useMemo(() => getRouteSegments(routeDataA), [routeDataA]);
+  const routeSegmentsB = useMemo(() => getRouteSegments(routeDataB), [routeDataB]);
 
   const allPositions = useMemo(() => {
     const positions = [
@@ -216,9 +235,10 @@ function ResultsPage() {
     if (selectedVenue) {
       positions.push([selectedVenue.lat, selectedVenue.lon]);
     }
-    positions.push(...routeA, ...routeB);
+    routeSegmentsA.forEach((segment) => positions.push(...segment));
+    routeSegmentsB.forEach((segment) => positions.push(...segment));
     return positions;
-  }, [originA, originB, selectedVenue, routeA, routeB]);
+  }, [originA, originB, selectedVenue, routeSegmentsA, routeSegmentsB]);
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase(1), 200);
@@ -363,6 +383,10 @@ function ResultsPage() {
     navigateToDetail(venue, cachedA, cachedB, null, null);
   };
 
+  const selectVenue = (venue) => {
+    setSelectedVenue(venue);
+  };
+
   return (
     <div className="results-page">
       <div className="results-map-section">
@@ -396,18 +420,8 @@ function ResultsPage() {
 
             {phase >= 2 && (
               <>
-                {routeA.length > 0 && (
-                  <>
-                    <Polyline positions={routeA} color="#FFFFFF" weight={5} opacity={0.3} className="anim-route-line-a" />
-                    <Polyline positions={routeA} color="#FFFFFF" weight={2} opacity={1.0} className="anim-route-line-a" />
-                  </>
-                )}
-                {routeB.length > 0 && (
-                  <>
-                    <Polyline positions={routeB} color="#D4AF37" weight={5} opacity={0.3} className="anim-route-line-b" />
-                    <Polyline positions={routeB} color="#D4AF37" weight={2} opacity={1.0} className="anim-route-line-b" />
-                  </>
-                )}
+                <RoutedPolylines segments={routeSegmentsA} color="#FFFFFF" className="anim-route-line-a" />
+                <RoutedPolylines segments={routeSegmentsB} color="#D4AF37" className="anim-route-line-b" />
               </>
             )}
 
@@ -509,7 +523,7 @@ function ResultsPage() {
                   border: selectedVenue?.id === point.id ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(255,255,255,0.07)',
                   backgroundColor: selectedVenue?.id === point.id ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
                 }}
-                onClick={() => openDetailView(point)}
+                onClick={() => selectVenue(point)}
               >
                 <div className="meeting-card-info">
                   <span className={`meeting-card-tag ${index === 0 ? '' : 'nearby'}`}>
