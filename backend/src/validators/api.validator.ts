@@ -64,7 +64,7 @@ export const routeRequestSchema = z
 
 export const searchQuerySchema = z
   .object({
-    q: text(2, 120),
+    q: text(1, 120),
   })
   .strict();
 

@@ -1,6 +1,6 @@
 import { apiFetch } from "./api";
 
-const SUGGESTION_CACHE_KEY = "medio_location_suggestion_cache_v2";
+const SUGGESTION_CACHE_KEY = "medio_location_suggestion_cache_v3";
 const POPULARITY_KEY = "medio_location_popularity_v1";
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const CACHE_LIMIT = 80;
@@ -14,6 +14,15 @@ const normalizeLocationName = (name) =>
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+const getPrimaryLocationName = (name) => String(name || "").split(",")[0];
+
+const matchesQueryPrefix = (suggestion, query) => {
+  const normalizedQuery = normalizeLocationName(query);
+  if (!normalizedQuery) return false;
+
+  return normalizeLocationName(getPrimaryLocationName(suggestion?.name)).startsWith(normalizedQuery);
+};
 
 const getSuggestionKey = (suggestion) =>
   `${normalizeLocationName(suggestion.name)}:${Number(suggestion.lat).toFixed(4)},${Number(suggestion.lng).toFixed(4)}`;
@@ -129,6 +138,9 @@ const rankByLocalPopularity = (suggestions) => {
     .slice(0, 5);
 };
 
+const filterSuggestionsForQuery = (suggestions, query) =>
+  rankByLocalPopularity(suggestions.filter((suggestion) => matchesQueryPrefix(suggestion, query)));
+
 export const recordLocationSelection = (location) => {
   const [suggestion] = dedupeLocationSuggestions([location], 1);
   if (!suggestion) return;
@@ -159,10 +171,10 @@ export const recordLocationSelection = (location) => {
 
 export const fetchLocationSuggestions = async (query, signal) => {
   const trimmedQuery = query.trim();
-  if (trimmedQuery.length < 3) return [];
+  if (trimmedQuery.length < 1) return [];
 
   const cached = getCachedSuggestionEntry(trimmedQuery);
-  if (cached) return rankByLocalPopularity(cached.results);
+  if (cached) return filterSuggestionsForQuery(cached.results, trimmedQuery);
 
   try {
     const res = await apiFetch(
@@ -171,7 +183,7 @@ export const fetchLocationSuggestions = async (query, signal) => {
     );
     if (!res.ok) return [];
 
-    const suggestions = rankByLocalPopularity(await res.json());
+    const suggestions = filterSuggestionsForQuery(await res.json(), trimmedQuery);
     cacheSuggestions(trimmedQuery, suggestions);
     return suggestions;
   } catch (error) {

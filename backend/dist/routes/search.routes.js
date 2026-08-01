@@ -19,6 +19,24 @@ const pendingSearches = new Map();
 const popularityCache = new Map();
 const curatedLocations = [
     {
+        name: "Mumbai, Maharashtra",
+        lat: 19.0760,
+        lng: 72.8777,
+        keywords: ["mumbai"]
+    },
+    {
+        name: "Marine Drive, Mumbai",
+        lat: 18.9430,
+        lng: 72.8238,
+        keywords: ["marine drive", "marine"]
+    },
+    {
+        name: "Matunga, Mumbai",
+        lat: 19.0269,
+        lng: 72.8553,
+        keywords: ["matunga"]
+    },
+    {
         name: "Juhu, Mumbai",
         lat: 19.1075,
         lng: 72.8263,
@@ -251,7 +269,7 @@ const getQueryTokens = (query) => query
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .split(/\s+/)
     .map((token) => tokenAliases[token] ?? token)
-    .filter((token) => token.length > 1);
+    .filter((token) => token.length > 0);
 const getSearchCacheKey = (query) => getQueryTokens(query).sort().join(" ");
 const normalizeSuggestionName = (name) => name
     .normalize("NFKD")
@@ -260,6 +278,14 @@ const normalizeSuggestionName = (name) => name
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
+const getPrimarySuggestionName = (name) => name.split(",")[0];
+const matchesQueryPrefix = (suggestion, query) => {
+    const normalizedQuery = normalizeSuggestionName(query);
+    if (!normalizedQuery)
+        return false;
+    return normalizeSuggestionName(getPrimarySuggestionName(suggestion.name)).startsWith(normalizedQuery);
+};
+const filterSuggestionsForQuery = (suggestions, query) => suggestions.filter((suggestion) => matchesQueryPrefix(suggestion, query));
 const dedupeLocationSuggestions = (suggestions) => {
     const seen = new Set();
     const unique = [];
@@ -307,7 +333,7 @@ const getPopularSuggestionsForQuery = (query) => {
     if (!normalizedQuery)
         return [];
     return [...popularityCache.values()]
-        .filter(({ suggestion }) => normalizeSuggestionName(suggestion.name).includes(normalizedQuery))
+        .filter(({ suggestion }) => matchesQueryPrefix(suggestion, normalizedQuery))
         .sort((left, right) => right.count - left.count ||
         right.lastSelected - left.lastSelected)
         .map(({ suggestion }) => suggestion)
@@ -442,8 +468,6 @@ const getCuratedSuggestions = (query) => {
                 return 3;
             if (normalizedKeyword.startsWith(normalizedQuery))
                 return 2;
-            if (normalizedKeyword.includes(normalizedQuery))
-                return 1;
             return 0;
         }));
         return { location, bestScore };
@@ -519,7 +543,7 @@ const fetchPhotonSuggestions = async (query) => {
             ...getCuratedSuggestions(query),
             ...photonSuggestions
         ];
-        return rankSuggestionsByPopularity(suggestions);
+        return rankSuggestionsByPopularity(filterSuggestionsForQuery(suggestions, query));
     }
     finally {
         clearTimeout(timeout);
@@ -542,7 +566,7 @@ router.get("/", security_middleware_1.searchRateLimiter, (0, validation_middlewa
         res.setHeader("X-Medio-Cache", "hit");
         res.json(rankSuggestionsByPopularity([
             ...getPopularSuggestionsForQuery(query),
-            ...cached.results
+            ...filterSuggestionsForQuery(cached.results, query)
         ]));
         return;
     }

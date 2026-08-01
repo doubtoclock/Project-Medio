@@ -58,7 +58,7 @@ exports.routeRequestSchema = zod_1.z
     .strict();
 exports.searchQuerySchema = zod_1.z
     .object({
-    q: text(2, 120),
+    q: text(1, 120),
 })
     .strict();
 //# sourceMappingURL=api.validator.js.map

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, User, Users, MapPin } from 'lucide-react';
 import { RouteMetricsPanel, RouteStepsPanel, ItinerarySwitcher, formatDuration } from '../lib/routeUtils';
@@ -53,16 +53,23 @@ function DetailPage() {
 
   const [itineraryIndexA, setItineraryIndexA] = useState(0);
   const [itineraryIndexB, setItineraryIndexB] = useState(0);
+  const requestedRouteKeysRef = useRef(new Set());
 
   const itineraryA = itinerariesA[itineraryIndexA] || null;
   const itineraryB = itinerariesB[itineraryIndexB] || null;
 
   useEffect(() => {
     if (isRecipient || !venue || !originA || !originB) return;
-    if (routeDataA || routeDataB || routeErrorA || routeErrorB) return;
+    const needsRouteA = !routeDataA && !routeErrorA;
+    const needsRouteB = !routeDataB && !routeErrorB;
+    if (!needsRouteA && !needsRouteB) return;
 
     let cancelled = false;
     const fetchRoute = async (origin, side) => {
+      const routeKey = `${side}-${venue.id || `${venue.lat},${venue.lon ?? venue.lng}`}`;
+      if (requestedRouteKeysRef.current.has(routeKey)) return;
+      requestedRouteKeysRef.current.add(routeKey);
+
       try {
         const data = await apiClient.route.plan({
           from: { lat: origin.lat, lng: origin.lng },
@@ -86,8 +93,8 @@ function DetailPage() {
       }
     };
 
-    fetchRoute(originA, 'A');
-    fetchRoute(originB, 'B');
+    if (needsRouteA) fetchRoute(originA, 'A');
+    if (needsRouteB) fetchRoute(originB, 'B');
 
     return () => { cancelled = true; };
   }, [isRecipient, venue, originA, originB, routeDataA, routeDataB, routeErrorA, routeErrorB]);

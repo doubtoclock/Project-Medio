@@ -56,7 +56,7 @@ function MeetPage() {
   // Fetch suggestions for A
   useEffect(() => {
     const query = debouncedA.trim();
-    if (query.length < 3) {
+    if (query.length < 1) {
       setSuggestionsA([]);
       return;
     }
@@ -83,7 +83,7 @@ function MeetPage() {
   // Fetch suggestions for B
   useEffect(() => {
     const query = debouncedB.trim();
-    if (query.length < 3) {
+    if (query.length < 1) {
       setSuggestionsB([]);
       return;
     }

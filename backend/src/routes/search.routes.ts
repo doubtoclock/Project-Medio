@@ -43,6 +43,24 @@ const popularityCache = new Map<string, {
 
 const curatedLocations: Array<LocationSuggestion & { keywords: string[] }> = [
   {
+    name: "Mumbai, Maharashtra",
+    lat: 19.0760,
+    lng: 72.8777,
+    keywords: ["mumbai"]
+  },
+  {
+    name: "Marine Drive, Mumbai",
+    lat: 18.9430,
+    lng: 72.8238,
+    keywords: ["marine drive", "marine"]
+  },
+  {
+    name: "Matunga, Mumbai",
+    lat: 19.0269,
+    lng: 72.8553,
+    keywords: ["matunga"]
+  },
+  {
     name: "Juhu, Mumbai",
     lat: 19.1075,
     lng: 72.8263,
@@ -278,7 +296,7 @@ const getQueryTokens = (query: string) =>
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .split(/\s+/)
     .map((token) => tokenAliases[token] ?? token)
-    .filter((token) => token.length > 1);
+    .filter((token) => token.length > 0);
 
 const getSearchCacheKey = (query: string) =>
   getQueryTokens(query).sort().join(" ");
@@ -291,6 +309,18 @@ const normalizeSuggestionName = (name: string) =>
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+const getPrimarySuggestionName = (name: string) => name.split(",")[0];
+
+const matchesQueryPrefix = (suggestion: LocationSuggestion, query: string) => {
+  const normalizedQuery = normalizeSuggestionName(query);
+  if (!normalizedQuery) return false;
+
+  return normalizeSuggestionName(getPrimarySuggestionName(suggestion.name)).startsWith(normalizedQuery);
+};
+
+const filterSuggestionsForQuery = (suggestions: LocationSuggestion[], query: string) =>
+  suggestions.filter((suggestion) => matchesQueryPrefix(suggestion, query));
 
 const dedupeLocationSuggestions = (suggestions: LocationSuggestion[]) => {
   const seen = new Set<string>();
@@ -354,7 +384,7 @@ const getPopularSuggestionsForQuery = (query: string) => {
 
   return [...popularityCache.values()]
     .filter(({ suggestion }) =>
-      normalizeSuggestionName(suggestion.name).includes(normalizedQuery)
+      matchesQueryPrefix(suggestion, normalizedQuery)
     )
     .sort((left, right) =>
       right.count - left.count ||
@@ -516,7 +546,6 @@ const getCuratedSuggestions = (query: string) => {
         if (normalizedKeyword === normalizedQuery) return 4;
         if (normalizedKeyword.startsWith(`${normalizedQuery} `)) return 3;
         if (normalizedKeyword.startsWith(normalizedQuery)) return 2;
-        if (normalizedKeyword.includes(normalizedQuery)) return 1;
         return 0;
       }));
 
@@ -642,7 +671,7 @@ const fetchPhotonSuggestions = async (
       ...photonSuggestions
     ];
 
-    return rankSuggestionsByPopularity(suggestions);
+    return rankSuggestionsByPopularity(filterSuggestionsForQuery(suggestions, query));
   } finally {
     clearTimeout(timeout);
   }
@@ -669,7 +698,7 @@ router.get("/", searchRateLimiter, validateQuery(searchQuerySchema), async (req,
     res.setHeader("X-Medio-Cache", "hit");
     res.json(rankSuggestionsByPopularity([
       ...getPopularSuggestionsForQuery(query),
-      ...cached.results
+      ...filterSuggestionsForQuery(cached.results, query)
     ]));
     return;
   }

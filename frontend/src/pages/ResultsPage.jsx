@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -19,8 +19,30 @@ const getMeetCategory = (place) => place.category || 'Place';
 
 const getPreviewRoute = (start, end) => [[start.lat, start.lng], [end.lat, end.lng]];
 
-const limitRouteCache = (cache, maxEntries = 8) =>
+const limitRouteCache = (cache, maxEntries = 32) =>
   Object.fromEntries(Object.entries(cache).slice(-maxEntries));
+
+const getVenueRouteKey = (side, venue) =>
+  `${side}-${venue.id || `${venue.lat},${venue.lon ?? venue.lng}`}`;
+
+const getRouteErrorMessage = (err) => {
+  const msg = err?.message || '';
+  if (msg.includes('Failed to fetch route from OTP') || msg.includes('502')) {
+    return 'Routing is currently available only within the regions included in the current map dataset.';
+  }
+  if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+    return 'Unable to connect to the server.';
+  }
+  return 'Could not calculate route.';
+};
+
+const assertRouteData = (data) => {
+  const itineraries = data?.data?.plan?.itineraries;
+  if (!Array.isArray(itineraries) || itineraries.length === 0) {
+    throw new Error('No route found');
+  }
+  return data;
+};
 
 const getOriginIcon = (phase) => L.divIcon({
   className: phase >= 1 ? 'leaflet-custom-marker-container' : 'anim-hidden',
@@ -106,6 +128,7 @@ function ResultsPage() {
   const [routeErrorB, setRouteErrorB] = useState(null);
   const [loadingRoutes, setLoadingRoutes] = useState(false);
   const routeCacheRef = useRef(savedRestore?.routeCache || {});
+  const pendingRoutesRef = useRef(new Map());
   routeCacheRef.current = routeCache;
 
   const hasResults = meetResults.length > 0;
@@ -114,6 +137,42 @@ function ResultsPage() {
     lat: (originA.lat + originB.lat) / 2,
     lng: (originA.lng + originB.lng) / 2,
   }), [originA.lat, originA.lng, originB.lat, originB.lng]);
+
+  const fetchRouteForVenue = useCallback((side, venue) => {
+    const routeKey = getVenueRouteKey(side, venue);
+    const cached = routeCacheRef.current[routeKey];
+    if (cached) return Promise.resolve(cached);
+
+    const pending = pendingRoutesRef.current.get(routeKey);
+    if (pending) return pending;
+
+    const from = side === 'A' ? originA : originB;
+    const fromName = side === 'A' ? originA.name : originB.name;
+    const promise = apiClient.route.plan({
+      from: { lat: from.lat, lng: from.lng },
+      to: { lat: venue.lat, lng: venue.lon },
+      fromName,
+      toName: venue.name,
+      travelMode: 'local',
+      localTransport: { bus: true, rail: true, subway: true, car: false },
+    })
+      .then(assertRouteData)
+      .then((data) => {
+        setRouteCache((prev) => {
+          if (prev[routeKey]) return prev;
+          const next = limitRouteCache({ ...prev, [routeKey]: data });
+          routeCacheRef.current = next;
+          return next;
+        });
+        return data;
+      })
+      .finally(() => {
+        pendingRoutesRef.current.delete(routeKey);
+      });
+
+    pendingRoutesRef.current.set(routeKey, promise);
+    return promise;
+  }, [originA, originB]);
 
   const navigateToDetail = (venue, dataA = routeDataA, dataB = routeDataB, errorA = routeErrorA, errorB = routeErrorB) => {
     if (!venue) return;
@@ -179,6 +238,15 @@ function ResultsPage() {
   }, [hasResults]);
 
   useEffect(() => {
+    if (!hasResults) return;
+
+    meetResults.forEach((venue) => {
+      fetchRouteForVenue('A', venue).catch(() => {});
+      fetchRouteForVenue('B', venue).catch(() => {});
+    });
+  }, [hasResults, meetResults, fetchRouteForVenue]);
+
+  useEffect(() => {
     if (!selectedVenue) return;
 
     let cancelled = false;
@@ -193,10 +261,8 @@ function ResultsPage() {
     setRouteErrorA(null);
     setRouteErrorB(null);
 
-      const fetchSide = async (side) => {
-      const from = side === 'A' ? originA : originB;
-      const fromName = side === 'A' ? originA.name : originB.name;
-      const routeKey = `${side}-${selectedVenue.id}`;
+    const fetchSide = async (side) => {
+      const routeKey = getVenueRouteKey(side, selectedVenue);
       const cached = routeCacheRef.current[routeKey];
 
       if (cached) {
@@ -213,22 +279,8 @@ function ResultsPage() {
       }
 
       try {
-        const data = await apiClient.route.plan({
-          from: { lat: from.lat, lng: from.lng },
-          to: { lat: selectedVenue.lat, lng: selectedVenue.lon },
-          fromName,
-          toName: selectedVenue.name,
-          travelMode: 'local',
-          localTransport: { bus: true, rail: true, subway: true, car: false },
-        });
-        const itineraries = data?.data?.plan?.itineraries;
-        if (!Array.isArray(itineraries) || itineraries.length === 0) throw new Error('No route found');
+        const data = await fetchRouteForVenue(side, selectedVenue);
         if (!cancelled) {
-          setRouteCache((prev) => {
-            const next = limitRouteCache({ ...prev, [routeKey]: data });
-            routeCacheRef.current = next;
-            return next;
-          });
           if (side === 'A') {
             setRouteDataA(data);
             localDataA = data;
@@ -239,15 +291,7 @@ function ResultsPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          const msg = err?.message || '';
-          let errorText;
-          if (msg.includes('Failed to fetch route from OTP') || msg.includes('502')) {
-            errorText = 'Routing is currently available only within the regions included in the current map dataset.';
-          } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-            errorText = 'Unable to connect to the server.';
-          } else {
-            errorText = 'Could not calculate route.';
-          }
+          const errorText = getRouteErrorMessage(err);
           if (side === 'A') {
             setRouteErrorA(errorText);
             localErrorA = errorText;
@@ -266,7 +310,7 @@ function ResultsPage() {
     });
 
     return () => { cancelled = true; };
-  }, [selectedVenue]);
+  }, [selectedVenue, fetchRouteForVenue]);
 
   const categoryCounts = useMemo(() => {
     return meetResults.reduce((counts, place) => {
@@ -302,12 +346,21 @@ function ResultsPage() {
   const handleRescale = () => setRescaleTrigger((prev) => prev + 1);
 
   const openDetailView = (venue) => {
+    const cachedA = routeCacheRef.current[getVenueRouteKey('A', venue)] || null;
+    const cachedB = routeCacheRef.current[getVenueRouteKey('B', venue)] || null;
+
     if (selectedVenue?.id === venue.id) {
-      navigateToDetail(venue);
+      navigateToDetail(
+        venue,
+        routeDataA || cachedA,
+        routeDataB || cachedB,
+        routeErrorA,
+        routeErrorB
+      );
       return;
     }
     setSelectedVenue(venue);
-    navigateToDetail(venue, null, null, null, null);
+    navigateToDetail(venue, cachedA, cachedB, null, null);
   };
 
   return (

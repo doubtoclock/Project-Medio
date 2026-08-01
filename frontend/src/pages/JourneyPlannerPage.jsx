@@ -312,7 +312,7 @@ export default function JourneyPlannerPage() {
   // Fetch suggestions for A
   useEffect(() => {
     const query = debouncedA.trim();
-    if (query.length < 3) { setSuggestionsA([]); return; }
+    if (query.length < 1) { setSuggestionsA([]); return; }
     const controller = new AbortController();
     let cancelled = false;
     fetchLocationSuggestions(query, controller.signal)
@@ -324,7 +324,7 @@ export default function JourneyPlannerPage() {
   // Fetch suggestions for B
   useEffect(() => {
     const query = debouncedB.trim();
-    if (query.length < 3) { setSuggestionsB([]); return; }
+    if (query.length < 1) { setSuggestionsB([]); return; }
     const controller = new AbortController();
     let cancelled = false;
     fetchLocationSuggestions(query, controller.signal)
