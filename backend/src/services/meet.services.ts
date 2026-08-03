@@ -3,6 +3,7 @@ import { Coordinates } from "./isochrone.services";
 import {
   fetchMeetingPOIs,
   fetchMeetingPOIsNearPoints,
+  isValidCategoryPOI,
   OverpassPOI,
   POILookupUnavailableError
 } from "./poi.services";
@@ -98,15 +99,9 @@ const curatedMeetingPOIs: OverpassPOI[] = [
   { type: "node", id: -1010, lat: 19.1351, lon: 72.8146, tags: { name: "Versova Social", amenity: "restaurant" } },
   { type: "node", id: -1011, lat: 19.1293, lon: 72.8310, tags: { name: "Lokhandwala Market", amenity: "marketplace" } },
   { type: "node", id: -1012, lat: 19.1412, lon: 72.8309, tags: { name: "Infiniti Mall, Andheri", shop: "mall" } },
-  { type: "node", id: -1013, lat: 19.1155, lon: 72.8727, tags: { name: "Andheri East", amenity: "restaurant" } },
   { type: "node", id: -1014, lat: 19.1176, lon: 72.9060, tags: { name: "Powai Lake", leisure: "garden" } },
   { type: "node", id: -1015, lat: 19.1197, lon: 72.9073, tags: { name: "Galleria, Powai", shop: "mall" } },
-  { type: "node", id: -1016, lat: 19.0663, lon: 72.8670, tags: { name: "BKC, Bandra Kurla Complex", amenity: "restaurant" } },
-  { type: "node", id: -1017, lat: 19.0014, lon: 72.8302, tags: { name: "High Street Phoenix, Lower Parel", shop: "mall" } },
-  { type: "node", id: -1018, lat: 19.0178, lon: 72.8478, tags: { name: "Dadar", amenity: "restaurant" } },
-  { type: "node", id: -1019, lat: 19.2290, lon: 72.8574, tags: { name: "Borivali", amenity: "restaurant" } },
-  { type: "node", id: -1020, lat: 19.2813, lon: 72.8567, tags: { name: "Mira Road", amenity: "restaurant" } },
-  { type: "node", id: -1021, lat: 19.3002, lon: 72.8544, tags: { name: "Bhayandar", amenity: "restaurant" } }
+  { type: "node", id: -1017, lat: 19.0014, lon: 72.8302, tags: { name: "High Street Phoenix, Lower Parel", shop: "mall" } }
 ];
 
 const clamp = (value: number, min: number, max: number) =>
@@ -580,11 +575,6 @@ const buildBidirectionalRouteSeeds = async (
 
 const getPoiKey = (poi: OverpassPOI) => `${poi.type || "node"}:${poi.id}`;
 
-const hasUsableName = (poi: OverpassPOI) => {
-  const name = poi.tags?.name?.trim();
-  return Boolean(name && name.length > 1);
-};
-
 const mergeUniquePois = (
   existing: OverpassPOI[],
   next: OverpassPOI[]
@@ -623,7 +613,7 @@ const fetchExpandedMeetingPOIs = async (
             POI_TIMEOUT_MS,
             stage
           );
-          const namedPois = pois.filter(hasUsableName);
+          const namedPois = pois.filter(isValidCategoryPOI);
           results = mergeUniquePois(results, namedPois);
           circleCounts.set(seedIndex, mergeUniquePois([], [
             ...results.filter((poi) => getDistanceKm(seed, poi) <= radiusKm)
@@ -677,6 +667,7 @@ const fetchCuratedMeetingPOIsNearSeeds = (
 
   for (const radiusKm of getExpandedSearchRadii(baseRadiusKm)) {
     const nearbyPois = curatedMeetingPOIs.filter((poi) =>
+      isValidCategoryPOI(poi) &&
       seeds.some((seed) => getDistanceKm(seed, poi) <= radiusKm)
     );
     results = mergeUniquePois(results, nearbyPois);
@@ -903,7 +894,7 @@ const findSurfaceMeetPois = async (
     }
   }
 
-  return pois.filter(hasUsableName);
+  return pois.filter(isValidCategoryPOI);
 };
 
 const findMeetPointsWithSurfaceFallback = async (

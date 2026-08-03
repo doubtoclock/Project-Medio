@@ -73,6 +73,59 @@ const hasUsableName = (poi: OverpassPOI) => {
   return Boolean(name && name.length > 1);
 };
 
+const CATEGORY_TAG_VALUES: Record<string, Set<string>> = {
+  amenity: new Set([
+    "cafe",
+    "restaurant",
+    "food_court",
+    "fast_food",
+    "bar",
+    "pub",
+    "ice_cream",
+    "library",
+    "cinema",
+    "theatre",
+    "arts_centre",
+    "community_centre",
+    "marketplace"
+  ]),
+  leisure: new Set([
+    "park",
+    "garden",
+    "bowling_alley",
+    "sports_centre",
+    "fitness_centre"
+  ]),
+  tourism: new Set([
+    "museum",
+    "attraction",
+    "gallery",
+    "hotel"
+  ]),
+  shop: new Set([
+    "mall",
+    "department_store",
+    "books"
+  ]),
+  natural: new Set(["beach"])
+};
+
+const hasCategoryTag = (tags: Record<string, string> = {}) =>
+  Object.entries(CATEGORY_TAG_VALUES).some(([key, values]) => {
+    const value = tags[key];
+    return typeof value === "string" && values.has(value);
+  });
+
+export const isValidCategoryPOI = (poi: OverpassPOI) => {
+  const tags = poi.tags ?? {};
+
+  if (!hasUsableName(poi)) return false;
+  if (!hasCategoryTag(tags)) return false;
+  if (tags.place || tags.boundary || tags.admin_level) return false;
+
+  return true;
+};
+
 const roundCoord = (value: number) => value.toFixed(3);
 
 const getPoiCacheKey = (
@@ -293,7 +346,8 @@ export async function fetchMeetingPOIsNearPoints(
     .filter((poi) =>
       Number.isFinite(poi.lat) &&
       Number.isFinite(poi.lon) &&
-      isWithinServiceAreaBounds({ lat: poi.lat, lon: poi.lon })
+      isWithinServiceAreaBounds({ lat: poi.lat, lon: poi.lon }) &&
+      isValidCategoryPOI(poi)
     )
     .slice(0, limit);
 
@@ -370,6 +424,7 @@ export async function fetchMeetingPOIs(
 
       if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return false;
       if (!isWithinServiceAreaBounds({ lat: p.lat, lon: p.lon })) return false;
+      if (!isValidCategoryPOI(p)) return false;
 
       const point = turf.point([p.lon, p.lat]);
 

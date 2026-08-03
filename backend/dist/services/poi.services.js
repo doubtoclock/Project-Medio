@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.POILookupUnavailableError = void 0;
+exports.isValidCategoryPOI = exports.POILookupUnavailableError = void 0;
 exports.fetchMeetingPOIsNearPoints = fetchMeetingPOIsNearPoints;
 exports.fetchMeetingPOIs = fetchMeetingPOIs;
 const axios_1 = __importDefault(require("axios"));
@@ -75,6 +75,57 @@ const hasUsableName = (poi) => {
     const name = poi.tags?.name?.trim();
     return Boolean(name && name.length > 1);
 };
+const CATEGORY_TAG_VALUES = {
+    amenity: new Set([
+        "cafe",
+        "restaurant",
+        "food_court",
+        "fast_food",
+        "bar",
+        "pub",
+        "ice_cream",
+        "library",
+        "cinema",
+        "theatre",
+        "arts_centre",
+        "community_centre",
+        "marketplace"
+    ]),
+    leisure: new Set([
+        "park",
+        "garden",
+        "bowling_alley",
+        "sports_centre",
+        "fitness_centre"
+    ]),
+    tourism: new Set([
+        "museum",
+        "attraction",
+        "gallery",
+        "hotel"
+    ]),
+    shop: new Set([
+        "mall",
+        "department_store",
+        "books"
+    ]),
+    natural: new Set(["beach"])
+};
+const hasCategoryTag = (tags = {}) => Object.entries(CATEGORY_TAG_VALUES).some(([key, values]) => {
+    const value = tags[key];
+    return typeof value === "string" && values.has(value);
+});
+const isValidCategoryPOI = (poi) => {
+    const tags = poi.tags ?? {};
+    if (!hasUsableName(poi))
+        return false;
+    if (!hasCategoryTag(tags))
+        return false;
+    if (tags.place || tags.boundary || tags.admin_level)
+        return false;
+    return true;
+};
+exports.isValidCategoryPOI = isValidCategoryPOI;
 const roundCoord = (value) => value.toFixed(3);
 const getPoiCacheKey = (points, radiusKm, stage) => [
     stage,
@@ -235,7 +286,8 @@ async function fetchMeetingPOIsNearPoints(points, radiusKm, limit = 80, timeoutM
     const pois = dedupePOIs(responsePois)
         .filter((poi) => Number.isFinite(poi.lat) &&
         Number.isFinite(poi.lon) &&
-        (0, service_area_1.isWithinServiceAreaBounds)({ lat: poi.lat, lon: poi.lon }))
+        (0, service_area_1.isWithinServiceAreaBounds)({ lat: poi.lat, lon: poi.lon }) &&
+        (0, exports.isValidCategoryPOI)(poi))
         .slice(0, limit);
     setCachedPois(cacheKey, pois);
     logger_1.logger.info("Overpass POI search completed", {
@@ -293,6 +345,8 @@ async function fetchMeetingPOIs(polygon) {
             if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon))
                 return false;
             if (!(0, service_area_1.isWithinServiceAreaBounds)({ lat: p.lat, lon: p.lon }))
+                return false;
+            if (!(0, exports.isValidCategoryPOI)(p))
                 return false;
             const point = turf.point([p.lon, p.lat]);
             return turf.booleanPointInPolygon(point, polygon);

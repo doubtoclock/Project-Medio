@@ -73,15 +73,9 @@ const curatedMeetingPOIs = [
     { type: "node", id: -1010, lat: 19.1351, lon: 72.8146, tags: { name: "Versova Social", amenity: "restaurant" } },
     { type: "node", id: -1011, lat: 19.1293, lon: 72.8310, tags: { name: "Lokhandwala Market", amenity: "marketplace" } },
     { type: "node", id: -1012, lat: 19.1412, lon: 72.8309, tags: { name: "Infiniti Mall, Andheri", shop: "mall" } },
-    { type: "node", id: -1013, lat: 19.1155, lon: 72.8727, tags: { name: "Andheri East", amenity: "restaurant" } },
     { type: "node", id: -1014, lat: 19.1176, lon: 72.9060, tags: { name: "Powai Lake", leisure: "garden" } },
     { type: "node", id: -1015, lat: 19.1197, lon: 72.9073, tags: { name: "Galleria, Powai", shop: "mall" } },
-    { type: "node", id: -1016, lat: 19.0663, lon: 72.8670, tags: { name: "BKC, Bandra Kurla Complex", amenity: "restaurant" } },
-    { type: "node", id: -1017, lat: 19.0014, lon: 72.8302, tags: { name: "High Street Phoenix, Lower Parel", shop: "mall" } },
-    { type: "node", id: -1018, lat: 19.0178, lon: 72.8478, tags: { name: "Dadar", amenity: "restaurant" } },
-    { type: "node", id: -1019, lat: 19.2290, lon: 72.8574, tags: { name: "Borivali", amenity: "restaurant" } },
-    { type: "node", id: -1020, lat: 19.2813, lon: 72.8567, tags: { name: "Mira Road", amenity: "restaurant" } },
-    { type: "node", id: -1021, lat: 19.3002, lon: 72.8544, tags: { name: "Bhayandar", amenity: "restaurant" } }
+    { type: "node", id: -1017, lat: 19.0014, lon: 72.8302, tags: { name: "High Street Phoenix, Lower Parel", shop: "mall" } }
 ];
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const bucketCoordinate = (value) => (Math.round(value / MEET_CACHE_BUCKET_DEGREES) *
@@ -481,10 +475,6 @@ const buildBidirectionalRouteSeeds = async (A, B) => {
     return [...seeds, ...fallbackSeeds].slice(0, TOUCH_SEED_COUNT);
 };
 const getPoiKey = (poi) => `${poi.type || "node"}:${poi.id}`;
-const hasUsableName = (poi) => {
-    const name = poi.tags?.name?.trim();
-    return Boolean(name && name.length > 1);
-};
 const mergeUniquePois = (existing, next) => {
     const seen = new Set(existing.map(getPoiKey));
     const merged = [...existing];
@@ -507,7 +497,7 @@ const fetchExpandedMeetingPOIs = async (seeds, baseRadiusKm) => {
             for (const [seedIndex, seed] of seeds.entries()) {
                 try {
                     const pois = await (0, poi_services_1.fetchMeetingPOIsNearPoints)([seed], radiusKm, Math.ceil(POI_BATCH_LIMIT / Math.max(seeds.length, 1)), POI_TIMEOUT_MS, stage);
-                    const namedPois = pois.filter(hasUsableName);
+                    const namedPois = pois.filter(poi_services_1.isValidCategoryPOI);
                     results = mergeUniquePois(results, namedPois);
                     circleCounts.set(seedIndex, mergeUniquePois([], [
                         ...results.filter((poi) => getDistanceKm(seed, poi) <= radiusKm)
@@ -546,7 +536,8 @@ const fetchExpandedMeetingPOIs = async (seeds, baseRadiusKm) => {
 const fetchCuratedMeetingPOIsNearSeeds = (seeds, baseRadiusKm) => {
     let results = [];
     for (const radiusKm of getExpandedSearchRadii(baseRadiusKm)) {
-        const nearbyPois = curatedMeetingPOIs.filter((poi) => seeds.some((seed) => getDistanceKm(seed, poi) <= radiusKm));
+        const nearbyPois = curatedMeetingPOIs.filter((poi) => (0, poi_services_1.isValidCategoryPOI)(poi) &&
+            seeds.some((seed) => getDistanceKm(seed, poi) <= radiusKm));
         results = mergeUniquePois(results, nearbyPois);
         if (results.length >= MIN_LIVE_RESULTS) {
             return results.slice(0, POI_BATCH_LIMIT);
@@ -695,7 +686,7 @@ const findSurfaceMeetPois = async (A, B) => {
             logger_1.logger.warn("Surface fallback buffer failed", { error: err });
         }
     }
-    return pois.filter(hasUsableName);
+    return pois.filter(poi_services_1.isValidCategoryPOI);
 };
 const findMeetPointsWithSurfaceFallback = async (A, B, directDistanceKm) => {
     const surfacePois = await findSurfaceMeetPois(A, B);
