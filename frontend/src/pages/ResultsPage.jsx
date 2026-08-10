@@ -5,6 +5,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LocateFixed, ArrowLeft, Clock } from 'lucide-react';
 import { apiClient } from '../lib/apiClient';
+import { CARTO_DARK_TILE_URL, preloadMapTiles } from '../lib/mapTiles';
 import { decodePolyline } from '../lib/routeUtils';
 import './ResultsPage.css';
 
@@ -158,6 +159,11 @@ function ResultsPage() {
     lat: (originA.lat + originB.lat) / 2,
     lng: (originA.lng + originB.lng) / 2,
   }), [originA.lat, originA.lng, originB.lat, originB.lng]);
+
+  useEffect(() => {
+    preloadMapTiles(midpoint, 13, 2);
+    preloadMapTiles(midpoint, 15, 1);
+  }, [midpoint]);
 
   const fetchRouteForVenue = useCallback((side, venue) => {
     const routeKey = getVenueRouteKey(side, venue);
@@ -414,7 +420,7 @@ function ResultsPage() {
             style={{ width: '100%', height: '100%' }}
           >
             <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              url={CARTO_DARK_TILE_URL}
             />
             <MapAnimator positions={allPositions} midpoint={midpoint} phase={phase} rescaleTrigger={rescaleTrigger} />
 

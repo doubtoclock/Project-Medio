@@ -24,7 +24,7 @@ type SearchCacheEntry = {
   hits: number;
 };
 
-const PHOTON_TIMEOUT_MS = 1800;
+const PHOTON_TIMEOUT_MS = 8000;
 const SEARCH_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const SEARCH_CACHE_LIMIT = 160;
 const POPULARITY_CACHE_LIMIT = 500;
@@ -637,7 +637,9 @@ const getPhotonDisplayName = (properties: {
     ...Array.from(new Set(context)).slice(0, 2),
   ].join(", ");
 
-  return displayName.replace(/mira[-\s]bhayander/gi, "Mira Bhayandar");
+  return displayName
+    .replace(/mira[-\s]bhayander/gi, "Mira Bhayandar")
+    .replace(/bhayander/gi, "Bhayandar");
 };
 
 const isPhotonResultInServiceArea = (item: {
@@ -799,7 +801,10 @@ router.get("/", searchRateLimiter, validateQuery(searchQuerySchema), async (req,
     res.json(results);
   } catch (error) {
     logger.error("Photon search failed", { error });
-    res.status(500).json([]);
+    res.json(rankSuggestionsByPopularity([
+      ...getPopularSuggestionsForQuery(query),
+      ...getCuratedSuggestions(query)
+    ]));
   } finally {
     pendingSearches.delete(cacheKey);
   }

@@ -6,6 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiClient } from '../lib/apiClient';
 import { fetchLocationSuggestions, recordLocationSelection } from '../lib/locationSearch';
+import { CARTO_DARK_TILE_URL, preloadMapTiles } from '../lib/mapTiles';
 import './MeetPage.css';
 
 const liveLocationIcon = L.divIcon({
@@ -43,6 +44,10 @@ function MeetPage() {
 
   // Debounce A
   useEffect(() => {
+    preloadMapTiles({ lat: 19.0760, lng: 72.8777 }, 13, 1);
+  }, []);
+
+  useEffect(() => {
     debounceRefA.current = setTimeout(() => setDebouncedA(locA), 400);
     return () => clearTimeout(debounceRefA.current);
   }, [locA]);
@@ -64,7 +69,9 @@ function MeetPage() {
     const controller = new AbortController();
     let isCurrent = true;
 
-    fetchLocationSuggestions(query, controller.signal)
+    fetchLocationSuggestions(query, controller.signal, (suggestions) => {
+      if (isCurrent) setSuggestionsA(suggestions);
+    })
       .then((suggestions) => {
         if (isCurrent) setSuggestionsA(suggestions);
       })
@@ -91,7 +98,9 @@ function MeetPage() {
     const controller = new AbortController();
     let isCurrent = true;
 
-    fetchLocationSuggestions(query, controller.signal)
+    fetchLocationSuggestions(query, controller.signal, (suggestions) => {
+      if (isCurrent) setSuggestionsB(suggestions);
+    })
       .then((suggestions) => {
         if (isCurrent) setSuggestionsB(suggestions);
       })
@@ -188,6 +197,11 @@ function MeetPage() {
         return;
       }
 
+      preloadMapTiles({
+        lat: (coordsA.lat + coordsB.lat) / 2,
+        lng: (coordsA.lng + coordsB.lng) / 2,
+      }, 13, 2);
+
       navigate('/results', {
         state: {
           meetResults: results,
@@ -220,7 +234,7 @@ function MeetPage() {
           style={{ width: '100%', height: '100%' }}
         >
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            url={CARTO_DARK_TILE_URL}
           />
           <Marker position={[19.0760, 72.8777]} icon={liveLocationIcon} />
         </MapContainer>

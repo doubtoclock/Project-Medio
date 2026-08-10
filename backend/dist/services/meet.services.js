@@ -73,9 +73,12 @@ const curatedMeetingPOIs = [
     { type: "node", id: -1010, lat: 19.1351, lon: 72.8146, tags: { name: "Versova Social", amenity: "restaurant" } },
     { type: "node", id: -1011, lat: 19.1293, lon: 72.8310, tags: { name: "Lokhandwala Market", amenity: "marketplace" } },
     { type: "node", id: -1012, lat: 19.1412, lon: 72.8309, tags: { name: "Infiniti Mall, Andheri", shop: "mall" } },
+    { type: "node", id: -1013, lat: 19.2133, lon: 72.8491, tags: { name: "Raghuleela Mega Mall, Kandivali", shop: "mall" } },
     { type: "node", id: -1014, lat: 19.1176, lon: 72.9060, tags: { name: "Powai Lake", leisure: "garden" } },
     { type: "node", id: -1015, lat: 19.1197, lon: 72.9073, tags: { name: "Galleria, Powai", shop: "mall" } },
-    { type: "node", id: -1017, lat: 19.0014, lon: 72.8302, tags: { name: "High Street Phoenix, Lower Parel", shop: "mall" } }
+    { type: "node", id: -1016, lat: 19.2029, lon: 72.8601, tags: { name: "Growel's 101, Kandivali", shop: "mall" } },
+    { type: "node", id: -1017, lat: 19.0014, lon: 72.8302, tags: { name: "High Street Phoenix, Lower Parel", shop: "mall" } },
+    { type: "node", id: -1018, lat: 19.2965, lon: 72.8483, tags: { name: "Maxus Mall, Bhayandar West", shop: "mall" } }
 ];
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const bucketCoordinate = (value) => (Math.round(value / MEET_CACHE_BUCKET_DEGREES) *
@@ -583,9 +586,9 @@ const scoreCandidateWithDurations = (poi, timeA, timeB) => {
     const maxTravelTime = Math.max(timeA, timeB);
     const category = getPoiCategory(poi.tags);
     const venueScore = getVenueScore(poi.tags);
-    const score = (maxTravelTime / 60) * 0.42 +
-        (average / 60) * 0.24 +
-        (diff / 60) * 0.26 -
+    const score = (maxTravelTime / 60) * 0.34 +
+        (average / 60) * 0.18 +
+        (diff / 60) * 0.55 -
         venueScore * 10;
     return {
         id: poi.id,

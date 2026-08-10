@@ -315,7 +315,9 @@ export default function JourneyPlannerPage() {
     if (query.length < 1) { setSuggestionsA([]); return; }
     const controller = new AbortController();
     let cancelled = false;
-    fetchLocationSuggestions(query, controller.signal)
+    fetchLocationSuggestions(query, controller.signal, (suggestions) => {
+      if (!cancelled) setSuggestionsA(suggestions);
+    })
       .then((suggestions) => { if (!cancelled) setSuggestionsA(suggestions); })
       .catch(() => { if (!cancelled && !controller.signal.aborted) setSuggestionsA([]); });
     return () => { cancelled = true; controller.abort(); };
@@ -327,7 +329,9 @@ export default function JourneyPlannerPage() {
     if (query.length < 1) { setSuggestionsB([]); return; }
     const controller = new AbortController();
     let cancelled = false;
-    fetchLocationSuggestions(query, controller.signal)
+    fetchLocationSuggestions(query, controller.signal, (suggestions) => {
+      if (!cancelled) setSuggestionsB(suggestions);
+    })
       .then((suggestions) => { if (!cancelled) setSuggestionsB(suggestions); })
       .catch(() => { if (!cancelled && !controller.signal.aborted) setSuggestionsB([]); });
     return () => { cancelled = true; controller.abort(); };
