@@ -4,7 +4,6 @@ import { validateQuery } from "../middlewares/validation.middleware";
 import { logger } from "../utils/logger";
 import {
   SERVICE_AREA_BOUNDS,
-  SERVICE_AREA_QUERY,
   hasServiceAreaName,
   isWithinServiceAreaBounds,
 } from "../utils/service-area";
@@ -30,8 +29,8 @@ const SEARCH_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const SEARCH_CACHE_LIMIT = 160;
 const POPULARITY_CACHE_LIMIT = 500;
 const MIN_SIMILAR_QUERY_LENGTH = 5;
-const MAX_SEARCH_RESULTS = 5;
-const PHOTON_RESULT_LIMIT = 12;
+const MAX_SEARCH_RESULTS = 8;
+const PHOTON_RESULT_LIMIT = 16;
 
 const searchCache = new Map<string, SearchCacheEntry>();
 const pendingSearches = new Map<string, Promise<LocationSuggestion[]>>();
@@ -316,7 +315,22 @@ const matchesQueryPrefix = (suggestion: LocationSuggestion, query: string) => {
   const normalizedQuery = normalizeSuggestionName(query);
   if (!normalizedQuery) return false;
 
-  return normalizeSuggestionName(getPrimarySuggestionName(suggestion.name)).startsWith(normalizedQuery);
+  const normalizedName = normalizeSuggestionName(suggestion.name);
+  if (!normalizedName) return false;
+
+  if (
+    normalizeSuggestionName(getPrimarySuggestionName(suggestion.name)).startsWith(normalizedQuery)
+  ) {
+    return true;
+  }
+
+  if (normalizedName.includes(normalizedQuery)) return true;
+
+  const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+  return (
+    queryTokens.length > 1 &&
+    queryTokens.every((token) => normalizedName.includes(token))
+  );
 };
 
 const filterSuggestionsForQuery = (suggestions: LocationSuggestion[], query: string) =>
@@ -557,9 +571,15 @@ const getCuratedSuggestions = (query: string) => {
     .map(({ keywords, ...location }) => location);
 };
 
+const isWardCode = (part: string) => /^[\p{L}\p{N}/-]+\s+ward$/iu.test(part.trim());
+
 const getPhotonDisplayName = (properties: {
   name?: string;
   street?: string;
+  locality?: string;
+  neighbourhood?: string;
+  suburb?: string;
+  municipality?: string;
   city?: string;
   district?: string;
   county?: string;
@@ -569,19 +589,36 @@ const getPhotonDisplayName = (properties: {
   if (!primary) return "Unnamed location";
 
   const context = [
+    properties.locality,
+    properties.neighbourhood,
+    properties.suburb,
+    properties.municipality,
     properties.district,
     properties.city,
     properties.county,
-    properties.state
-  ].filter((part): part is string => Boolean(part && normalizeSuggestionName(part) !== normalizeSuggestionName(primary)));
+    properties.state,
+  ].filter((part): part is string => {
+    if (!part) return false;
+    if (isWardCode(part)) return false;
+    return normalizeSuggestionName(part) !== normalizeSuggestionName(primary);
+  });
 
-  return [primary, ...Array.from(new Set(context)).slice(0, 2)].join(", ");
+  const displayName = [
+    primary,
+    ...Array.from(new Set(context)).slice(0, 2),
+  ].join(", ");
+
+  return displayName.replace(/mira[-\s]bhayander/gi, "Mira Bhayandar");
 };
 
 const isPhotonResultInServiceArea = (item: {
   properties: {
     name?: string;
     street?: string;
+    locality?: string;
+    neighbourhood?: string;
+    suburb?: string;
+    municipality?: string;
     city?: string;
     district?: string;
     county?: string;
@@ -597,6 +634,10 @@ const isPhotonResultInServiceArea = (item: {
     hasServiceAreaName([
       item.properties.name,
       item.properties.street,
+      item.properties.locality,
+      item.properties.neighbourhood,
+      item.properties.suburb,
+      item.properties.municipality,
       item.properties.city,
       item.properties.district,
       item.properties.county,
@@ -613,7 +654,7 @@ const fetchPhotonSuggestions = async (
 
   try {
     const photonParams = new URLSearchParams({
-      q: `${query} ${SERVICE_AREA_QUERY}`,
+      q: query,
       limit: String(PHOTON_RESULT_LIMIT),
       lang: "en",
       bbox: [
@@ -642,6 +683,10 @@ const fetchPhotonSuggestions = async (
         properties: {
           name?: string;
           street?: string;
+          locality?: string;
+          neighbourhood?: string;
+          suburb?: string;
+          municipality?: string;
           city?: string;
           district?: string;
           county?: string;

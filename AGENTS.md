@@ -104,11 +104,11 @@ Project-Medio/
 
 - Backend autocomplete route: `backend/src/routes/search.routes.ts`.
 - Client autocomplete helper: `frontend/src/lib/locationSearch.js`.
-- Search is geo-locked with `SERVICE_AREA_BOUNDS` and `SERVICE_AREA_NAMES`; Photon requests include a Mumbai/Mira Bhayandar query and bbox.
-- Suggestions combine curated local places, Photon results, and popularity hits.
+- Search is geo-locked with `SERVICE_AREA_BOUNDS` (bbox on Photon requests) and `SERVICE_AREA_NAMES` (post-filter). The Photon `q` is the raw typed query only; appending city words was removed because it corrupted Photon's ranking.
+- Suggestions combine curated local places, Photon results, and popularity hits; display names prefer locality/suburb over ward-code districts, and `Mira-Bhayander` is normalized to `Mira Bhayandar`.
 - Backend keeps an in-memory search cache with TTL and pending-request de-duplication.
 - Backend also tracks selected suggestions through `POST /api/search/select`; popular selected places rank higher in later search responses.
-- Frontend keeps a localStorage suggestion cache and local popularity map so repeated searches feel instant for the same browser.
+- Frontend keeps a localStorage suggestion cache and local popularity map; the cache is reused for longer typed prefixes (e.g. a cached `and` query serves `andheri`), so repeated searches feel instant for the same browser.
 - `MeetPage.jsx` records popularity when a suggestion is selected for either origin.
 
 ## Results/detail performance notes

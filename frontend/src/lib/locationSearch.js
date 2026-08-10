@@ -21,7 +21,20 @@ const matchesQueryPrefix = (suggestion, query) => {
   const normalizedQuery = normalizeLocationName(query);
   if (!normalizedQuery) return false;
 
-  return normalizeLocationName(getPrimaryLocationName(suggestion?.name)).startsWith(normalizedQuery);
+  const normalizedName = normalizeLocationName(suggestion?.name || "");
+  if (!normalizedName) return false;
+
+  if (normalizeLocationName(getPrimaryLocationName(suggestion?.name)).startsWith(normalizedQuery)) {
+    return true;
+  }
+
+  if (normalizedName.includes(normalizedQuery)) return true;
+
+  const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+  return (
+    queryTokens.length > 1 &&
+    queryTokens.every((token) => normalizedName.includes(token))
+  );
 };
 
 const getSuggestionKey = (suggestion) =>
@@ -44,7 +57,7 @@ const writeJsonStorage = (key, value) => {
   }
 };
 
-export const dedupeLocationSuggestions = (suggestions, limit = 5) => {
+export const dedupeLocationSuggestions = (suggestions, limit = 8) => {
   if (!Array.isArray(suggestions)) return [];
 
   const seen = new Set();
@@ -74,21 +87,37 @@ export const dedupeLocationSuggestions = (suggestions, limit = 5) => {
 const getCachedSuggestionEntry = (query) => {
   const cache = readJsonStorage(SUGGESTION_CACHE_KEY, {});
   const key = normalizeLocationName(query);
+  const now = Date.now();
   const entry = cache[key];
 
-  if (!entry || entry.expiresAt <= Date.now()) {
-    if (entry) {
-      delete cache[key];
-      writeJsonStorage(SUGGESTION_CACHE_KEY, cache);
-    }
-    return null;
+  if (entry && entry.expiresAt > now) {
+    entry.lastUsed = now;
+    entry.hits = (entry.hits || 0) + 1;
+    cache[key] = entry;
+    writeJsonStorage(SUGGESTION_CACHE_KEY, cache);
+    return entry;
   }
 
-  entry.lastUsed = Date.now();
-  entry.hits = (entry.hits || 0) + 1;
-  cache[key] = entry;
-  writeJsonStorage(SUGGESTION_CACHE_KEY, cache);
-  return entry;
+  if (entry) {
+    delete cache[key];
+  }
+
+  const prefixKeys = Object.keys(cache)
+    .filter((cachedKey) => cachedKey && cachedKey !== key && key.startsWith(cachedKey))
+    .sort((left, right) => right.length - left.length);
+
+  for (const cachedKey of prefixKeys) {
+    const candidate = cache[cachedKey];
+    if (!candidate || candidate.expiresAt <= now) continue;
+
+    candidate.lastUsed = now;
+    candidate.hits = (candidate.hits || 0) + 1;
+    cache[cachedKey] = candidate;
+    writeJsonStorage(SUGGESTION_CACHE_KEY, cache);
+    return candidate;
+  }
+
+  return null;
 };
 
 const cacheSuggestions = (query, suggestions) => {
@@ -135,7 +164,7 @@ const rankByLocalPopularity = (suggestions) => {
       left.index - right.index
     )
     .map(({ suggestion }) => suggestion)
-    .slice(0, 5);
+    .slice(0, 8);
 };
 
 const filterSuggestionsForQuery = (suggestions, query) =>
@@ -174,7 +203,10 @@ export const fetchLocationSuggestions = async (query, signal) => {
   if (trimmedQuery.length < 1) return [];
 
   const cached = getCachedSuggestionEntry(trimmedQuery);
-  if (cached) return filterSuggestionsForQuery(cached.results, trimmedQuery);
+  if (cached) {
+    const filtered = filterSuggestionsForQuery(cached.results, trimmedQuery);
+    if (filtered.length > 0) return filtered;
+  }
 
   try {
     const res = await apiFetch(

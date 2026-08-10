@@ -12,8 +12,8 @@ const SEARCH_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const SEARCH_CACHE_LIMIT = 160;
 const POPULARITY_CACHE_LIMIT = 500;
 const MIN_SIMILAR_QUERY_LENGTH = 5;
-const MAX_SEARCH_RESULTS = 5;
-const PHOTON_RESULT_LIMIT = 12;
+const MAX_SEARCH_RESULTS = 8;
+const PHOTON_RESULT_LIMIT = 16;
 const searchCache = new Map();
 const pendingSearches = new Map();
 const popularityCache = new Map();
@@ -283,7 +283,17 @@ const matchesQueryPrefix = (suggestion, query) => {
     const normalizedQuery = normalizeSuggestionName(query);
     if (!normalizedQuery)
         return false;
-    return normalizeSuggestionName(getPrimarySuggestionName(suggestion.name)).startsWith(normalizedQuery);
+    const normalizedName = normalizeSuggestionName(suggestion.name);
+    if (!normalizedName)
+        return false;
+    if (normalizeSuggestionName(getPrimarySuggestionName(suggestion.name)).startsWith(normalizedQuery)) {
+        return true;
+    }
+    if (normalizedName.includes(normalizedQuery))
+        return true;
+    const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+    return (queryTokens.length > 1 &&
+        queryTokens.every((token) => normalizedName.includes(token)));
 };
 const filterSuggestionsForQuery = (suggestions, query) => suggestions.filter((suggestion) => matchesQueryPrefix(suggestion, query));
 const dedupeLocationSuggestions = (suggestions) => {
@@ -477,17 +487,32 @@ const getCuratedSuggestions = (query) => {
         .map(({ location }) => location)
         .map(({ keywords, ...location }) => location);
 };
+const isWardCode = (part) => /^[\p{L}\p{N}/-]+\s+ward$/iu.test(part.trim());
 const getPhotonDisplayName = (properties) => {
     const primary = properties.name || properties.street || properties.city;
     if (!primary)
         return "Unnamed location";
     const context = [
+        properties.locality,
+        properties.neighbourhood,
+        properties.suburb,
+        properties.municipality,
         properties.district,
         properties.city,
         properties.county,
-        properties.state
-    ].filter((part) => Boolean(part && normalizeSuggestionName(part) !== normalizeSuggestionName(primary)));
-    return [primary, ...Array.from(new Set(context)).slice(0, 2)].join(", ");
+        properties.state,
+    ].filter((part) => {
+        if (!part)
+            return false;
+        if (isWardCode(part))
+            return false;
+        return normalizeSuggestionName(part) !== normalizeSuggestionName(primary);
+    });
+    const displayName = [
+        primary,
+        ...Array.from(new Set(context)).slice(0, 2),
+    ].join(", ");
+    return displayName.replace(/mira[-\s]bhayander/gi, "Mira Bhayandar");
 };
 const isPhotonResultInServiceArea = (item) => {
     const [lng, lat] = item.geometry.coordinates;
@@ -497,6 +522,10 @@ const isPhotonResultInServiceArea = (item) => {
         (0, service_area_1.hasServiceAreaName)([
             item.properties.name,
             item.properties.street,
+            item.properties.locality,
+            item.properties.neighbourhood,
+            item.properties.suburb,
+            item.properties.municipality,
             item.properties.city,
             item.properties.district,
             item.properties.county,
@@ -508,7 +537,7 @@ const fetchPhotonSuggestions = async (query) => {
     const timeout = setTimeout(() => controller.abort(), PHOTON_TIMEOUT_MS);
     try {
         const photonParams = new URLSearchParams({
-            q: `${query} ${service_area_1.SERVICE_AREA_QUERY}`,
+            q: query,
             limit: String(PHOTON_RESULT_LIMIT),
             lang: "en",
             bbox: [

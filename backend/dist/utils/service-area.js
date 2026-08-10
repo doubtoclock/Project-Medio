@@ -15,8 +15,13 @@ exports.SERVICE_AREA_NAMES = [
     "mumbai suburban",
     "mira bhayandar",
     "mira-bhayandar",
+    "mira bhayander",
+    "mira-bhayander",
     "mira road",
+    "miraroad",
     "bhayandar",
+    "bhayander",
+    "kashimira",
 ];
 const normalizeServiceAreaText = (value) => value
     .normalize("NFKD")
@@ -39,7 +44,13 @@ const isWithinServiceAreaBounds = ({ lat, lng, lon, }) => {
 exports.isWithinServiceAreaBounds = isWithinServiceAreaBounds;
 const hasServiceAreaName = (parts) => {
     const haystack = (0, exports.normalizeServiceAreaText)(parts.filter(Boolean).join(" "));
-    return exports.SERVICE_AREA_NAMES.some((name) => haystack.includes(name));
+    if (!haystack)
+        return false;
+    const matchesServiceName = (name) => haystack.includes(name);
+    if (matchesServiceName("navi mumbai")) {
+        return exports.SERVICE_AREA_NAMES.some((name) => name !== "mumbai" && matchesServiceName(name));
+    }
+    return exports.SERVICE_AREA_NAMES.some(matchesServiceName);
 };
 exports.hasServiceAreaName = hasServiceAreaName;
 //# sourceMappingURL=service-area.js.map

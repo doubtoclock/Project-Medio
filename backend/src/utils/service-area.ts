@@ -14,8 +14,13 @@ export const SERVICE_AREA_NAMES = [
   "mumbai suburban",
   "mira bhayandar",
   "mira-bhayandar",
+  "mira bhayander",
+  "mira-bhayander",
   "mira road",
+  "miraroad",
   "bhayandar",
+  "bhayander",
+  "kashimira",
 ];
 
 export const normalizeServiceAreaText = (value: string) =>
@@ -50,5 +55,15 @@ export const isWithinServiceAreaBounds = ({
 
 export const hasServiceAreaName = (parts: Array<string | undefined>) => {
   const haystack = normalizeServiceAreaText(parts.filter(Boolean).join(" "));
-  return SERVICE_AREA_NAMES.some((name) => haystack.includes(name));
+  if (!haystack) return false;
+
+  const matchesServiceName = (name: string) => haystack.includes(name);
+
+  if (matchesServiceName("navi mumbai")) {
+    return SERVICE_AREA_NAMES.some(
+      (name) => name !== "mumbai" && matchesServiceName(name)
+    );
+  }
+
+  return SERVICE_AREA_NAMES.some(matchesServiceName);
 };
