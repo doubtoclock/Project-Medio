@@ -157,6 +157,35 @@ const curatedLocations = [
         keywords: ["bhayandar", "mira bhayandar"]
     },
     {
+        name: "Maxus Mall, Bhayandar West, Mira Bhayandar",
+        lat: 19.2965,
+        lng: 72.8483,
+        keywords: [
+            "maxus",
+            "maxus mall",
+            "maxus mall bhayandar",
+            "maxus mall bhayander",
+            "maxus mall mira bhayandar",
+            "bhayandar maxus mall",
+            "bhayander maxus mall"
+        ]
+    },
+    {
+        name: "Phoenix Palladium, Lower Parel, Mumbai",
+        lat: 18.9950,
+        lng: 72.8240,
+        keywords: [
+            "phoenix palladium",
+            "palladium",
+            "palladium mall",
+            "phoenix palladium lower parel",
+            "phoenix palladium mumbai",
+            "phoenix mall lower parel",
+            "high street phoenix",
+            "high street phoenix lower parel"
+        ]
+    },
+    {
         name: "Santacruz West, Mumbai",
         lat: 19.0815,
         lng: 72.8379,
@@ -573,6 +602,13 @@ const fetchPhotonSuggestions = async (query) => {
             ...photonSuggestions
         ];
         return rankSuggestionsByPopularity(filterSuggestionsForQuery(suggestions, query));
+    }
+    catch (error) {
+        logger_1.logger.warn("Photon search unavailable; using local location suggestions", { error });
+        return rankSuggestionsByPopularity([
+            ...getPopularSuggestionsForQuery(query),
+            ...getCuratedSuggestions(query)
+        ]);
     }
     finally {
         clearTimeout(timeout);
