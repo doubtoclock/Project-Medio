@@ -255,6 +255,8 @@ export default function JourneyPlannerPage() {
   const [suggestionsA, setSuggestionsA] = useState([]);
   const [suggestionsB, setSuggestionsB] = useState([]);
   const [activeField, setActiveField] = useState(null);
+  const [searchLoadingA, setSearchLoadingA] = useState(false);
+  const [searchLoadingB, setSearchLoadingB] = useState(false);
   const debounceRefA = useRef(null);
   const debounceRefB = useRef(null);
 
@@ -312,29 +314,35 @@ export default function JourneyPlannerPage() {
   // Fetch suggestions for A
   useEffect(() => {
     const query = debouncedA.trim();
-    if (query.length < 1) { setSuggestionsA([]); return; }
+    if (query.length < 1) { setSuggestionsA([]); setSearchLoadingA(false); return; }
     const controller = new AbortController();
     let cancelled = false;
     fetchLocationSuggestions(query, controller.signal, (suggestions) => {
       if (!cancelled) setSuggestionsA(suggestions);
+    }, {
+      onNetworkStart: () => { if (!cancelled) setSearchLoadingA(true); },
+      onNetworkEnd: () => { if (!cancelled) setSearchLoadingA(false); },
     })
       .then((suggestions) => { if (!cancelled) setSuggestionsA(suggestions); })
       .catch(() => { if (!cancelled && !controller.signal.aborted) setSuggestionsA([]); });
-    return () => { cancelled = true; controller.abort(); };
+    return () => { cancelled = true; setSearchLoadingA(false); controller.abort(); };
   }, [debouncedA]);
 
   // Fetch suggestions for B
   useEffect(() => {
     const query = debouncedB.trim();
-    if (query.length < 1) { setSuggestionsB([]); return; }
+    if (query.length < 1) { setSuggestionsB([]); setSearchLoadingB(false); return; }
     const controller = new AbortController();
     let cancelled = false;
     fetchLocationSuggestions(query, controller.signal, (suggestions) => {
       if (!cancelled) setSuggestionsB(suggestions);
+    }, {
+      onNetworkStart: () => { if (!cancelled) setSearchLoadingB(true); },
+      onNetworkEnd: () => { if (!cancelled) setSearchLoadingB(false); },
     })
       .then((suggestions) => { if (!cancelled) setSuggestionsB(suggestions); })
       .catch(() => { if (!cancelled && !controller.signal.aborted) setSuggestionsB([]); });
-    return () => { cancelled = true; controller.abort(); };
+    return () => { cancelled = true; setSearchLoadingB(false); controller.abort(); };
   }, [debouncedB]);
 
   // Prefill from navigation state (e.g. from DetailPage "Navigate" button)
@@ -371,8 +379,8 @@ export default function JourneyPlannerPage() {
   };
 
   const handleSelectLocation = (location, field) => {
-    if (field === 'A') { setLocA(location.name); setCoordsA(location); setSuggestionsA([]); }
-    else { setLocB(location.name); setCoordsB(location); setSuggestionsB([]); }
+    if (field === 'A') { setLocA(location.name); setCoordsA(location); setSuggestionsA([]); setSearchLoadingA(false); }
+    else { setLocB(location.name); setCoordsB(location); setSuggestionsB([]); setSearchLoadingB(false); }
     setActiveField(null);
     setRouteCache({});
     setSelectedRouteIndex(0);
@@ -381,8 +389,8 @@ export default function JourneyPlannerPage() {
   };
 
   const handleClearLocation = (field) => {
-    if (field === 'A') { setLocA(''); setCoordsA(null); setSuggestionsA([]); }
-    else { setLocB(''); setCoordsB(null); setSuggestionsB([]); }
+    if (field === 'A') { setLocA(''); setCoordsA(null); setSuggestionsA([]); setSearchLoadingA(false); }
+    else { setLocB(''); setCoordsB(null); setSuggestionsB([]); setSearchLoadingB(false); }
     setActiveField(null);
     setRouteCache({});
     setSelectedRouteIndex(0);
@@ -574,6 +582,9 @@ export default function JourneyPlannerPage() {
                   <X size={14} />
                 </button>
               )}
+              {searchLoadingA && (
+                <Loader size={14} className="planner-search-loader" aria-label="Loading suggestions" />
+              )}
               {activeField === 'A' && suggestionsA.length > 0 && (
                 <div className="location-suggestions">
                   {suggestionsA.map((s) => (
@@ -610,6 +621,9 @@ export default function JourneyPlannerPage() {
                 >
                   <X size={14} />
                 </button>
+              )}
+              {searchLoadingB && (
+                <Loader size={14} className="planner-search-loader" aria-label="Loading suggestions" />
               )}
               {activeField === 'B' && suggestionsB.length > 0 && (
                 <div className="location-suggestions">

@@ -31,6 +31,8 @@ function MeetPage() {
   const [suggestionsA, setSuggestionsA] = useState([]);
   const [suggestionsB, setSuggestionsB] = useState([]);
   const [activeField, setActiveField] = useState(null);
+  const [searchLoadingA, setSearchLoadingA] = useState(false);
+  const [searchLoadingB, setSearchLoadingB] = useState(false);
   const [loadingMeet, setLoadingMeet] = useState(false);
   const [meetNotice, setMeetNotice] = useState('');
 
@@ -63,6 +65,7 @@ function MeetPage() {
     const query = debouncedA.trim();
     if (query.length < 1) {
       setSuggestionsA([]);
+      setSearchLoadingA(false);
       return;
     }
 
@@ -71,6 +74,9 @@ function MeetPage() {
 
     fetchLocationSuggestions(query, controller.signal, (suggestions) => {
       if (isCurrent) setSuggestionsA(suggestions);
+    }, {
+      onNetworkStart: () => { if (isCurrent) setSearchLoadingA(true); },
+      onNetworkEnd: () => { if (isCurrent) setSearchLoadingA(false); },
     })
       .then((suggestions) => {
         if (isCurrent) setSuggestionsA(suggestions);
@@ -83,6 +89,7 @@ function MeetPage() {
 
     return () => {
       isCurrent = false;
+      setSearchLoadingA(false);
       controller.abort();
     };
   }, [debouncedA]);
@@ -92,6 +99,7 @@ function MeetPage() {
     const query = debouncedB.trim();
     if (query.length < 1) {
       setSuggestionsB([]);
+      setSearchLoadingB(false);
       return;
     }
 
@@ -100,6 +108,9 @@ function MeetPage() {
 
     fetchLocationSuggestions(query, controller.signal, (suggestions) => {
       if (isCurrent) setSuggestionsB(suggestions);
+    }, {
+      onNetworkStart: () => { if (isCurrent) setSearchLoadingB(true); },
+      onNetworkEnd: () => { if (isCurrent) setSearchLoadingB(false); },
     })
       .then((suggestions) => {
         if (isCurrent) setSuggestionsB(suggestions);
@@ -112,6 +123,7 @@ function MeetPage() {
 
     return () => {
       isCurrent = false;
+      setSearchLoadingB(false);
       controller.abort();
     };
   }, [debouncedB]);
@@ -151,10 +163,12 @@ function MeetPage() {
       setLocA(location.name);
       setCoordsA(location);
       setSuggestionsA([]);
+      setSearchLoadingA(false);
     } else {
       setLocB(location.name);
       setCoordsB(location);
       setSuggestionsB([]);
+      setSearchLoadingB(false);
     }
     setActiveField(null);
     resetResults();
@@ -165,10 +179,12 @@ function MeetPage() {
       setLocA('');
       setCoordsA(null);
       setSuggestionsA([]);
+      setSearchLoadingA(false);
     } else {
       setLocB('');
       setCoordsB(null);
       setSuggestionsB([]);
+      setSearchLoadingB(false);
     }
     setActiveField(null);
     resetResults();
@@ -290,6 +306,9 @@ function MeetPage() {
                 <X size={14} />
               </button>
             )}
+            {searchLoadingA && (
+              <Loader size={18} className="meet-search-loader" aria-label="Loading suggestions" />
+            )}
           </div>
           {activeField === 'A' && suggestionsA.length > 0 && (
             <div
@@ -348,6 +367,9 @@ function MeetPage() {
               >
                 <X size={14} />
               </button>
+            )}
+            {searchLoadingB && (
+              <Loader size={18} className="meet-search-loader" aria-label="Loading suggestions" />
             )}
           </div>
           {activeField === 'B' && suggestionsB.length > 0 && (

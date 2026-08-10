@@ -180,6 +180,14 @@
   transform: translateY(-1px);
 }
 
+.meet-search-loader {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  color: rgba(255, 255, 255, 0.62);
+  animation: searchSpin 0.8s linear infinite;
+}
+
 /* Analysis engine text */
 .meet-spacer-bottom {
   flex: 1;
@@ -319,5 +327,11 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes searchSpin {
+  to {
+    transform: rotate(360deg);
   }
 }

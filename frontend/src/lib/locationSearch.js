@@ -95,7 +95,7 @@ const getCachedSuggestionEntry = (query) => {
     entry.hits = (entry.hits || 0) + 1;
     cache[key] = entry;
     writeJsonStorage(SUGGESTION_CACHE_KEY, cache);
-    return { ...entry, cacheKey: key, isExact: true };
+    return { ...entry, isExact: true };
   }
 
   if (entry) {
@@ -114,7 +114,7 @@ const getCachedSuggestionEntry = (query) => {
     candidate.hits = (candidate.hits || 0) + 1;
     cache[cachedKey] = candidate;
     writeJsonStorage(SUGGESTION_CACHE_KEY, cache);
-    return { ...candidate, cacheKey: cachedKey, isExact: false };
+    return { ...candidate, isExact: false };
   }
 
   return null;
@@ -198,19 +198,29 @@ export const recordLocationSelection = (location) => {
   }).catch(() => {});
 };
 
-const fetchFreshLocationSuggestions = async (trimmedQuery, signal) => {
-  const res = await apiFetch(
-    `/api/search?q=${encodeURIComponent(trimmedQuery)}`,
-    { signal }
-  );
-  if (!res.ok) return [];
+const fetchFreshLocationSuggestions = async (trimmedQuery, signal, callbacks = {}) => {
+  callbacks.onNetworkStart?.();
+  try {
+    const res = await apiFetch(
+      `/api/search?q=${encodeURIComponent(trimmedQuery)}`,
+      { signal }
+    );
+    if (!res.ok) return [];
 
-  const suggestions = filterSuggestionsForQuery(await res.json(), trimmedQuery);
-  cacheSuggestions(trimmedQuery, suggestions);
-  return suggestions;
+    const suggestions = filterSuggestionsForQuery(await res.json(), trimmedQuery);
+    cacheSuggestions(trimmedQuery, suggestions);
+    return suggestions;
+  } finally {
+    callbacks.onNetworkEnd?.();
+  }
 };
 
-export const fetchLocationSuggestions = async (query, signal, onBackgroundResults) => {
+export const fetchLocationSuggestions = async (
+  query,
+  signal,
+  onBackgroundResults,
+  callbacks = {}
+) => {
   const trimmedQuery = query.trim();
   if (trimmedQuery.length < 1) return [];
 
@@ -230,7 +240,7 @@ export const fetchLocationSuggestions = async (query, signal, onBackgroundResult
   }
 
   try {
-    return await fetchFreshLocationSuggestions(trimmedQuery, signal);
+    return await fetchFreshLocationSuggestions(trimmedQuery, signal, callbacks);
   } catch (error) {
     if (signal?.aborted) {
       throw error;
