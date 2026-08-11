@@ -7,7 +7,7 @@ const current_user_1 = require("../utils/current-user");
 const logger_1 = require("../utils/logger");
 const service_area_1 = require("../utils/service-area");
 const getMeetPoints = async (req, res) => {
-    const { latA, lonA, latB, lonB, fromName, toName } = req.body;
+    const { latA, lonA, latB, lonB, fromName, toName } = res.locals.validated.body;
     const A = {
         lat: latA,
         lon: lonA,

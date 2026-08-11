@@ -11,7 +11,7 @@ export const getMeetPoints = async (
   res: Response
 ): Promise<void> => {
   const { latA, lonA, latB, lonB, fromName, toName } =
-    req.body as MeetRequestInput;
+    res.locals.validated.body as MeetRequestInput;
 
   const A = {
     lat: latA,

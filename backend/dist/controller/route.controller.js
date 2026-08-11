@@ -247,7 +247,19 @@ const fetchOtpPlan = async (modeSet, from, to, routingDateTime) => {
 };
 const getRouteFromOTP = async (req, res) => {
     try {
-        const { from, to, fromName, toName, travelMode, localTransport } = req.body;
+        const rawBody = req.body;
+        const validatedBody = res.locals.validated.body;
+        logger_1.logger.info("DEBUG_ROUTE_REQUEST", {
+            origin: req.headers.origin || "unknown",
+            userAgent: req.headers["user-agent"] || "unknown",
+            rawBody: JSON.stringify(rawBody),
+            validatedBody: JSON.stringify(validatedBody),
+            from: validatedBody.from,
+            to: validatedBody.to,
+            isFromValid: (0, service_area_1.isWithinServiceAreaBounds)(validatedBody.from),
+            isToValid: (0, service_area_1.isWithinServiceAreaBounds)(validatedBody.to),
+        });
+        const { from, to, fromName, toName, travelMode, localTransport } = validatedBody;
         if (!(0, service_area_1.isWithinServiceAreaBounds)(from) || !(0, service_area_1.isWithinServiceAreaBounds)(to)) {
             return res.status(400).json({
                 message: "Routing is available only in Mumbai and Mira Bhayandar",
@@ -321,6 +333,7 @@ const getRouteFromOTP = async (req, res) => {
                 name: error.name,
                 message: error.message,
                 cause: error.cause,
+                stack: error.stack,
                 url: env_1.env.OTP_GRAPHQL_URL,
             },
         });

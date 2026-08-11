@@ -321,8 +321,21 @@ const fetchOtpPlan = async (
 
 export const getRouteFromOTP = async (req: Request, res: Response) => {
   try {
-    const { from, to, fromName, toName, travelMode, localTransport } =
-      req.body as RouteRequestInput;
+    const rawBody = req.body;
+    const validatedBody = res.locals.validated.body as RouteRequestInput;
+
+    logger.info("DEBUG_ROUTE_REQUEST", {
+      origin: req.headers.origin || "unknown",
+      userAgent: req.headers["user-agent"] || "unknown",
+      rawBody: JSON.stringify(rawBody),
+      validatedBody: JSON.stringify(validatedBody),
+      from: validatedBody.from,
+      to: validatedBody.to,
+      isFromValid: isWithinServiceAreaBounds(validatedBody.from),
+      isToValid: isWithinServiceAreaBounds(validatedBody.to),
+    });
+
+    const { from, to, fromName, toName, travelMode, localTransport } = validatedBody;
 
     if (!isWithinServiceAreaBounds(from) || !isWithinServiceAreaBounds(to)) {
       return res.status(400).json({
@@ -404,6 +417,7 @@ export const getRouteFromOTP = async (req: Request, res: Response) => {
         name: error.name,
         message: error.message,
         cause: error.cause,
+        stack: error.stack,
         url: env.OTP_GRAPHQL_URL,
       },
     });
