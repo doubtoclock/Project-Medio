@@ -8,6 +8,7 @@ import {
   isWithinServiceAreaBounds,
 } from "../utils/service-area";
 import { searchQuerySchema } from "../validators/api.validator";
+import { isFuzzyMatch, getFuzzyScore } from "../utils/fuzzy";
 
 const router = Router();
 
@@ -747,13 +748,63 @@ const fetchPhotonSuggestions = async (
       ...photonSuggestions
     ];
 
-    return rankSuggestionsByPopularity(filterSuggestionsForQuery(suggestions, query));
+    const strongResults = filterSuggestionsForQuery(suggestions, query);
+    if (strongResults.length > 0) {
+      return rankSuggestionsByPopularity(strongResults);
+    }
+
+    const allCandidates = [
+      ...curatedLocations,
+      ...Array.from(popularityCache.values()).map((e) => e.suggestion),
+      ...photonSuggestions
+    ];
+
+    const fuzzyCandidates = dedupeLocationSuggestions(allCandidates)
+      .map((candidate) => {
+        const keywords = (candidate as any).keywords || [];
+        return {
+          candidate,
+          score: getFuzzyScore(query, candidate.name, keywords),
+          isMatch: isFuzzyMatch(query, candidate.name, keywords)
+        };
+      })
+      .filter((item) => item.isMatch)
+      .sort((a, b) => b.score - a.score)
+      .map((item) => item.candidate);
+
+    return rankSuggestionsByPopularity(fuzzyCandidates);
   } catch (error) {
     logger.warn("Photon search unavailable; using local location suggestions", { error });
-    return rankSuggestionsByPopularity([
+    
+    const localSuggestions = [
       ...getPopularSuggestionsForQuery(query),
       ...getCuratedSuggestions(query)
-    ]);
+    ];
+    
+    const strongResults = filterSuggestionsForQuery(localSuggestions, query);
+    if (strongResults.length > 0) {
+      return rankSuggestionsByPopularity(strongResults);
+    }
+
+    const allLocalCandidates = [
+      ...curatedLocations,
+      ...Array.from(popularityCache.values()).map((e) => e.suggestion)
+    ];
+
+    const fuzzyCandidates = dedupeLocationSuggestions(allLocalCandidates)
+      .map((candidate) => {
+        const keywords = (candidate as any).keywords || [];
+        return {
+          candidate,
+          score: getFuzzyScore(query, candidate.name, keywords),
+          isMatch: isFuzzyMatch(query, candidate.name, keywords)
+        };
+      })
+      .filter((item) => item.isMatch)
+      .sort((a, b) => b.score - a.score)
+      .map((item) => item.candidate);
+
+    return rankSuggestionsByPopularity(fuzzyCandidates);
   } finally {
     clearTimeout(timeout);
   }

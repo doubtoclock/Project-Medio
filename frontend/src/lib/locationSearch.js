@@ -207,9 +207,9 @@ const fetchFreshLocationSuggestions = async (trimmedQuery, signal, callbacks = {
     );
     if (!res.ok) return [];
 
-    const suggestions = filterSuggestionsForQuery(await res.json(), trimmedQuery);
-    cacheSuggestions(trimmedQuery, suggestions);
-    return suggestions;
+    const freshResults = await res.json();
+    cacheSuggestions(trimmedQuery, freshResults);
+    return freshResults;
   } finally {
     callbacks.onNetworkEnd?.();
   }
