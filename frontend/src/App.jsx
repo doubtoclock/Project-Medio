@@ -19,12 +19,34 @@ import SideNav from './components/SideNav/SideNav';
 import PhoneFrame from './components/PhoneFrame/PhoneFrame';
 import './App.css';
 
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+
 function AppRoutes() {
   const { isExpanded, setIsExpanded } = useNavigation();
   const location = useLocation();
+  const navigate = window.history; // use history API
   const isPublicPage = ['/', '/login', '/privacy', '/terms', '/download-app'].includes(location.pathname);
   const isGuestSharePage = location.pathname.startsWith('/share');
   const hideNav = isPublicPage || isGuestSharePage;
+
+  React.useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      const listener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+        // Root screens where back button should exit
+        const rootPaths = ['/', '/login', '/meet'];
+        
+        if (rootPaths.includes(window.location.pathname)) {
+          CapacitorApp.exitApp();
+        } else {
+          window.history.back();
+        }
+      });
+      return () => {
+        listener.then(l => l.remove());
+      };
+    }
+  }, []);
 
   return (
     <div className="app-container">

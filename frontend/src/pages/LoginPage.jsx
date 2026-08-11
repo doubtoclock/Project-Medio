@@ -5,6 +5,9 @@ import { getBackendUrl } from "../lib/backend";
 import { getFrontendUrl } from "../lib/frontendUrl";
 import "./LoginPage.css";
 
+import { Capacitor } from '@capacitor/core';
+import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const { isAuthenticated, login } = useAuth();
@@ -44,8 +47,48 @@ export default function LoginPage() {
     }
     setGoogleLoading(true);
     setGoogleError(false);
-    const returnUrl = getFrontendUrl("/login");
-    window.location.href = `${getBackendUrl()}/api/auth/google?redirect=${encodeURIComponent(returnUrl)}`;
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await GoogleSignIn.initialize({
+          clientId: '943070343124-rnkq374mo63g67qoet5e14d6jf6e8cjv.apps.googleusercontent.com',
+          serverClientId: '943070343124-rnkq374mo63g67qoet5e14d6jf6e8cjv.apps.googleusercontent.com',
+          scopes: ['profile', 'email']
+        });
+        
+        const result = await GoogleSignIn.signIn();
+        const idToken = result.authentication?.idToken || result.authentication?.accessToken || result.idToken;
+        
+        if (!idToken) {
+            throw new Error("No ID token received from Google");
+        }
+        
+        const res = await fetch(`${getBackendUrl()}/api/auth/google/native`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken })
+        });
+        
+        if (!res.ok) {
+          throw new Error("Backend authentication failed");
+        }
+        
+        const data = await res.json();
+        if (data.token) {
+          login(data.token);
+        } else {
+          throw new Error("Invalid token received from backend");
+        }
+      } catch (error) {
+        console.error("Native Google login failed", error);
+        setGoogleError(true);
+      } finally {
+        setGoogleLoading(false);
+      }
+    } else {
+      const returnUrl = getFrontendUrl("/login");
+      window.location.href = `${getBackendUrl()}/api/auth/google?redirect=${encodeURIComponent(returnUrl)}`;
+    }
   };
 
   return (
