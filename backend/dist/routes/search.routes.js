@@ -3,9 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const security_middleware_1 = require("../middlewares/security.middleware");
 const validation_middleware_1 = require("../middlewares/validation.middleware");
+const db_1 = require("../lib/db");
+const cached_place_1 = require("../models/cached-place");
 const logger_1 = require("../utils/logger");
 const service_area_1 = require("../utils/service-area");
 const api_validator_1 = require("../validators/api.validator");
+const fuzzy_1 = require("../utils/fuzzy");
+const place_search_1 = require("../utils/place-search");
 const router = (0, express_1.Router)();
 const PHOTON_TIMEOUT_MS = 8000;
 const SEARCH_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
@@ -14,6 +18,10 @@ const POPULARITY_CACHE_LIMIT = 500;
 const MIN_SIMILAR_QUERY_LENGTH = 5;
 const MAX_SEARCH_RESULTS = 8;
 const PHOTON_RESULT_LIMIT = 16;
+const DB_PLACE_CACHE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+const DB_PLACE_CANDIDATE_LIMIT = 120;
+const MIN_CONFIDENT_CACHE_RESULTS = 4;
+const STRONG_SINGLE_CACHE_SCORE = 90;
 const searchCache = new Map();
 const pendingSearches = new Map();
 const popularityCache = new Map();
@@ -402,6 +410,182 @@ const recordLocationSelection = (suggestion) => {
     prunePopularityCache();
     return true;
 };
+const getPlaceCacheExpiry = () => new Date(Date.now() + DB_PLACE_CACHE_TTL_MS);
+const buildCacheablePlace = (place) => {
+    const aliasValues = Array.from(new Set([
+        place.name,
+        ...(place.aliases ?? []),
+        ...(place.addressParts ?? []),
+    ].map((value) => value.trim()).filter(Boolean))).slice(0, 24);
+    const normalizedAliases = Array.from(new Set(aliasValues.map(place_search_1.normalizePlaceText).filter(Boolean)));
+    const normalizedName = (0, place_search_1.normalizePlaceText)(place.name);
+    const addressParts = Array.from(new Set((place.addressParts ?? []).map((part) => part.trim()).filter(Boolean))).slice(0, 24);
+    const searchValues = [place.name, ...aliasValues, ...addressParts];
+    return {
+        serviceAreaId: service_area_1.DEFAULT_SERVICE_AREA.id,
+        canonicalName: place.name.trim(),
+        normalizedName,
+        aliases: aliasValues.filter((alias) => (0, place_search_1.normalizePlaceText)(alias) !== normalizedName),
+        normalizedAliases: normalizedAliases.filter((alias) => alias !== normalizedName),
+        addressParts,
+        searchTokens: (0, place_search_1.getPlaceSearchTokens)(searchValues),
+        searchGrams: (0, place_search_1.getPlaceSearchGrams)(searchValues),
+        lat: place.lat,
+        lng: place.lng,
+        source: place.source,
+        sourceId: place.sourceId,
+        lastSeenAt: new Date(),
+        expiresAt: getPlaceCacheExpiry(),
+    };
+};
+const getCanonicalPlaceKey = (place) => `${(0, place_search_1.normalizePlaceText)(place.name)}:${place.lat.toFixed(4)}:${place.lng.toFixed(4)}`;
+const upsertCachedPlaces = async (places) => {
+    if (!(0, db_1.isMongoReady)())
+        return;
+    const cacheablePlaces = dedupeLocationSuggestions(places)
+        .map((suggestion) => places.find((place) => getCanonicalPlaceKey(place) === getCanonicalPlaceKey(suggestion)) ?? suggestion)
+        .map((place) => buildCacheablePlace(place))
+        .filter((place) => place.normalizedName && place.searchGrams.length > 0);
+    if (cacheablePlaces.length === 0)
+        return;
+    await Promise.allSettled(cacheablePlaces.map((place) => {
+        const selector = place.sourceId
+            ? {
+                serviceAreaId: place.serviceAreaId,
+                source: place.source,
+                sourceId: place.sourceId,
+            }
+            : {
+                serviceAreaId: place.serviceAreaId,
+                normalizedName: place.normalizedName,
+                lat: { $gte: place.lat - 0.0007, $lte: place.lat + 0.0007 },
+                lng: { $gte: place.lng - 0.0007, $lte: place.lng + 0.0007 },
+            };
+        return cached_place_1.CachedPlace.updateOne(selector, {
+            $set: {
+                canonicalName: place.canonicalName,
+                normalizedName: place.normalizedName,
+                addressParts: place.addressParts,
+                searchTokens: place.searchTokens,
+                searchGrams: place.searchGrams,
+                lat: place.lat,
+                lng: place.lng,
+                source: place.source,
+                sourceId: place.sourceId,
+                lastSeenAt: place.lastSeenAt,
+                expiresAt: place.expiresAt,
+            },
+            $addToSet: {
+                aliases: { $each: place.aliases },
+                normalizedAliases: { $each: place.normalizedAliases },
+            },
+            $setOnInsert: {
+                selectedCount: 0,
+            },
+        }, { upsert: true });
+    }));
+};
+let curatedCacheSeeded = false;
+const ensureCuratedPlaceCache = async () => {
+    if (curatedCacheSeeded || !(0, db_1.isMongoReady)())
+        return;
+    curatedCacheSeeded = true;
+    await upsertCachedPlaces(curatedLocations.map(({ keywords, ...location }) => ({
+        ...location,
+        source: "curated",
+        sourceId: `curated:${(0, place_search_1.normalizePlaceText)(location.name)}`,
+        aliases: keywords,
+        addressParts: location.name.split(",").map((part) => part.trim()),
+    })));
+};
+const cachedPlacesToSuggestions = (places, query) => places
+    .map((place, index) => ({
+    suggestion: {
+        name: place.canonicalName,
+        lat: place.lat,
+        lng: place.lng,
+    },
+    score: (0, place_search_1.scoreCachedPlace)(query, place),
+    index,
+}))
+    .filter(({ score }) => score > 0)
+    .sort((left, right) => right.score - left.score ||
+    getPopularityScore(right.suggestion) - getPopularityScore(left.suggestion) ||
+    left.index - right.index)
+    .map(({ suggestion, score }) => ({ suggestion, score }));
+const searchCachedPlaces = async (query) => {
+    if (!(0, db_1.isMongoReady)())
+        return [];
+    await ensureCuratedPlaceCache();
+    const normalizedQuery = (0, place_search_1.normalizePlaceText)(query);
+    const queryTokens = (0, place_search_1.getPlaceSearchTokens)([query]);
+    const queryGrams = (0, place_search_1.getPlaceSearchGrams)([query]);
+    if (!normalizedQuery || queryGrams.length === 0)
+        return [];
+    const now = new Date();
+    const prefixPattern = new RegExp(`^${normalizedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+    const candidates = await cached_place_1.CachedPlace.find({
+        serviceAreaId: service_area_1.DEFAULT_SERVICE_AREA.id,
+        expiresAt: { $gt: now },
+        $or: [
+            { normalizedName: prefixPattern },
+            { normalizedAliases: prefixPattern },
+            { searchTokens: { $in: queryTokens } },
+            { searchGrams: { $in: queryGrams } },
+        ],
+    })
+        .sort({ selectedCount: -1, lastSeenAt: -1 })
+        .limit(DB_PLACE_CANDIDATE_LIMIT)
+        .lean();
+    return cachedPlacesToSuggestions(candidates, query);
+};
+const rankConfidenceResults = (items) => {
+    const seen = new Set();
+    const ranked = [];
+    for (const item of items.sort((left, right) => right.score - left.score)) {
+        const key = getPopularityKey(item.suggestion);
+        if (seen.has(key))
+            continue;
+        seen.add(key);
+        ranked.push(item.suggestion);
+        if (ranked.length >= MAX_SEARCH_RESULTS)
+            break;
+    }
+    return ranked;
+};
+const scoreSuggestionsForQuery = (suggestions, query) => dedupeLocationSuggestions(suggestions).map((suggestion, index) => ({
+    suggestion,
+    score: (0, fuzzy_1.getFuzzyScore)(query, suggestion.name) +
+        (matchesQueryPrefix(suggestion, query) ? 35 : 0) +
+        Math.min(8, getPopularityScore(suggestion)) -
+        index * 0.01,
+}));
+const recordCachedPlaceSelection = async (suggestion) => {
+    if (!(0, db_1.isMongoReady)())
+        return;
+    await ensureCuratedPlaceCache();
+    const [normalized] = dedupeLocationSuggestions([suggestion]);
+    if (!normalized)
+        return;
+    const normalizedName = (0, place_search_1.normalizePlaceText)(normalized.name);
+    const now = new Date();
+    const nearbyWindow = {
+        lat: { $gte: normalized.lat - 0.0007, $lte: normalized.lat + 0.0007 },
+        lng: { $gte: normalized.lng - 0.0007, $lte: normalized.lng + 0.0007 },
+    };
+    await cached_place_1.CachedPlace.updateOne({
+        serviceAreaId: service_area_1.DEFAULT_SERVICE_AREA.id,
+        normalizedName,
+        ...nearbyWindow,
+    }, {
+        $inc: { selectedCount: 1 },
+        $set: {
+            lastSelectedAt: now,
+            lastSeenAt: now,
+            expiresAt: getPlaceCacheExpiry(),
+        },
+    });
+};
 const getBigrams = (value) => {
     const compact = value.replace(/\s+/g, "");
     if (compact.length < 2)
@@ -563,6 +747,32 @@ const isPhotonResultInServiceArea = (item) => {
             item.properties.state,
         ]));
 };
+const getPhotonSourceId = (item) => {
+    const { osm_type: osmType, osm_id: osmId } = item.properties;
+    if (osmType && osmId)
+        return `photon:${osmType}:${osmId}`;
+    const [lng, lat] = item.geometry.coordinates;
+    const displayName = getPhotonDisplayName(item.properties);
+    return `photon:${(0, place_search_1.normalizePlaceText)(displayName)}:${lat.toFixed(5)}:${lng.toFixed(5)}`;
+};
+const getPhotonAliases = (item) => Array.from(new Set([
+    item.properties.name,
+    item.properties.street,
+    item.properties.locality,
+    item.properties.neighbourhood,
+    item.properties.suburb,
+    item.properties.municipality,
+].filter((part) => Boolean(part?.trim()))));
+const getPhotonAddressParts = (item) => Array.from(new Set([
+    item.properties.locality,
+    item.properties.neighbourhood,
+    item.properties.suburb,
+    item.properties.municipality,
+    item.properties.city,
+    item.properties.district,
+    item.properties.county,
+    item.properties.state,
+].filter((part) => Boolean(part?.trim()))));
 const fetchPhotonSuggestions = async (query) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), PHOTON_TIMEOUT_MS);
@@ -593,24 +803,71 @@ const fetchPhotonSuggestions = async (query) => {
             .map((item) => ({
             name: getPhotonDisplayName(item.properties),
             lat: item.geometry.coordinates[1],
-            lng: item.geometry.coordinates[0]
+            lng: item.geometry.coordinates[0],
+            source: "photon",
+            sourceId: getPhotonSourceId(item),
+            aliases: getPhotonAliases(item),
+            addressParts: getPhotonAddressParts(item),
         }))
             .filter((item) => item.name !== "Unnamed location" &&
             Number.isFinite(item.lat) &&
             Number.isFinite(item.lng));
+        await upsertCachedPlaces(photonSuggestions);
         const suggestions = [
             ...getPopularSuggestionsForQuery(query),
             ...getCuratedSuggestions(query),
             ...photonSuggestions
         ];
-        return rankSuggestionsByPopularity(filterSuggestionsForQuery(suggestions, query));
+        const strongResults = filterSuggestionsForQuery(suggestions, query);
+        if (strongResults.length > 0) {
+            return rankSuggestionsByPopularity(strongResults);
+        }
+        const allCandidates = [
+            ...curatedLocations,
+            ...Array.from(popularityCache.values()).map((e) => e.suggestion),
+            ...photonSuggestions
+        ];
+        const fuzzyCandidates = dedupeLocationSuggestions(allCandidates)
+            .map((candidate) => {
+            const keywords = candidate.keywords || [];
+            return {
+                candidate,
+                score: (0, fuzzy_1.getFuzzyScore)(query, candidate.name, keywords),
+                isMatch: (0, fuzzy_1.isFuzzyMatch)(query, candidate.name, keywords)
+            };
+        })
+            .filter((item) => item.isMatch)
+            .sort((a, b) => b.score - a.score)
+            .map((item) => item.candidate);
+        return rankSuggestionsByPopularity(fuzzyCandidates);
     }
     catch (error) {
         logger_1.logger.warn("Photon search unavailable; using local location suggestions", { error });
-        return rankSuggestionsByPopularity([
+        const localSuggestions = [
             ...getPopularSuggestionsForQuery(query),
             ...getCuratedSuggestions(query)
-        ]);
+        ];
+        const strongResults = filterSuggestionsForQuery(localSuggestions, query);
+        if (strongResults.length > 0) {
+            return rankSuggestionsByPopularity(strongResults);
+        }
+        const allLocalCandidates = [
+            ...curatedLocations,
+            ...Array.from(popularityCache.values()).map((e) => e.suggestion)
+        ];
+        const fuzzyCandidates = dedupeLocationSuggestions(allLocalCandidates)
+            .map((candidate) => {
+            const keywords = candidate.keywords || [];
+            return {
+                candidate,
+                score: (0, fuzzy_1.getFuzzyScore)(query, candidate.name, keywords),
+                isMatch: (0, fuzzy_1.isFuzzyMatch)(query, candidate.name, keywords)
+            };
+        })
+            .filter((item) => item.isMatch)
+            .sort((a, b) => b.score - a.score)
+            .map((item) => item.candidate);
+        return rankSuggestionsByPopularity(fuzzyCandidates);
     }
     finally {
         clearTimeout(timeout);
@@ -618,31 +875,63 @@ const fetchPhotonSuggestions = async (query) => {
 };
 router.post("/select", security_middleware_1.searchRateLimiter, async (req, res) => {
     const { name, lat, lng } = req.body ?? {};
-    const accepted = recordLocationSelection({
+    const suggestion = {
         name: typeof name === "string" ? name : "",
         lat: Number(lat),
         lng: Number(lng),
-    });
+    };
+    const accepted = recordLocationSelection(suggestion);
+    if (accepted) {
+        recordCachedPlaceSelection(suggestion).catch((error) => {
+            logger_1.logger.warn("Failed to record cached place selection", { error });
+        });
+    }
     res.status(accepted ? 204 : 400).end();
 });
 router.get("/", security_middleware_1.searchRateLimiter, (0, validation_middleware_1.validateQuery)(api_validator_1.searchQuerySchema), async (req, res) => {
     const query = req.query.q;
     const cacheKey = getSearchCacheKey(query);
-    const cached = getCachedSearch(cacheKey);
-    if (cached) {
-        res.setHeader("X-Medio-Cache", "hit");
-        res.json(rankSuggestionsByPopularity([
-            ...getPopularSuggestionsForQuery(query),
-            ...filterSuggestionsForQuery(cached.results, query)
-        ]));
-        return;
-    }
     try {
+        const cachedPlaceMatches = await searchCachedPlaces(query);
+        const confidentCacheMatches = cachedPlaceMatches.filter(({ score }) => (0, place_search_1.isConfidentPlaceScore)(score));
+        if (confidentCacheMatches.length >= MIN_CONFIDENT_CACHE_RESULTS ||
+            (confidentCacheMatches[0]?.score ?? 0) >= STRONG_SINGLE_CACHE_SCORE) {
+            const results = rankConfidenceResults(confidentCacheMatches);
+            setCachedSearch(cacheKey, results);
+            res.setHeader("X-Medio-Place-Cache", "hit");
+            res.json(results);
+            return;
+        }
+        const cached = getCachedSearch(cacheKey);
+        if (cached) {
+            const cachedResults = scoreSuggestionsForQuery([
+                ...getPopularSuggestionsForQuery(query),
+                ...filterSuggestionsForQuery(cached.results, query),
+            ], query);
+            const combinedCachedResults = rankConfidenceResults([
+                ...confidentCacheMatches,
+                ...cachedResults,
+            ]);
+            if (combinedCachedResults.length > 0) {
+                res.setHeader("X-Medio-Cache", "hit");
+                res.json(combinedCachedResults);
+                return;
+            }
+        }
         const pending = pendingSearches.get(cacheKey) ?? fetchPhotonSuggestions(query);
         if (!pendingSearches.has(cacheKey)) {
             pendingSearches.set(cacheKey, pending);
         }
-        const results = await pending;
+        const photonResults = await pending;
+        const postPhotonCachedMatches = await searchCachedPlaces(query);
+        const results = rankConfidenceResults([
+            ...postPhotonCachedMatches,
+            ...scoreSuggestionsForQuery([
+                ...getPopularSuggestionsForQuery(query),
+                ...getCuratedSuggestions(query),
+                ...photonResults,
+            ], query),
+        ]);
         if (results.length > 0) {
             setCachedSearch(cacheKey, results);
         }
