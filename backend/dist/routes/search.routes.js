@@ -1,6 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const mongoose_1 = __importDefault(require("mongoose"));
 const security_middleware_1 = require("../middlewares/security.middleware");
 const validation_middleware_1 = require("../middlewares/validation.middleware");
 const db_1 = require("../lib/db");
@@ -21,7 +25,7 @@ const PHOTON_RESULT_LIMIT = 16;
 const DB_PLACE_CACHE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 const DB_PLACE_CANDIDATE_LIMIT = 120;
 const MIN_CONFIDENT_CACHE_RESULTS = 4;
-const STRONG_SINGLE_CACHE_SCORE = 90;
+const STRONG_SINGLE_CACHE_SCORE = 74;
 const searchCache = new Map();
 const pendingSearches = new Map();
 const popularityCache = new Map();
@@ -333,7 +337,7 @@ const matchesQueryPrefix = (suggestion, query) => {
         queryTokens.every((token) => normalizedName.includes(token)));
 };
 const filterSuggestionsForQuery = (suggestions, query) => suggestions.filter((suggestion) => matchesQueryPrefix(suggestion, query));
-const dedupeLocationSuggestions = (suggestions) => {
+const dedupeLocationSuggestions = (suggestions, limit = MAX_SEARCH_RESULTS) => {
     const seen = new Set();
     const unique = [];
     for (const suggestion of suggestions) {
@@ -352,7 +356,7 @@ const dedupeLocationSuggestions = (suggestions) => {
             lat: suggestion.lat,
             lng: suggestion.lng
         });
-        if (unique.length >= MAX_SEARCH_RESULTS)
+        if (unique.length >= limit)
             break;
     }
     return unique;
@@ -442,7 +446,7 @@ const getCanonicalPlaceKey = (place) => `${(0, place_search_1.normalizePlaceText
 const upsertCachedPlaces = async (places) => {
     if (!(0, db_1.isMongoReady)())
         return;
-    const cacheablePlaces = dedupeLocationSuggestions(places)
+    const cacheablePlaces = dedupeLocationSuggestions(places, DB_PLACE_CANDIDATE_LIMIT)
         .map((suggestion) => places.find((place) => getCanonicalPlaceKey(place) === getCanonicalPlaceKey(suggestion)) ?? suggestion)
         .map((place) => buildCacheablePlace(place))
         .filter((place) => place.normalizedName && place.searchGrams.length > 0);
@@ -458,8 +462,8 @@ const upsertCachedPlaces = async (places) => {
             : {
                 serviceAreaId: place.serviceAreaId,
                 normalizedName: place.normalizedName,
-                lat: { $gte: place.lat - 0.0007, $lte: place.lat + 0.0007 },
-                lng: { $gte: place.lng - 0.0007, $lte: place.lng + 0.0007 },
+                lat: mongoose_1.default.trusted({ $gte: place.lat - 0.0007, $lte: place.lat + 0.0007 }),
+                lng: mongoose_1.default.trusted({ $gte: place.lng - 0.0007, $lte: place.lng + 0.0007 }),
             };
         return cached_place_1.CachedPlace.updateOne(selector, {
             $set: {
@@ -516,28 +520,34 @@ const cachedPlacesToSuggestions = (places, query) => places
 const searchCachedPlaces = async (query) => {
     if (!(0, db_1.isMongoReady)())
         return [];
-    await ensureCuratedPlaceCache();
-    const normalizedQuery = (0, place_search_1.normalizePlaceText)(query);
-    const queryTokens = (0, place_search_1.getPlaceSearchTokens)([query]);
-    const queryGrams = (0, place_search_1.getPlaceSearchGrams)([query]);
-    if (!normalizedQuery || queryGrams.length === 0)
+    try {
+        await ensureCuratedPlaceCache();
+        const normalizedQuery = (0, place_search_1.normalizePlaceText)(query);
+        const queryTokens = (0, place_search_1.getPlaceSearchTokens)([query]);
+        const queryGrams = (0, place_search_1.getPlaceSearchGrams)([query]);
+        if (!normalizedQuery || queryGrams.length === 0)
+            return [];
+        const now = new Date();
+        const prefixPattern = new RegExp(`^${normalizedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+        const candidates = await cached_place_1.CachedPlace.find({
+            serviceAreaId: service_area_1.DEFAULT_SERVICE_AREA.id,
+            expiresAt: mongoose_1.default.trusted({ $gt: now }),
+            $or: [
+                { normalizedName: prefixPattern },
+                { normalizedAliases: prefixPattern },
+                { searchTokens: mongoose_1.default.trusted({ $in: queryTokens }) },
+                { searchGrams: mongoose_1.default.trusted({ $in: queryGrams }) },
+            ],
+        })
+            .sort({ selectedCount: -1, lastSeenAt: -1 })
+            .limit(DB_PLACE_CANDIDATE_LIMIT)
+            .lean();
+        return cachedPlacesToSuggestions(candidates, query);
+    }
+    catch (error) {
+        logger_1.logger.warn("Shared place cache search failed; continuing with live/local search", { error });
         return [];
-    const now = new Date();
-    const prefixPattern = new RegExp(`^${normalizedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
-    const candidates = await cached_place_1.CachedPlace.find({
-        serviceAreaId: service_area_1.DEFAULT_SERVICE_AREA.id,
-        expiresAt: { $gt: now },
-        $or: [
-            { normalizedName: prefixPattern },
-            { normalizedAliases: prefixPattern },
-            { searchTokens: { $in: queryTokens } },
-            { searchGrams: { $in: queryGrams } },
-        ],
-    })
-        .sort({ selectedCount: -1, lastSeenAt: -1 })
-        .limit(DB_PLACE_CANDIDATE_LIMIT)
-        .lean();
-    return cachedPlacesToSuggestions(candidates, query);
+    }
 };
 const rankConfidenceResults = (items) => {
     const seen = new Set();
@@ -553,13 +563,35 @@ const rankConfidenceResults = (items) => {
     }
     return ranked;
 };
-const scoreSuggestionsForQuery = (suggestions, query) => dedupeLocationSuggestions(suggestions).map((suggestion, index) => ({
+const scoreSuggestionsForQuery = (suggestions, query) => dedupeLocationSuggestions(suggestions, DB_PLACE_CANDIDATE_LIMIT).map((suggestion, index) => ({
     suggestion,
     score: (0, fuzzy_1.getFuzzyScore)(query, suggestion.name) +
         (matchesQueryPrefix(suggestion, query) ? 35 : 0) +
         Math.min(8, getPopularityScore(suggestion)) -
         index * 0.01,
 }));
+const getLocalFuzzySuggestions = (query) => {
+    const localCandidates = [
+        ...curatedLocations,
+        ...Array.from(popularityCache.values()).map((entry) => entry.suggestion),
+    ];
+    const fuzzyMatches = dedupeLocationSuggestions(localCandidates, DB_PLACE_CANDIDATE_LIMIT)
+        .map((candidate, index) => {
+        const keywords = candidate.keywords || [];
+        const fuzzyScore = (0, fuzzy_1.getFuzzyScore)(query, candidate.name, keywords);
+        const prefixScore = matchesQueryPrefix(candidate, query) ? 35 : 0;
+        const popularityScore = Math.min(8, getPopularityScore(candidate));
+        return {
+            suggestion: candidate,
+            score: fuzzyScore + prefixScore + popularityScore - index * 0.01,
+            isMatch: prefixScore > 0 ||
+                (0, fuzzy_1.isFuzzyMatch)(query, candidate.name, keywords) ||
+                fuzzyScore >= 70,
+        };
+    })
+        .filter(({ isMatch }) => isMatch);
+    return rankConfidenceResults(fuzzyMatches);
+};
 const recordCachedPlaceSelection = async (suggestion) => {
     if (!(0, db_1.isMongoReady)())
         return;
@@ -570,8 +602,8 @@ const recordCachedPlaceSelection = async (suggestion) => {
     const normalizedName = (0, place_search_1.normalizePlaceText)(normalized.name);
     const now = new Date();
     const nearbyWindow = {
-        lat: { $gte: normalized.lat - 0.0007, $lte: normalized.lat + 0.0007 },
-        lng: { $gte: normalized.lng - 0.0007, $lte: normalized.lng + 0.0007 },
+        lat: mongoose_1.default.trusted({ $gte: normalized.lat - 0.0007, $lte: normalized.lat + 0.0007 }),
+        lng: mongoose_1.default.trusted({ $gte: normalized.lng - 0.0007, $lte: normalized.lng + 0.0007 }),
     };
     await cached_place_1.CachedPlace.updateOne({
         serviceAreaId: service_area_1.DEFAULT_SERVICE_AREA.id,
@@ -795,7 +827,7 @@ const fetchPhotonSuggestions = async (query) => {
             signal: controller.signal
         });
         if (!response.ok) {
-            return dedupeLocationSuggestions(getCuratedSuggestions(query));
+            return getLocalFuzzySuggestions(query);
         }
         const data = (await response.json());
         const photonSuggestions = (data.features ?? [])
@@ -827,7 +859,7 @@ const fetchPhotonSuggestions = async (query) => {
             ...Array.from(popularityCache.values()).map((e) => e.suggestion),
             ...photonSuggestions
         ];
-        const fuzzyCandidates = dedupeLocationSuggestions(allCandidates)
+        const fuzzyCandidates = dedupeLocationSuggestions(allCandidates, DB_PLACE_CANDIDATE_LIMIT)
             .map((candidate) => {
             const keywords = candidate.keywords || [];
             return {
@@ -843,31 +875,7 @@ const fetchPhotonSuggestions = async (query) => {
     }
     catch (error) {
         logger_1.logger.warn("Photon search unavailable; using local location suggestions", { error });
-        const localSuggestions = [
-            ...getPopularSuggestionsForQuery(query),
-            ...getCuratedSuggestions(query)
-        ];
-        const strongResults = filterSuggestionsForQuery(localSuggestions, query);
-        if (strongResults.length > 0) {
-            return rankSuggestionsByPopularity(strongResults);
-        }
-        const allLocalCandidates = [
-            ...curatedLocations,
-            ...Array.from(popularityCache.values()).map((e) => e.suggestion)
-        ];
-        const fuzzyCandidates = dedupeLocationSuggestions(allLocalCandidates)
-            .map((candidate) => {
-            const keywords = candidate.keywords || [];
-            return {
-                candidate,
-                score: (0, fuzzy_1.getFuzzyScore)(query, candidate.name, keywords),
-                isMatch: (0, fuzzy_1.isFuzzyMatch)(query, candidate.name, keywords)
-            };
-        })
-            .filter((item) => item.isMatch)
-            .sort((a, b) => b.score - a.score)
-            .map((item) => item.candidate);
-        return rankSuggestionsByPopularity(fuzzyCandidates);
+        return getLocalFuzzySuggestions(query);
     }
     finally {
         clearTimeout(timeout);
@@ -906,7 +914,7 @@ router.get("/", security_middleware_1.searchRateLimiter, (0, validation_middlewa
         if (cached) {
             const cachedResults = scoreSuggestionsForQuery([
                 ...getPopularSuggestionsForQuery(query),
-                ...filterSuggestionsForQuery(cached.results, query),
+                ...cached.results,
             ], query);
             const combinedCachedResults = rankConfidenceResults([
                 ...confidentCacheMatches,
@@ -930,6 +938,7 @@ router.get("/", security_middleware_1.searchRateLimiter, (0, validation_middlewa
                 ...getPopularSuggestionsForQuery(query),
                 ...getCuratedSuggestions(query),
                 ...photonResults,
+                ...getLocalFuzzySuggestions(query),
             ], query),
         ]);
         if (results.length > 0) {
@@ -939,10 +948,7 @@ router.get("/", security_middleware_1.searchRateLimiter, (0, validation_middlewa
     }
     catch (error) {
         logger_1.logger.error("Photon search failed", { error });
-        res.json(rankSuggestionsByPopularity([
-            ...getPopularSuggestionsForQuery(query),
-            ...getCuratedSuggestions(query)
-        ]));
+        res.json(getLocalFuzzySuggestions(query));
     }
     finally {
         pendingSearches.delete(cacheKey);

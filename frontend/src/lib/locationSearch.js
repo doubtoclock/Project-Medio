@@ -37,6 +37,66 @@ const matchesQueryPrefix = (suggestion, query) => {
   );
 };
 
+const getLevenshteinDistance = (left, right) => {
+  if (left.length === 0) return right.length;
+  if (right.length === 0) return left.length;
+
+  const matrix = Array.from({ length: left.length + 1 }, () =>
+    new Array(right.length + 1).fill(0)
+  );
+
+  for (let i = 0; i <= left.length; i += 1) matrix[i][0] = i;
+  for (let j = 0; j <= right.length; j += 1) matrix[0][j] = j;
+
+  for (let i = 1; i <= left.length; i += 1) {
+    for (let j = 1; j <= right.length; j += 1) {
+      const cost = left[i - 1] === right[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+
+      if (
+        i > 1 &&
+        j > 1 &&
+        left[i - 1] === right[j - 2] &&
+        left[i - 2] === right[j - 1]
+      ) {
+        matrix[i][j] = Math.min(matrix[i][j], matrix[i - 2][j - 2] + cost);
+      }
+    }
+  }
+
+  return matrix[left.length][right.length];
+};
+
+const matchesQueryFuzzy = (suggestion, query) => {
+  if (matchesQueryPrefix(suggestion, query)) return true;
+
+  const normalizedQuery = normalizeLocationName(query);
+  const normalizedName = normalizeLocationName(suggestion?.name || "");
+  if (!normalizedQuery || !normalizedName) return false;
+
+  const queryTokens = normalizedQuery
+    .split(" ")
+    .filter((token) => token && !["mumbai", "mira", "bhayandar", "bhayander"].includes(token));
+  const candidateTokens = normalizedName.split(" ").filter(Boolean);
+  const tokensToMatch = queryTokens.length > 0 ? queryTokens : normalizedQuery.split(" ").filter(Boolean);
+
+  return tokensToMatch.every((queryToken) =>
+    candidateTokens.some((candidateToken) => {
+      if (candidateToken.startsWith(queryToken)) return true;
+
+      const distance = getLevenshteinDistance(queryToken, candidateToken);
+      if (queryToken.length >= 5) return distance <= 2;
+      if (queryToken.length >= 4) return distance <= 1;
+
+      return false;
+    })
+  );
+};
+
 const getSuggestionKey = (suggestion) =>
   `${normalizeLocationName(suggestion.name)}:${Number(suggestion.lat).toFixed(4)},${Number(suggestion.lng).toFixed(4)}`;
 
@@ -168,7 +228,7 @@ const rankByLocalPopularity = (suggestions) => {
 };
 
 const filterSuggestionsForQuery = (suggestions, query) =>
-  rankByLocalPopularity(suggestions.filter((suggestion) => matchesQueryPrefix(suggestion, query)));
+  rankByLocalPopularity(suggestions.filter((suggestion) => matchesQueryFuzzy(suggestion, query)));
 
 export const recordLocationSelection = (location) => {
   const [suggestion] = dedupeLocationSuggestions([location], 1);

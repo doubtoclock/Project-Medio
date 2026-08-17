@@ -111,12 +111,13 @@ Project-Medio/
 - Cached places store canonical names, normalized names, aliases, address parts, search tokens, character grams, source/sourceId, coordinates, selection counts, `lastSeenAt`, and `expiresAt`.
 - Cached-place indexes include service-area/name, service-area/aliases, service-area/tokens, service-area/grams, source/sourceId, coordinate lookup, text search fields, and a TTL index on `expiresAt`.
 - Autocomplete flow is now: normalize the query, fuzzy-search the shared place cache first, return strong cache hits immediately, otherwise query Photon, normalize/dedupe/filter Photon results, persist canonical Photon places and aliases, then confidence-rank combined cache/Photon/curated/popular results.
+- Fuzzy fallback candidate generation must dedupe broadly before ranking, not cap to the eight public results first. A past regression caused typo queries like `versiva`, `virsovaa`, and `virsowa` to miss Versova because Versova appeared after the first eight curated entries.
 - Do not cache arbitrary typo strings as standalone places. Typos should map to canonical cached places through aliases/search grams/fuzzy scoring. User-specific search caching should only be used later for personalization or recents.
 - Suggestions preserve the existing API response shape: `{ name, lat, lng }`.
 - Suggestions combine shared cached places, curated local places, Photon results, and popularity hits; display names prefer locality/suburb over ward-code districts, and `Mira-Bhayander` is normalized to `Mira Bhayandar`.
 - Backend still keeps a small in-memory search response cache with TTL, limits, and pending-request de-duplication for speed, but the shared place cache is checked first.
 - Backend tracks selected suggestions through `POST /api/search/select`; popular selected places rank higher in later search responses and the shared cached-place selection count is updated when possible.
-- Frontend keeps a localStorage suggestion cache and local popularity map; the cache is reused for longer typed prefixes (e.g. a cached `and` query serves `andheri`), so repeated searches feel instant for the same browser.
+- Frontend keeps a localStorage suggestion cache and local popularity map; the cache is reused for longer typed prefixes (e.g. a cached `and` query serves `andheri`), so repeated searches feel instant for the same browser. Cached frontend suggestions must be filtered with typo-aware matching, otherwise a backend fuzzy result can be hidden on the next exact cached lookup.
 - `MeetPage.jsx` records popularity when a suggestion is selected for either origin.
 
 ## Results/detail performance notes
@@ -130,6 +131,7 @@ Project-Medio/
 
 - Backend build: run `npm run build` inside `backend/`.
 - Backend search regression test: run `npm run test:search` inside `backend/`. It currently covers `versiva`, `virsovaa`, `virsowa`, `versova`, and `versova mumbai`, and expects Versova to be confidently surfaced in the Mumbai service area.
+- Route-level search smoke test: start the backend and call `/api/search?q=versiva`, `/api/search?q=virsovaa`, `/api/search?q=virsowa`, `/api/search?q=versova`, and `/api/search?q=versova%20mumbai`; all should return non-empty results with Versova in the Mumbai service area.
 - Frontend build: run `npm run build` inside `frontend/`.
 - Both builds were run after the current routing/search/performance updates and passed.
 - Vite currently reports a non-fatal bundle-size warning for the frontend JS chunk; this existed as a build concern, not a compile failure.

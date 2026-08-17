@@ -110,7 +110,6 @@ const cachedPlaceSchema = new mongoose_1.Schema({
     expiresAt: {
         type: Date,
         required: true,
-        index: true,
     },
 }, { timestamps: true });
 cachedPlaceSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
