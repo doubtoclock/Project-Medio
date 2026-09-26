@@ -3,10 +3,15 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getBackendUrl } from "../lib/backend";
 import { getFrontendUrl } from "../lib/frontendUrl";
+import { apiClient } from "../lib/apiClient";
 import "./LoginPage.css";
 
 import { Capacitor } from '@capacitor/core';
 import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const GOOGLE_SERVER_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_SERVER_CLIENT_ID || GOOGLE_CLIENT_ID;
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -14,7 +19,7 @@ export default function LoginPage() {
   const [params] = useSearchParams();
 
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [googleError, setGoogleError] = useState(false);
+  const [googleError, setGoogleError] = useState("");
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [legalError, setLegalError] = useState("");
 
@@ -46,13 +51,21 @@ export default function LoginPage() {
       return;
     }
     setGoogleLoading(true);
-    setGoogleError(false);
+    setGoogleError("");
 
     if (Capacitor.isNativePlatform()) {
+      const backendUrl = getBackendUrl();
+
       try {
+        if (!GOOGLE_CLIENT_ID) {
+          throw new Error(
+            "Google sign-in is not configured: VITE_GOOGLE_CLIENT_ID is missing from the build."
+          );
+        }
+
         await GoogleSignIn.initialize({
-          clientId: '943070343124-rnkq374mo63g67qoet5e14d6jf6e8cjv.apps.googleusercontent.com',
-          serverClientId: '943070343124-rnkq374mo63g67qoet5e14d6jf6e8cjv.apps.googleusercontent.com',
+          clientId: GOOGLE_CLIENT_ID,
+          serverClientId: GOOGLE_SERVER_CLIENT_ID,
           scopes: ['profile', 'email']
         });
         
@@ -63,25 +76,27 @@ export default function LoginPage() {
             throw new Error("No ID token received from Google");
         }
         
-        const res = await fetch(`${getBackendUrl()}/api/auth/google/native`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken })
-        });
-        
-        if (!res.ok) {
-          throw new Error("Backend authentication failed");
-        }
-        
-        const data = await res.json();
+        const data = await apiClient.auth.nativeLogin(idToken);
+
         if (data.token) {
           login(data.token);
         } else {
           throw new Error("Invalid token received from backend");
         }
       } catch (error) {
+        const rawMessage = error?.message || String(error);
+
+        if (/Failed to fetch|NetworkError|Load failed/i.test(rawMessage)) {
+          setGoogleError(
+            `Cannot reach the backend at ${backendUrl}. Check VITE_BACKEND_URL.`
+          );
+        } else if (/id token|token audience|IdToken/i.test(rawMessage)) {
+          setGoogleError(rawMessage);
+        } else {
+          setGoogleError(rawMessage);
+        }
+
         console.error("Native Google login failed", error);
-        setGoogleError(true);
       } finally {
         setGoogleLoading(false);
       }
@@ -149,7 +164,7 @@ export default function LoginPage() {
           </button>
 
           {googleError && (
-            <p className="login-error-text">Google sign-in failed. Please try again.</p>
+            <p className="login-error-text">{googleError}</p>
           )}
 
           <p className="login-secure-text">Secure login powered by Google</p>

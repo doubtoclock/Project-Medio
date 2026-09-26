@@ -68,41 +68,35 @@ function RoutedPolylines({ segments, color, className }) {
   );
 }
 
-const getOriginIcon = (phase) => L.divIcon({
-  className: phase >= 1 ? 'leaflet-custom-marker-container' : 'anim-hidden',
+const getOriginIcon = () => L.divIcon({
+  className: 'leaflet-custom-marker-container',
   html: `<div class="marker-origin"></div>`,
   iconSize: [12, 12],
   iconAnchor: [6, 6],
 });
 
-const getVenueIcon = (phase, isSelected) => L.divIcon({
-  className: phase >= 4 ? 'leaflet-custom-marker-container' : 'anim-hidden',
-  html: `<div class="marker-venue ${isSelected ? 'marker-venue-selected' : ''} anim-ui-reveal"></div>`,
+const getVenueIcon = (isSelected) => L.divIcon({
+  className: 'leaflet-custom-marker-container',
+  html: `<div class="marker-venue ${isSelected ? 'marker-venue-selected' : ''}"></div>`,
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 });
 
-const nexusIcon = L.divIcon({
-  className: '',
-  html: `
-    <div class="marker-nexus">
-      <div class="marker-nexus-outer"></div>
-      <div class="marker-nexus-inner"></div>
-    </div>
-  `,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-});
-
 function MapAnimator({ positions, midpoint, phase, rescaleTrigger }) {
   const map = useMap();
+  const hasAnimatedIn = useRef(false);
+  const lastRescaleTrigger = useRef(rescaleTrigger);
 
   useEffect(() => {
     if (phase === 0) {
       map.setView([midpoint.lat, midpoint.lng], 15, { animate: false });
-    } else if (phase >= 1 && positions.length > 0) {
+    } else if (phase >= 1 && positions.length > 0 && (
+      !hasAnimatedIn.current || rescaleTrigger !== lastRescaleTrigger.current
+    )) {
       const bounds = L.latLngBounds(positions);
       map.flyToBounds(bounds, { padding: [100, 100], maxZoom: 14, duration: 1.5 });
+      hasAnimatedIn.current = true;
+      lastRescaleTrigger.current = rescaleTrigger;
     }
   }, [map, positions, midpoint, phase, rescaleTrigger]);
 
@@ -148,7 +142,8 @@ function ResultsPage() {
   const [routeDataB, setRouteDataB] = useState(null);
   const [routeErrorA, setRouteErrorA] = useState(null);
   const [routeErrorB, setRouteErrorB] = useState(null);
-  const [loadingRoutes, setLoadingRoutes] = useState(false);
+  const [routesLoadedVenueKey, setRoutesLoadedVenueKey] = useState(null);
+  const hasAnimatedRoutesRef = useRef(false);
   const routeCacheRef = useRef(savedRestore?.routeCache || {});
   const pendingRoutesRef = useRef(new Map());
   routeCacheRef.current = routeCache;
@@ -232,15 +227,18 @@ function ResultsPage() {
 
   const routeSegmentsA = useMemo(() => getRouteSegments(routeDataA), [routeDataA]);
   const routeSegmentsB = useMemo(() => getRouteSegments(routeDataB), [routeDataB]);
+  const activeRoutesReady = Boolean(
+    selectedVenue && routesLoadedVenueKey === getVenueRouteKey('A', selectedVenue)
+  );
+  const animateRoutes = activeRoutesReady && phase >= 2 && !hasAnimatedRoutesRef.current;
+  if (animateRoutes) hasAnimatedRoutesRef.current = true;
 
   const allPositions = useMemo(() => {
     const positions = [
       [originA.lat, originA.lng],
       [originB.lat, originB.lng],
     ];
-    if (selectedVenue) {
-      positions.push([selectedVenue.lat, selectedVenue.lon]);
-    }
+    if (selectedVenue) positions.push([selectedVenue.lat, selectedVenue.lon]);
     routeSegmentsA.forEach((segment) => positions.push(...segment));
     routeSegmentsB.forEach((segment) => positions.push(...segment));
     return positions;
@@ -281,7 +279,7 @@ function ResultsPage() {
     let localErrorA = null;
     let localErrorB = null;
 
-    setLoadingRoutes(true);
+    setRoutesLoadedVenueKey(null);
     setRouteDataA(null);
     setRouteDataB(null);
     setRouteErrorA(null);
@@ -293,28 +291,16 @@ function ResultsPage() {
 
       if (cached) {
         if (!cancelled) {
-          if (side === 'A') {
-            setRouteDataA(cached);
-            localDataA = cached;
-          } else {
-            setRouteDataB(cached);
-            localDataB = cached;
-          }
+          if (side === 'A') localDataA = cached;
+          else localDataB = cached;
         }
         return;
       }
 
       try {
         const data = await fetchRouteForVenue(side, selectedVenue);
-        if (!cancelled) {
-          if (side === 'A') {
-            setRouteDataA(data);
-            localDataA = data;
-          } else {
-            setRouteDataB(data);
-            localDataB = data;
-          }
-        }
+        if (side === 'A') localDataA = data;
+        else localDataB = data;
       } catch (err) {
         if (!cancelled) {
           const errorText = getRouteErrorMessage(err);
@@ -331,7 +317,9 @@ function ResultsPage() {
 
     Promise.all([fetchSide('A'), fetchSide('B')]).finally(() => {
       if (!cancelled) {
-        setLoadingRoutes(false);
+        setRouteDataA(localDataA);
+        setRouteDataB(localDataB);
+        setRoutesLoadedVenueKey(getVenueRouteKey('A', selectedVenue));
       }
     });
 
@@ -422,56 +410,46 @@ function ResultsPage() {
               url={CARTO_DARK_TILE_URL}
               attribution={CARTO_ATTRIBUTION}
             />
-            <MapAnimator positions={allPositions} midpoint={midpoint} phase={phase} rescaleTrigger={rescaleTrigger} />
+            <MapAnimator positions={allPositions} midpoint={midpoint} phase={activeRoutesReady ? phase : 0} rescaleTrigger={rescaleTrigger} />
 
-            {phase >= 2 && (
+            {phase >= 2 && activeRoutesReady && (
               <>
-                <RoutedPolylines segments={routeSegmentsA} color="#FFFFFF" className="anim-route-line-a" />
-                <RoutedPolylines segments={routeSegmentsB} color="#D4AF37" className="anim-route-line-b" />
+                <RoutedPolylines segments={routeSegmentsA} color="#FFFFFF" className={animateRoutes ? 'anim-route-line-a' : ''} />
+                <RoutedPolylines segments={routeSegmentsB} color="#D4AF37" className={animateRoutes ? 'anim-route-line-b' : ''} />
               </>
             )}
 
-            <Marker position={[originA.lat, originA.lng]} icon={getOriginIcon(phase)}>
+            <Marker position={[originA.lat, originA.lng]} icon={getOriginIcon()}>
               <Popup className="custom-popup">
                 <strong>Origin A</strong><br />{originA.name}
               </Popup>
             </Marker>
 
-            <Marker position={[originB.lat, originB.lng]} icon={getOriginIcon(phase)}>
+            <Marker position={[originB.lat, originB.lng]} icon={getOriginIcon()}>
               <Popup className="custom-popup">
                 <strong>Origin B</strong><br />{originB.name}
               </Popup>
             </Marker>
 
-            {phase >= 3 && (
+            {selectedVenue && (
               <Marker
-                position={[midpoint.lat, midpoint.lng]}
-                icon={L.divIcon({
-                  className: 'anim-nexus-spring',
-                  html: nexusIcon.options.html,
-                  iconSize: [24, 24],
-                  iconAnchor: [12, 12]
-                })}
+                key={selectedVenue.id}
+                position={[selectedVenue.lat, selectedVenue.lon]}
+                icon={getVenueIcon(true)}
               >
                 <Popup className="custom-popup">
-                  <strong>Optimal Nexus</strong>
+                  <strong>{selectedVenue.name}</strong><br />
+                  {getMeetCategory(selectedVenue)}
                 </Popup>
               </Marker>
             )}
-
-            {phase >= 4 && filteredMeetResults.map((venue) => (
-              <Marker
-                key={venue.id}
-                position={[venue.lat, venue.lon]}
-                icon={getVenueIcon(phase, selectedVenue?.id === venue.id)}
-              >
-                <Popup className="custom-popup">
-                  <strong>{venue.name}</strong><br />
-                  {getMeetCategory(venue)}
-                </Popup>
-              </Marker>
-            ))}
           </MapContainer>
+          {selectedVenue && !activeRoutesReady && (
+            <div className="results-map-loading" role="status" aria-live="polite">
+              <span className="results-map-spinner" />
+              <span>Loading routes for {selectedVenue?.name || 'meeting point'}...</span>
+            </div>
+          )}
         </div>
       </div>
 

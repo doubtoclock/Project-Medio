@@ -31,6 +31,32 @@
   overflow: hidden;
 }
 
+.results-map-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  background: rgba(17, 17, 19, 0.72);
+  color: var(--primary-text);
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  text-align: center;
+}
+
+.results-map-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #62d987;
+  border-radius: 50%;
+  animation: routeSpin 0.8s linear infinite;
+}
+
 .results-map-container .leaflet-container {
   width: 100%;
   height: 100%;
@@ -185,10 +211,10 @@
 .marker-origin {
   width: 12px;
   height: 12px;
-  background-color: var(--secondary-text);
+  background-color: #38c96b;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 0 10px var(--border-color);
+  box-shadow: 0 0 10px rgba(56, 201, 107, 0.75);
 }
 
 .marker-nexus {
