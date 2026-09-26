@@ -29,7 +29,7 @@ services:
       - key: CAPACITOR_ORIGINS
         value: capacitor://localhost,http://localhost,https://localhost
       - key: OTP_BASE_URL
-        value: https://medio-otp.onrender.com
+        value: http://80.225.221.144:8080
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET

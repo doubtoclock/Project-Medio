@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'org.mywire.medio',
-  appName: 'MEDIO',
+  appId: 'com.medio.app',
+  appName: 'Medio',
   webDir: 'dist',
   server: {
     hostname: 'medio.mywire.org',

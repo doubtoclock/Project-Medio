@@ -21,6 +21,7 @@ import {
   decodePolyline,
   RouteStepsPanel,
 } from '../lib/routeUtils';
+import { CARTO_ATTRIBUTION, CARTO_DARK_TILE_URL } from '../lib/mapTiles';
 import './JourneyPlannerPage.css';
 
 const TRANSPORT_OPTIONS = [
@@ -689,12 +690,12 @@ export default function JourneyPlannerPage() {
             center={fallbackMapCenter}
             zoom={13}
             zoomControl={false}
-            attributionControl={false}
             scrollWheelZoom={true}
             className="planner-leaflet-map"
           >
               <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                url={CARTO_DARK_TILE_URL}
+                attribution={CARTO_ATTRIBUTION}
               />
 
               {coordsA && (

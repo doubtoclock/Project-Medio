@@ -1,4 +1,15 @@
-export const CARTO_DARK_TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const CARTO_BASEMAPS_KEY =
+  import.meta.env.VITE_CARTO_BASEMAPS_KEY || "cb1_3yvy_1_93a066d8fc07c861e20712b8";
+
+const withKey = (url) =>
+  `${url}${url.includes("?") ? "&" : "?"}key=${CARTO_BASEMAPS_KEY}`;
+
+export const CARTO_DARK_TILE_URL = withKey(
+  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+);
+
+export const CARTO_ATTRIBUTION =
+  '&copy; <a href="https://carto.com/attributions">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 const TILE_SUBDOMAINS = ["a", "b", "c", "d"];
 const loadedTiles = new Set();

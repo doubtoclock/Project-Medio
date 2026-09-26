@@ -6,7 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiClient } from '../lib/apiClient';
 import { fetchLocationSuggestions, recordLocationSelection } from '../lib/locationSearch';
-import { CARTO_DARK_TILE_URL, preloadMapTiles } from '../lib/mapTiles';
+import { CARTO_ATTRIBUTION, CARTO_DARK_TILE_URL, preloadMapTiles } from '../lib/mapTiles';
 import './MeetPage.css';
 
 const liveLocationIcon = L.divIcon({
@@ -242,7 +242,6 @@ function MeetPage() {
           center={[19.0760, 72.8777]}
           zoom={13}
           zoomControl={false}
-          attributionControl={false}
           scrollWheelZoom={false}
           dragging={false}
           touchZoom={false}
@@ -251,6 +250,7 @@ function MeetPage() {
         >
           <TileLayer
             url={CARTO_DARK_TILE_URL}
+            attribution={CARTO_ATTRIBUTION}
           />
           <Marker position={[19.0760, 72.8777]} icon={liveLocationIcon} />
         </MapContainer>

@@ -124,3 +124,23 @@ button.is-loading::after {
     transform: translateX(120%);
   }
 }
+
+/* =========================================
+   LEAFLET BASEMAP ATTRIBUTION (required by CARTO/OSM terms)
+   ========================================= */
+
+.leaflet-control-attribution {
+  background: rgba(9, 9, 9, 0.55) !important;
+  color: var(--muted-text) !important;
+  font-size: 9px;
+  line-height: 1.4;
+  padding: 2px 6px;
+  border-radius: 6px 0 0 0;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.leaflet-control-attribution a {
+  color: var(--secondary-text) !important;
+  text-decoration: underline;
+}

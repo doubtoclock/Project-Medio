@@ -5,7 +5,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LocateFixed, ArrowLeft, Clock } from 'lucide-react';
 import { apiClient } from '../lib/apiClient';
-import { CARTO_DARK_TILE_URL, preloadMapTiles } from '../lib/mapTiles';
+import { CARTO_ATTRIBUTION, CARTO_DARK_TILE_URL, preloadMapTiles } from '../lib/mapTiles';
 import { decodePolyline } from '../lib/routeUtils';
 import './ResultsPage.css';
 
@@ -416,11 +416,11 @@ function ResultsPage() {
             zoom={15}
             scrollWheelZoom={false}
             zoomControl={false}
-            attributionControl={false}
             style={{ width: '100%', height: '100%' }}
           >
             <TileLayer
               url={CARTO_DARK_TILE_URL}
+              attribution={CARTO_ATTRIBUTION}
             />
             <MapAnimator positions={allPositions} midpoint={midpoint} phase={phase} rescaleTrigger={rescaleTrigger} />
 

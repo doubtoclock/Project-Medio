@@ -75,11 +75,6 @@
   opacity: 1;
 }
 
-/* Hide leaflet attribution for cleaner look */
-.results-map-container .leaflet-control-attribution {
-  display: none;
-}
-
 .results-map-container .leaflet-control-zoom {
   display: none;
 }
