@@ -120,6 +120,14 @@ Project-Medio/
 - Frontend keeps a localStorage suggestion cache and local popularity map; the cache is reused for longer typed prefixes (e.g. a cached `and` query serves `andheri`), so repeated searches feel instant for the same browser. Cached frontend suggestions must be filtered with typo-aware matching, otherwise a backend fuzzy result can be hidden on the next exact cached lookup.
 - `MeetPage.jsx` records popularity when a suggestion is selected for either origin.
 
+## Shared meeting App Links
+
+- Shared meeting URLs use `https://medio.mywire.org/share/:shareId`; the React route is `/share/:shareId` and must remain usable in a browser as a fallback.
+- Android App Links are restricted to `https://medio.mywire.org/share/`. The generated `frontend/android/` directory is gitignored, so after `npx cap sync android`, run `npm run configure:android-links` from `frontend/` (or `npm run sync:android`, which performs both steps) to add the verified link intent filter.
+- `frontend/src/App.jsx` handles cold and warm incoming links through `@capacitor/app`; accept only HTTPS links on `medio.mywire.org` with the `/share/:shareId` path.
+- `frontend/public/.well-known/assetlinks.json` must be deployed at `https://medio.mywire.org/.well-known/assetlinks.json` with `application/json` and no redirect. Its SHA-256 fingerprint currently matches the release APK signing certificate. If Play App Signing or a signing-key rotation changes the installed app certificate, include that certificate fingerprint too.
+- Android users need an updated install containing the App Link intent filter. Verify domain association after deployment with Android's `pm get-app-links com.medio.app` or `assetlinks` verification tools; links may continue to open in the browser until association succeeds.
+
 ## Results/detail performance notes
 
 - `ResultsPage.jsx` no longer calls the public OSRM driving API for decorative preview lines; it draws immediate straight preview lines between origins and the midpoint.
@@ -133,5 +141,6 @@ Project-Medio/
 - Backend search regression test: run `npm run test:search` inside `backend/`. It currently covers `versiva`, `virsovaa`, `virsowa`, `versova`, and `versova mumbai`, and expects Versova to be confidently surfaced in the Mumbai service area.
 - Route-level search smoke test: start the backend and call `/api/search?q=versiva`, `/api/search?q=virsovaa`, `/api/search?q=virsowa`, `/api/search?q=versova`, and `/api/search?q=versova%20mumbai`; all should return non-empty results with Versova in the Mumbai service area.
 - Frontend build: run `npm run build` inside `frontend/`.
+- Android release build: from `frontend/`, run `npm run build` then `npm run sync:android`, then in `frontend/android/` run `./gradlew assembleRelease bundleRelease` with `JAVA_HOME=/opt/homebrew/opt/openjdk@21`.
 - Both builds were run after the current routing/search/performance updates and passed.
 - Vite currently reports a non-fatal bundle-size warning for the frontend JS chunk; this existed as a build concern, not a compile failure.

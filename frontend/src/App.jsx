@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import MeetPage from './pages/MeetPage';
@@ -25,10 +25,40 @@ import { Capacitor } from '@capacitor/core';
 function AppRoutes() {
   const { isExpanded, setIsExpanded } = useNavigation();
   const location = useLocation();
+  const routerNavigate = useNavigate();
   const navigate = window.history; // use history API
   const isPublicPage = ['/', '/login', '/privacy', '/terms', '/download-app'].includes(location.pathname);
   const isGuestSharePage = location.pathname.startsWith('/share');
   const hideNav = isPublicPage || isGuestSharePage;
+
+  React.useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return undefined;
+
+    const navigateToSharedLink = (url) => {
+      if (!url) return;
+      try {
+        const parsed = new URL(url);
+        if (parsed.hostname !== 'medio.mywire.org' || parsed.protocol !== 'https:') return;
+        const match = parsed.pathname.match(/^\/share\/([^/]+)\/?$/);
+        if (match) {
+          routerNavigate(`/share/${encodeURIComponent(decodeURIComponent(match[1]))}${parsed.search}${parsed.hash}`, { replace: true });
+        }
+      } catch {
+        // Ignore malformed or unsupported incoming URLs.
+      }
+    };
+
+    let active = true;
+    CapacitorApp.getLaunchUrl().then((launch) => {
+      if (active) navigateToSharedLink(launch?.url);
+    }).catch(() => {});
+    const listener = CapacitorApp.addListener('appUrlOpen', ({ url }) => navigateToSharedLink(url));
+
+    return () => {
+      active = false;
+      listener.then((handle) => handle.remove());
+    };
+  }, [routerNavigate]);
 
   React.useEffect(() => {
     if (Capacitor.isNativePlatform()) {

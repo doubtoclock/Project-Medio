@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.medio.app",
+      "sha256_cert_fingerprints": [
+        "58:AE:E0:B5:25:90:49:DE:54:85:DB:83:35:6F:26:98:6D:AC:BE:8C:B3:1A:DD:6B:92:79:88:91:B9:74:14:6C"
+      ]
+    }
+  }
+]

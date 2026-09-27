@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "configure:android-links": "node scripts/configure-android-links.mjs",
+    "sync:android": "cap sync android && npm run configure:android-links",
     "lint": "oxlint",
     "preview": "vite preview",
     "test:e2e": "playwright test",
