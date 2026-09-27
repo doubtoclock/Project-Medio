@@ -196,6 +196,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .info-card-header {
@@ -235,6 +236,9 @@
   letter-spacing: 2px;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.35);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .info-card-value {
@@ -328,6 +332,42 @@
   transform: scale(0.97);
   background-color: #E0E0E0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.detail-navigate-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 54px;
+  padding: 14px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-btn);
+  background: #0A84FF;
+  color: #FFFFFF;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(10, 132, 255, 0.24);
+  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.detail-navigate-button:hover {
+  transform: translateY(-2px);
+  background: #2492FF;
+  box-shadow: 0 8px 22px rgba(10, 132, 255, 0.34);
+}
+
+.detail-navigate-button:active {
+  transform: scale(0.98);
+}
+
+.detail-navigate-button:focus-visible {
+  outline: 3px solid rgba(10, 132, 255, 0.45);
+  outline-offset: 3px;
 }
 
 /* Footer */

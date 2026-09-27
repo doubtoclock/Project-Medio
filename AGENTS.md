@@ -123,6 +123,7 @@ Project-Medio/
 ## Shared meeting App Links
 
 - Shared meeting URLs use `https://www.medio.mywire.org/share/:shareId`; the React route is `/share/:shareId` and must remain usable in a browser as a fallback. The frontend normalizes the apex hostname to `www` when generating share URLs.
+- `SharedLinkPage.jsx` loads the saved share and renders the same `DetailPage` layout as the original meeting point, swapping origin A/B and their route data for the recipient. Keep the bottom Navigate button consistent on both views.
 - Android App Links cover `https://medio.mywire.org/share/` and `https://www.medio.mywire.org/share/`. The generated `frontend/android/` directory is gitignored, so after `npx cap sync android`, run `npm run configure:android-links` from `frontend/` (or `npm run sync:android`, which performs both steps) to add the link intent filter.
 - `frontend/src/App.jsx` handles cold and warm incoming links through `@capacitor/app`; accept only HTTPS links on `medio.mywire.org` or `www.medio.mywire.org` with the `/share/:shareId` path.
 - `frontend/public/.well-known/assetlinks.json` must be deployed at `https://www.medio.mywire.org/.well-known/assetlinks.json` with `application/json` and no redirect. The apex currently redirects to `www`, which prevents Android from verifying the apex host. The file's SHA-256 fingerprint matches the release APK signing certificate. If Play App Signing or a signing-key rotation changes the installed app certificate, include that certificate fingerprint too.

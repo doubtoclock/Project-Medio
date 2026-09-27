@@ -7,7 +7,7 @@ import coffeeHero from '../assets/coffee-hero.png';
 import './DetailPage.css';
 import './ResultsPage.css';
 
-function DetailPage() {
+function DetailPage({ sharedData = null }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -24,7 +24,10 @@ function DetailPage() {
     sessionStorage.removeItem('detailRestore');
   }, []);
 
+  const isSharedLink = Boolean(sharedData);
+
   const venue = useMemo(() => {
+    if (sharedData?.venue) return sharedData.venue;
     if (state.venue) return state.venue;
     if (savedDetail?.venue) return savedDetail.venue;
     const id = searchParams.get('id');
@@ -37,19 +40,31 @@ function DetailPage() {
       return { id, lat, lon, lng: lon, name: name || 'Meeting Point', rating: rating || null, category: category || 'Place' };
     }
     return null;
-  }, [state.venue, savedDetail?.venue, searchParams]);
+  }, [sharedData?.venue, state.venue, savedDetail?.venue, searchParams]);
 
-  const originA = state.originA || savedDetail?.originA || null;
-  const originB = state.originB || savedDetail?.originB || null;
-  const [routeDataA, setRouteDataA] = useState(state.routeDataA || savedDetail?.routeDataA || null);
-  const [routeDataB, setRouteDataB] = useState(state.routeDataB || savedDetail?.routeDataB || null);
-  const [routeErrorA, setRouteErrorA] = useState(state.routeErrorA || savedDetail?.routeErrorA || null);
-  const [routeErrorB, setRouteErrorB] = useState(state.routeErrorB || savedDetail?.routeErrorB || null);
+  const originA = isSharedLink ? sharedData.originB : (state.originA || savedDetail?.originA || null);
+  const originB = isSharedLink ? sharedData.originA : (state.originB || savedDetail?.originB || null);
+  const [routeDataA, setRouteDataA] = useState(isSharedLink ? sharedData.routeDataB : (state.routeDataA || savedDetail?.routeDataA || null));
+  const [routeDataB, setRouteDataB] = useState(isSharedLink ? sharedData.routeDataA : (state.routeDataB || savedDetail?.routeDataB || null));
+  const [routeErrorA, setRouteErrorA] = useState(isSharedLink ? sharedData.routeErrorB : (state.routeErrorA || savedDetail?.routeErrorA || null));
+  const [routeErrorB, setRouteErrorB] = useState(isSharedLink ? sharedData.routeErrorA : (state.routeErrorB || savedDetail?.routeErrorB || null));
 
-  const isRecipient = state.fromSharedLink || (!state.venue && !savedDetail?.venue && !!searchParams.get('id'));
+  const isRecipient = isSharedLink || state.fromSharedLink || (!state.venue && !savedDetail?.venue && !!searchParams.get('id'));
+  const showRouteDetails = !isRecipient || isSharedLink;
 
-  const itinerariesA = routeDataA?.data?.plan?.itineraries || [];
-  const itinerariesB = routeDataB?.data?.plan?.itineraries || [];
+  const extractItineraries = (routeData) => {
+    if (Array.isArray(routeData)) return routeData;
+    if (Array.isArray(routeData?.itineraries)) return routeData.itineraries;
+    if (Array.isArray(routeData?.plan?.itineraries)) return routeData.plan.itineraries;
+    if (Array.isArray(routeData?.data?.plan?.itineraries)) return routeData.data.plan.itineraries;
+    if (Array.isArray(routeData?.data?.itineraries)) return routeData.data.itineraries;
+    if (routeData?.itinerary?.legs) return [routeData.itinerary];
+    if (routeData?.legs) return [routeData];
+    return [];
+  };
+
+  const itinerariesA = extractItineraries(routeDataA);
+  const itinerariesB = extractItineraries(routeDataB);
 
   const [itineraryIndexA, setItineraryIndexA] = useState(0);
   const [itineraryIndexB, setItineraryIndexB] = useState(0);
@@ -59,7 +74,7 @@ function DetailPage() {
   const itineraryB = itinerariesB[itineraryIndexB] || null;
 
   useEffect(() => {
-    if (isRecipient || !venue || !originA || !originB) return;
+    if ((isRecipient && !isSharedLink) || !venue || !originA || !originB) return;
     const needsRouteA = !routeDataA && !routeErrorA;
     const needsRouteB = !routeDataB && !routeErrorB;
     if (!needsRouteA && !needsRouteB) return;
@@ -97,10 +112,10 @@ function DetailPage() {
     if (needsRouteB) fetchRoute(originB, 'B');
 
     return () => { cancelled = true; };
-  }, [isRecipient, venue, originA, originB, routeDataA, routeDataB, routeErrorA, routeErrorB]);
+  }, [isRecipient, isSharedLink, venue, originA, originB, routeDataA, routeDataB, routeErrorA, routeErrorB]);
 
   const handleNavigate = useCallback(() => {
-    if (isRecipient) {
+    if (isRecipient && !isSharedLink) {
       if (!venue) return;
       navigate('/travel', {
         state: {
@@ -116,7 +131,7 @@ function DetailPage() {
         }
       });
     }
-  }, [isRecipient, originA, venue, navigate]);
+  }, [isRecipient, isSharedLink, originA, venue, navigate]);
 
   return (
     <div className="detail-page">
@@ -147,8 +162,8 @@ function DetailPage() {
         </div>
       </div>
 
-      <div className="detail-body">
-        {!isRecipient && (
+      <div className="detail-content detail-body">
+        {showRouteDetails && (
           <>
             <div className="detail-grid anim-slide-up-fade" style={{ animationDelay: '0.4s' }}>
               <div className="detail-info-card anim-card-lift">
@@ -156,7 +171,7 @@ function DetailPage() {
                   <div className="info-card-icon">
                     <User className="anim-icon-tap" />
                   </div>
-                  <span className="info-card-label">You</span>
+                  <span className="info-card-label">{isSharedLink ? (originA?.name || 'You') : 'You'}</span>
                 </div>
                 <span className="info-card-value anim-slide-up-fade" style={{ animationDelay: '0.6s' }}>
                   {itineraryA ? formatDuration(itineraryA.duration) : (routeErrorA || '--')}
@@ -168,7 +183,7 @@ function DetailPage() {
                   <div className="info-card-icon friend-icon">
                     <Users className="anim-icon-tap" />
                   </div>
-                  <span className="info-card-label">Friend</span>
+                  <span className="info-card-label">{isSharedLink ? (originB?.name || 'Friend') : 'Friend'}</span>
                 </div>
                 <span className="info-card-value friend-value anim-slide-up-fade" style={{ animationDelay: '0.7s' }}>
                   {itineraryB ? formatDuration(itineraryB.duration) : (routeErrorB || '--')}
@@ -180,7 +195,7 @@ function DetailPage() {
               <div className="route-user-section route-user-error">
                 <div className="route-user-header">
                   <span className="route-user-dot route-user-dot-a"></span>
-                  <span className="route-user-label">User A</span>
+                  <span className="route-user-label">{isSharedLink ? (originA?.name || 'User A') : 'User A'}</span>
                 </div>
                 <p className="route-user-fail">{routeErrorA}</p>
               </div>
@@ -190,7 +205,7 @@ function DetailPage() {
               <div className="route-user-section">
                 <div className="route-user-header">
                   <span className="route-user-dot route-user-dot-a"></span>
-                  <span className="route-user-label">User A</span>
+                  <span className="route-user-label">{isSharedLink ? (originA?.name || 'User A') : 'User A'}</span>
                 </div>
                 <RouteMetricsPanel itinerary={itineraryA} />
                 <RouteStepsPanel itinerary={itineraryA} />
@@ -209,7 +224,7 @@ function DetailPage() {
               <div className="route-user-section route-user-error">
                 <div className="route-user-header">
                   <span className="route-user-dot route-user-dot-b"></span>
-                  <span className="route-user-label">User B</span>
+                  <span className="route-user-label">{isSharedLink ? (originB?.name || 'User B') : 'User B'}</span>
                 </div>
                 <p className="route-user-fail">{routeErrorB}</p>
               </div>
@@ -219,7 +234,7 @@ function DetailPage() {
               <div className="route-user-section">
                 <div className="route-user-header">
                   <span className="route-user-dot route-user-dot-b"></span>
-                  <span className="route-user-label">User B</span>
+                  <span className="route-user-label">{isSharedLink ? (originB?.name || 'User B') : 'User B'}</span>
                 </div>
                 <RouteMetricsPanel itinerary={itineraryB} />
                 <RouteStepsPanel itinerary={itineraryB} />
@@ -236,17 +251,7 @@ function DetailPage() {
           </>
         )}
 
-        <div className="anim-slide-up-fade" style={{ animationDelay: '0.5s' }}>
-          <div className="nav-card anim-card-lift" onClick={handleNavigate}>
-            <span className="nav-card-label">{isRecipient ? 'Navigate' : 'Nav Engine'}</span>
-            <div className="nav-card-bottom">
-              <span className="nav-card-name">Navigate</span>
-              <MapPin className="nav-card-icon anim-icon-tap" />
-            </div>
-          </div>
-        </div>
-
-        {!isRecipient && (
+        {showRouteDetails && (
           <button className="detail-share-button anim-card-lift anim-slide-up-fade" style={{ animationDelay: '0.6s' }}
             onClick={() => navigate('/share', {
               state: {
@@ -262,6 +267,11 @@ function DetailPage() {
             Share Meeting Point
           </button>
         )}
+
+        <button className="detail-navigate-button" onClick={handleNavigate}>
+          <MapPin size={19} />
+          <span>Navigate to meeting point</span>
+        </button>
 
         <div className="detail-footer">
           <span className="detail-footer-text">ID: {venue?.id || '---'}</span>
