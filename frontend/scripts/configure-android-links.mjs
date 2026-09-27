@@ -4,7 +4,14 @@ const manifestPath = new URL('../android/app/src/main/AndroidManifest.xml', impo
 let manifest = await readFile(manifestPath, 'utf8');
 
 const marker = 'android:autoVerify="true"';
-if (!manifest.includes(marker)) {
+const wwwHost = 'android:host="www.medio.mywire.org"';
+if (manifest.includes(marker) && !manifest.includes(wwwHost)) {
+  const filterEnd = manifest.indexOf('</intent-filter>', manifest.indexOf(marker));
+  if (filterEnd < 0) throw new Error('Could not find the App Link intent filter closing tag');
+  const wwwData = '                <data android:scheme="https" android:host="www.medio.mywire.org" android:pathPrefix="/share/" />\n';
+  manifest = `${manifest.slice(0, filterEnd)}${wwwData}${manifest.slice(filterEnd)}`;
+  await writeFile(manifestPath, manifest);
+} else if (!manifest.includes(marker)) {
   const activityEnd = manifest.indexOf('</activity>');
   if (activityEnd < 0) throw new Error('Could not find the MainActivity closing tag in AndroidManifest.xml');
 
@@ -14,6 +21,7 @@ if (!manifest.includes(marker)) {
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="medio.mywire.org" android:pathPrefix="/share/" />
+                <data android:scheme="https" android:host="www.medio.mywire.org" android:pathPrefix="/share/" />
             </intent-filter>
 `;
 
@@ -21,4 +29,4 @@ if (!manifest.includes(marker)) {
   await writeFile(manifestPath, manifest);
 }
 
-console.log('Android App Link filter is configured for https://medio.mywire.org/share/.');
+console.log('Android App Link filter is configured for the Medio share URL hosts.');

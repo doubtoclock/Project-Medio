@@ -1,5 +1,6 @@
-const CANONICAL_FRONTEND_URL = "https://medio.mywire.org";
+const CANONICAL_FRONTEND_URL = "https://www.medio.mywire.org";
 const LEGACY_FRONTEND_HOST = ["project-medio-rpcz", "vercel", "app"].join(".");
+const APEX_FRONTEND_HOST = "medio.mywire.org";
 
 const trimTrailingSlash = (url) => url.replace(/\/+$/, "");
 
@@ -8,11 +9,19 @@ export const getFrontendBaseUrl = () => {
   const browserOrigin = window.location.origin;
 
   if (configuredUrl) {
-    return trimTrailingSlash(configuredUrl);
+    const configured = new URL(configuredUrl);
+    if (configured.hostname === APEX_FRONTEND_HOST) {
+      configured.hostname = `www.${APEX_FRONTEND_HOST}`;
+    }
+    return trimTrailingSlash(configured.toString());
   }
 
   try {
-    if (new URL(browserOrigin).hostname === LEGACY_FRONTEND_HOST) {
+    const browserUrl = new URL(browserOrigin);
+    if (browserUrl.hostname === LEGACY_FRONTEND_HOST) {
+      return CANONICAL_FRONTEND_URL;
+    }
+    if (browserUrl.hostname === APEX_FRONTEND_HOST) {
       return CANONICAL_FRONTEND_URL;
     }
   } catch {

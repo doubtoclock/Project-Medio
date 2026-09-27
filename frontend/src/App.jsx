@@ -38,7 +38,7 @@ function AppRoutes() {
       if (!url) return;
       try {
         const parsed = new URL(url);
-        if (parsed.hostname !== 'medio.mywire.org' || parsed.protocol !== 'https:') return;
+        if (!['medio.mywire.org', 'www.medio.mywire.org'].includes(parsed.hostname) || parsed.protocol !== 'https:') return;
         const match = parsed.pathname.match(/^\/share\/([^/]+)\/?$/);
         if (match) {
           routerNavigate(`/share/${encodeURIComponent(decodeURIComponent(match[1]))}${parsed.search}${parsed.hash}`, { replace: true });
