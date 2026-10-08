@@ -263,7 +263,7 @@ const buildOtpQuery = (
                 longName
               }
               trip {
-                headsign
+                tripHeadsign
               }
               legGeometry {
                 points
@@ -316,7 +316,17 @@ const fetchOtpPlan = async (
       throw new Error("Failed to fetch route from OTP");
     }
 
-    return response.json();
+    const payload: any = await response.json();
+
+    if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
+      logger.error("OTP GraphQL returned errors", {
+        errors: payload.errors.map((error: any) => error?.message),
+        requestedModes: modeSet,
+      });
+      throw new Error("OTP rejected the route query");
+    }
+
+    return payload;
   } finally {
     clearTimeout(timeout);
   }

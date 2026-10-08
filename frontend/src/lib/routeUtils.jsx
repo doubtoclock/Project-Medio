@@ -344,7 +344,8 @@ export function RouteStepsPanel({ itinerary, units = getPreferredUnits() }) {
         const mode = normalizeMode(leg.mode);
         const label = modeLabels[mode] || leg.mode;
         const routeName = getLegRouteName(leg);
-        const headsign = typeof leg.trip?.headsign === 'string' ? leg.trip.headsign.trim() : '';
+        const headsignRaw = leg.trip?.tripHeadsign ?? leg.trip?.headsign;
+        const headsign = typeof headsignRaw === 'string' ? headsignRaw.trim() : '';
         const endpointSummary = getLegEndpointSummary(leg, idx, legs.length);
         const isTransit = !['WALK', 'CAR', 'BICYCLE'].includes(mode);
         const stopCount = Array.isArray(leg.intermediateStops) ? leg.intermediateStops.length : 0;
