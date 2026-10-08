@@ -84,18 +84,20 @@ const getVenueIcon = (isSelected) => L.divIcon({
 
 function MapAnimator({ positions, midpoint, phase, rescaleTrigger }) {
   const map = useMap();
-  const hasAnimatedIn = useRef(false);
+  const lastFittedPositions = useRef(null);
   const lastRescaleTrigger = useRef(rescaleTrigger);
 
   useEffect(() => {
     if (phase === 0) {
       map.setView([midpoint.lat, midpoint.lng], 15, { animate: false });
-    } else if (phase >= 1 && positions.length > 0 && (
-      !hasAnimatedIn.current || rescaleTrigger !== lastRescaleTrigger.current
+      return;
+    }
+    if (phase >= 1 && positions.length > 0 && (
+      positions !== lastFittedPositions.current || rescaleTrigger !== lastRescaleTrigger.current
     )) {
       const bounds = L.latLngBounds(positions);
       map.flyToBounds(bounds, { padding: [100, 100], maxZoom: 14, duration: 1.5 });
-      hasAnimatedIn.current = true;
+      lastFittedPositions.current = positions;
       lastRescaleTrigger.current = rescaleTrigger;
     }
   }, [map, positions, midpoint, phase, rescaleTrigger]);

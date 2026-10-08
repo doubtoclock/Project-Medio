@@ -262,6 +262,9 @@ const buildOtpQuery = (
                 shortName
                 longName
               }
+              trip {
+                headsign
+              }
               legGeometry {
                 points
               }

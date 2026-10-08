@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { CookieOptions, Request, Response } from "express";
-import { OAuth2Client } from "google-auth-library";
+import { OAuth2Client, TokenPayload } from "google-auth-library";
 import { env } from "../config/env";
 import { History } from "../models/history";
 import { Place } from "../models/place";
@@ -331,18 +331,35 @@ export const googleNativeSignIn = async (req: Request, res: Response) => {
     const { idToken } = req.body;
 
     if (!idToken || typeof idToken !== "string") {
-      return res.status(400).json({ message: "Missing idToken" });
+      return res.status(400).json({
+        message: "Missing idToken",
+        code: "missing_id_token",
+      });
     }
 
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: env.GOOGLE_CLIENT_ID,
-    });
+    let payload: TokenPayload | undefined;
 
-    const payload = ticket.getPayload();
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: env.GOOGLE_CLIENT_ID,
+      });
+
+      payload = ticket.getPayload();
+    } catch (error) {
+      logger.error("Google token verification failed", { error });
+
+      return res.status(401).json({
+        message: "Google sign-in failed",
+        code: "invalid_google_token",
+      });
+    }
 
     if (!payload?.email) {
-      return res.status(400).json({ message: "Invalid token" });
+      return res.status(401).json({
+        message: "Google sign-in failed",
+        code: "missing_email_claim",
+      });
     }
 
     const user = await upsertGoogleUser({
@@ -380,7 +397,6 @@ export const googleNativeSignIn = async (req: Request, res: Response) => {
     return res.status(401).json({ message: "Google sign-in failed" });
   }
 };
-
 export const deleteAccount = async (req: Request, res: Response) => {
   try {
     const user = await getOrCreateCurrentUser(req);

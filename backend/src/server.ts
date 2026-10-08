@@ -15,7 +15,16 @@ const warmUpOTP = async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        query: "{ routers { routerId } }",
+        query: `query Warmup {
+          plan(
+            from: { lat: 19.0725, lon: 72.8799 }
+            to: { lat: 19.0815, lon: 72.8877 }
+            transportModes: [{ mode: WALK }]
+            numItineraries: 1
+          ) {
+            itineraries { duration }
+          }
+        }`,
       }),
       signal: controller.signal,
     });
@@ -23,13 +32,16 @@ const warmUpOTP = async () => {
     if (res.ok) {
       logger.info("OTP service warmup successful");
     } else {
-      logger.warn("OTP service warmup returned non-ok", {
+      logger.warn("OTP service warmup returned non-ok - routes will fail", {
         status: res.status,
+        url: otpUrl,
       });
     }
   } catch (err: any) {
-    logger.warn("OTP service warmup failed (service may still be starting)", {
+    logger.warn("OTP service is unreachable - all route requests will return 502", {
       message: err.message,
+      url: env.OTP_GRAPHQL_URL,
+      hint: `Set OTP_BASE_URL (or OTP_HOSTPORT) to an OpenTripPlanner instance reachable from this process. Currently defaulting to "${env.OTP_BASE_URL}". A localhost address only works when OTP runs on the same machine as this backend.`,
     });
   }
 };

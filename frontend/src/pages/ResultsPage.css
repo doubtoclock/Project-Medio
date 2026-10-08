@@ -785,6 +785,17 @@
   font-family: 'Space Mono', monospace;
 }
 
+.route-step-headsign {
+  font-size: 11px;
+  color: #A1A1A1;
+}
+
+.route-step-time {
+  font-size: 11px;
+  color: #A1A1A1;
+  font-family: 'Space Mono', monospace;
+}
+
 .itinerary-switcher {
   display: flex;
   align-items: center;

@@ -19,6 +19,7 @@ import {
   getLegRouteName,
   normalizeMode,
   decodePolyline,
+  getDisplayDuration,
   RouteStepsPanel,
 } from '../lib/routeUtils';
 import { CARTO_ATTRIBUTION, CARTO_DARK_TILE_URL } from '../lib/mapTiles';
@@ -531,7 +532,7 @@ export default function JourneyPlannerPage() {
     );
 
     return {
-      duration: formatDuration(itinerary.duration),
+      duration: formatDuration(getDisplayDuration(itinerary)),
       distance: formatDistance(totalDistance, units),
       label: `${metrics.transfers} transfer${metrics.transfers !== 1 ? 's' : ''}`,
       tag: index === 0 ? 'Fastest' : `Option ${index + 1}`,
@@ -745,7 +746,7 @@ export default function JourneyPlannerPage() {
             {selectedRouteData && (
               <section className="journey-summary-panel">
                 <div className="summary-item">
-                  <span className="summary-val">{formatDuration(selectedRouteData.itinerary.duration)}</span>
+                  <span className="summary-val">{formatDuration(getDisplayDuration(selectedRouteData.itinerary))}</span>
                   <span className="summary-lbl">ETA</span>
                 </div>
                 <div className="summary-item">

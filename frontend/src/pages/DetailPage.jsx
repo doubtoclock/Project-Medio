@@ -1,11 +1,45 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, User, Users, MapPin } from 'lucide-react';
-import { RouteMetricsPanel, RouteStepsPanel, ItinerarySwitcher, formatDuration } from '../lib/routeUtils';
+import { RouteMetricsPanel, RouteStepsPanel, ItinerarySwitcher, formatDuration, getDisplayDuration } from '../lib/routeUtils';
 import { apiClient } from '../lib/apiClient';
 import coffeeHero from '../assets/coffee-hero.png';
+import foodAndDrinkImg from '../assets/cat_img/foodndrink.jpg';
+import shoppingImg from '../assets/cat_img/shopping.jpg';
+import marketImg from '../assets/cat_img/market.jpg';
+import parkImg from '../assets/cat_img/park.jpg';
+import beachImg from '../assets/cat_img/beach.jpg';
+import hotelImg from '../assets/cat_img/Hotel.jpg';
+import libraryImg from '../assets/cat_img/library.jpg';
+import cultureImg from '../assets/cat_img/culture.jpeg';
 import './DetailPage.css';
 import './ResultsPage.css';
+
+const CATEGORY_IMAGES = {
+  Cafe: foodAndDrinkImg,
+  Restaurant: foodAndDrinkImg,
+  'Food court': foodAndDrinkImg,
+  'Quick bite': foodAndDrinkImg,
+  Dessert: foodAndDrinkImg,
+  Bar: foodAndDrinkImg,
+  Mall: shoppingImg,
+  Bookstore: shoppingImg,
+  Market: marketImg,
+  Park: parkImg,
+  Garden: parkImg,
+  Beach: beachImg,
+  Hotel: hotelImg,
+  Library: libraryImg,
+  Cinema: cultureImg,
+  Theatre: cultureImg,
+  Museum: cultureImg,
+  Gallery: cultureImg,
+  'Arts center': cultureImg,
+  'Community center': cultureImg,
+};
+
+const getVenueImage = (venue) =>
+  venue?.image || CATEGORY_IMAGES[venue?.category] || coffeeHero;
 
 function DetailPage({ sharedData = null }) {
   const navigate = useNavigate();
@@ -136,7 +170,7 @@ function DetailPage({ sharedData = null }) {
   return (
     <div className="detail-page">
       <div className="detail-hero">
-        <img src={venue?.image || coffeeHero} alt={venue?.name || 'Venue'} />
+        <img src={getVenueImage(venue)} alt={venue?.name || 'Venue'} />
         <div className="detail-hero-overlay"></div>
 
         <div className="detail-top-bar">
@@ -174,7 +208,7 @@ function DetailPage({ sharedData = null }) {
                   <span className="info-card-label">{isSharedLink ? (originA?.name || 'You') : 'You'}</span>
                 </div>
                 <span className="info-card-value anim-slide-up-fade" style={{ animationDelay: '0.6s' }}>
-                  {itineraryA ? formatDuration(itineraryA.duration) : (routeErrorA || '--')}
+                  {itineraryA ? formatDuration(getDisplayDuration(itineraryA)) : (routeErrorA || '--')}
                 </span>
               </div>
 
@@ -186,7 +220,7 @@ function DetailPage({ sharedData = null }) {
                   <span className="info-card-label">{isSharedLink ? (originB?.name || 'Friend') : 'Friend'}</span>
                 </div>
                 <span className="info-card-value friend-value anim-slide-up-fade" style={{ animationDelay: '0.7s' }}>
-                  {itineraryB ? formatDuration(itineraryB.duration) : (routeErrorB || '--')}
+                  {itineraryB ? formatDuration(getDisplayDuration(itineraryB)) : (routeErrorB || '--')}
                 </span>
               </div>
             </div>

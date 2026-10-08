@@ -197,6 +197,9 @@ const buildOtpQuery = (transportModes, from, to, routingDateTime) => {
                 shortName
                 longName
               }
+              trip {
+                headsign
+              }
               legGeometry {
                 points
               }

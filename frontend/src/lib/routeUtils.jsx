@@ -102,7 +102,7 @@ export const getRouteMetrics = (itinerary) => {
   }, 0);
 
   return {
-    etaMinutes: Math.max(1, Math.round((itinerary.duration || 0) / 60)),
+    etaMinutes: Math.max(1, Math.round((getDisplayDuration(itinerary) || 0) / 60)),
     fare: estimateFare(legs),
     walkingMeters,
     transfers: Math.max(0, transitLegs.length - 1),
@@ -176,6 +176,136 @@ export function decodePolyline(encoded) {
   return points;
 }
 
+const MUMBAI_CAR_SPEED_KMH = 24;
+const CORRIDOR_CAR_SPEED_KMH = 40;
+const CORRIDOR_BUFFER_METERS = 500;
+
+const SEA_LINK_CORRIDOR = [
+  [19.0546, 72.8188],
+  [19.0410, 72.8170],
+  [19.0260, 72.8160],
+  [19.0105, 72.8160],
+];
+
+const COASTAL_ROAD_CORRIDOR = [
+  [18.9278, 72.8217],
+  [18.9517, 72.8194],
+  [18.9665, 72.8130],
+  [18.9820, 72.8167],
+  [19.0045, 72.8156],
+  [19.0546, 72.8188],
+  [19.0820, 72.8240],
+  [19.1100, 72.8250],
+  [19.1350, 72.8120],
+  [19.1350, 72.7950],
+  [19.1750, 72.8000],
+  [19.1900, 72.8080],
+  [19.2320, 72.8230],
+];
+
+const CAR_CORRIDORS = [SEA_LINK_CORRIDOR, COASTAL_ROAD_CORRIDOR];
+
+const toRadians = (degrees) => (degrees * Math.PI) / 180;
+
+const haversineMeters = (a, b) => {
+  const earthRadius = 6371000;
+  const dLat = toRadians(b[0] - a[0]);
+  const dLng = toRadians(b[1] - a[1]);
+  const lat1 = toRadians(a[0]);
+  const lat2 = toRadians(b[0]);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * earthRadius * Math.asin(Math.sqrt(h));
+};
+
+const pointToSegmentMeters = (point, segStart, segEnd) => {
+  const earthRadius = 6371000;
+  const toXY = (coord) => [
+    earthRadius * toRadians(coord[1]) * Math.cos(toRadians(point[0])),
+    earthRadius * toRadians(coord[0]),
+  ];
+  const p = toXY(point);
+  const a = toXY(segStart);
+  const b = toXY(segEnd);
+  const abx = b[0] - a[0];
+  const aby = b[1] - a[1];
+  const lengthSq = abx * abx + aby * aby;
+  const t = lengthSq === 0
+    ? 0
+    : Math.max(0, Math.min(1, ((p[0] - a[0]) * abx + (p[1] - a[1]) * aby) / lengthSq));
+  const dx = p[0] - (a[0] + t * abx);
+  const dy = p[1] - (a[1] + t * aby);
+  return Math.sqrt(dx * dx + dy * dy);
+};
+
+const distanceToCorridorsMeters = (point) => {
+  let minDistance = Infinity;
+  for (const corridor of CAR_CORRIDORS) {
+    for (let i = 0; i < corridor.length - 1; i++) {
+      minDistance = Math.min(
+        minDistance,
+        pointToSegmentMeters(point, corridor[i], corridor[i + 1])
+      );
+      if (minDistance <= CORRIDOR_BUFFER_METERS) return minDistance;
+    }
+  }
+  return minDistance;
+};
+
+const getLegFixedSeconds = (leg) => {
+  if (Number.isFinite(leg.startTime) && Number.isFinite(leg.endTime)) {
+    return Math.max(0, (leg.endTime - leg.startTime) / 1000);
+  }
+  return 0;
+};
+
+export const getCarAdjustedDuration = (itinerary) => {
+  const legs = itinerary?.legs || [];
+  const carLegs = legs.filter((leg) => normalizeMode(leg.mode) === 'CAR');
+  if (carLegs.length === 0) return itinerary?.duration || 0;
+
+  let corridorMeters = 0;
+  let regularMeters = 0;
+
+  for (const leg of carLegs) {
+    const points = decodePolyline(leg.legGeometry?.points);
+    if (points.length < 2) {
+      regularMeters += leg.distance || 0;
+      continue;
+    }
+    for (let i = 0; i < points.length - 1; i++) {
+      const segmentMeters = haversineMeters(points[i], points[i + 1]);
+      const midpoint = [
+        (points[i][0] + points[i + 1][0]) / 2,
+        (points[i][1] + points[i + 1][1]) / 2,
+      ];
+      if (distanceToCorridorsMeters(midpoint) <= CORRIDOR_BUFFER_METERS) {
+        corridorMeters += segmentMeters;
+      } else {
+        regularMeters += segmentMeters;
+      }
+    }
+  }
+
+  if (regularMeters + corridorMeters === 0) return itinerary?.duration || 0;
+
+  const carSeconds =
+    (regularMeters / 1000 / MUMBAI_CAR_SPEED_KMH) * 3600 +
+    (corridorMeters / 1000 / CORRIDOR_CAR_SPEED_KMH) * 3600;
+  const otherLegSeconds = legs
+    .filter((leg) => normalizeMode(leg.mode) !== 'CAR')
+    .reduce((sum, leg) => sum + getLegFixedSeconds(leg), 0);
+
+  return Math.round(carSeconds + otherLegSeconds);
+};
+
+export const getDisplayDuration = (itinerary) => {
+  if (!itinerary) return 0;
+  const adjusted = getCarAdjustedDuration(itinerary);
+  return adjusted > 0 ? adjusted : itinerary.duration || 0;
+};
+
 export const MODE_TO_API_PARAMS = {
   metro: { travelMode: 'local', localTransport: { subway: true } },
   bus: { travelMode: 'local', localTransport: { bus: true } },
@@ -189,7 +319,7 @@ export function RouteMetricsPanel({ itinerary, units = getPreferredUnits() }) {
   return (
     <div className="route-metrics">
       <div className="route-metric">
-        <span className="route-metric-value">{formatDuration(itinerary.duration)}</span>
+        <span className="route-metric-value">{formatDuration(getDisplayDuration(itinerary))}</span>
         <span className="route-metric-label">Duration</span>
       </div>
       <div className="route-metric">
@@ -214,8 +344,13 @@ export function RouteStepsPanel({ itinerary, units = getPreferredUnits() }) {
         const mode = normalizeMode(leg.mode);
         const label = modeLabels[mode] || leg.mode;
         const routeName = getLegRouteName(leg);
+        const headsign = typeof leg.trip?.headsign === 'string' ? leg.trip.headsign.trim() : '';
         const endpointSummary = getLegEndpointSummary(leg, idx, legs.length);
         const isTransit = !['WALK', 'CAR', 'BICYCLE'].includes(mode);
+        const stopCount = Array.isArray(leg.intermediateStops) ? leg.intermediateStops.length : 0;
+        const boardAt = getLegEndpointName(leg.from, idx === 0 ? 'Your location' : 'Transfer point');
+        const alightAt = getLegEndpointName(leg.to, idx === legs.length - 1 ? 'Destination' : 'Transfer point');
+        const startTime = Number.isFinite(leg.startTime) ? new Date(leg.startTime) : null;
         return (
           <div key={idx} className="route-step">
             <div className="route-step-line">
@@ -227,8 +362,28 @@ export function RouteStepsPanel({ itinerary, units = getPreferredUnits() }) {
               {isTransit && routeName && (
                 <span className="route-step-name">{routeName}</span>
               )}
-              <span className="route-step-endpoints">{endpointSummary}</span>
+              {isTransit && headsign && (
+                <span className="route-step-headsign">towards {headsign}</span>
+              )}
+              {isTransit ? (
+                <>
+                  <span className="route-step-endpoints">Board at {boardAt}</span>
+                  <span className="route-step-endpoints">Get off at {alightAt}</span>
+                  {stopCount > 0 && (
+                    <span className="route-step-distance">
+                      {stopCount} stop{stopCount !== 1 ? 's' : ''} in between
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="route-step-endpoints">{endpointSummary}</span>
+              )}
               <span className="route-step-distance">{formatDistance(leg.distance || 0, units)}</span>
+              {startTime && !Number.isNaN(startTime.getTime()) && (
+                <span className="route-step-time">
+                  {startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
             </div>
           </div>
         );

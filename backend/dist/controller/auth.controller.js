@@ -260,15 +260,31 @@ const googleNativeSignIn = async (req, res) => {
     try {
         const { idToken } = req.body;
         if (!idToken || typeof idToken !== "string") {
-            return res.status(400).json({ message: "Missing idToken" });
+            return res.status(400).json({
+                message: "Missing idToken",
+                code: "missing_id_token",
+            });
         }
-        const ticket = await googleClient.verifyIdToken({
-            idToken,
-            audience: env_1.env.GOOGLE_CLIENT_ID,
-        });
-        const payload = ticket.getPayload();
+        let payload;
+        try {
+            const ticket = await googleClient.verifyIdToken({
+                idToken,
+                audience: env_1.env.GOOGLE_CLIENT_ID,
+            });
+            payload = ticket.getPayload();
+        }
+        catch (error) {
+            logger_1.logger.error("Google token verification failed", { error });
+            return res.status(401).json({
+                message: "Google sign-in failed",
+                code: "invalid_google_token",
+            });
+        }
         if (!payload?.email) {
-            return res.status(400).json({ message: "Invalid token" });
+            return res.status(401).json({
+                message: "Google sign-in failed",
+                code: "missing_email_claim",
+            });
         }
         const user = await upsertGoogleUser({
             email: payload.email,
