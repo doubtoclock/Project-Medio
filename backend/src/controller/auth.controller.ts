@@ -440,6 +440,14 @@ export const checkAuth = async (req: Request, res: Response) => {
 
     const decoded = verifyToken(token);
 
+    const userExists = await User.exists({ _id: decoded.userId });
+
+    if (!userExists) {
+      return res.status(200).json({
+        authenticated: false,
+      });
+    }
+
     return res.status(200).json({
       authenticated: true,
       user: {
